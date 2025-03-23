@@ -14,7 +14,7 @@
 	<description>Common classes and utilities shared across microservices</description>
 	
 	<dependencies>
-		<!-- Jackson for JSON -->
+		<!-- Jackson for JSON serialization and deserialization -->
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
@@ -38,6 +38,12 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
+		</dependency>
+		
+		<!-- Jackson Java 8 Date/Time support -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jsr310</artifactId>
 		</dependency>
 	</dependencies>
 </project>
