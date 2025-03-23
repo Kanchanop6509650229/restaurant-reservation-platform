@@ -1,90 +1,61 @@
+version: '3.8'
+
 services:
+  # Zookeeper service
   zookeeper:
-    image: wurstmeister/zookeeper:latest
+    image: zookeeper:3.8
     container_name: zookeeper
     restart: always
     ports:
       - "2181:2181"
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
+    volumes:
+      - zookeeper-data:/data
+      - zookeeper-log:/datalog
+    networks:
+      - restaurant-platform-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # Kafka service
   kafka:
-    image: wurstmeister/kafka:latest
+    image: confluentinc/cp-kafka:7.3.2
     container_name: kafka
     restart: always
+    depends_on:
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    depends_on:
-      - zookeeper
-
-  spring-app:
-    image: openjdk:23
-    container_name: spring-boot-app
-    restart: always
-    working_dir: /app
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     volumes:
-      - ./spring-app:/app
-    ports:
-      - "8080:8080"
-    command: ["java", "-jar", "/app/app.jar"]
-    stop_grace_period: 30s
-    stop_signal: SIGTERM
-    depends_on:
-      - kafka
-      - mysql
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/mydatabase
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: MyStrong!Passw0rd
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SPRING_KAFKA_CONSUMER_GROUP_ID: my-group
-      SPRING_KAFKA_PRODUCER_KEY_SERIALIZER: org.apache.kafka.common.serialization.StringSerializer
-      SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER: org.apache.kafka.common.serialization.StringSerializer
-      SPRING_KAFKA_CONSUMER_KEY_DESERIALIZER: org.apache.kafka.common.serialization.StringDeserializer
-      SPRING_KAFKA_CONSUMER_VALUE_DESERIALIZER: org.apache.kafka.common.serialization.StringDeserializer
+      - kafka-data:/var/lib/kafka/data
+      - ${PWD}/config/kafka:/etc/kafka/custom-config
+    networks:
+      - restaurant-platform-network
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
-  kafka-consumer-spring-app:
-    image: openjdk:23
-    container_name: consumer-spring-boot-app
-    restart: always
-    working_dir: /app
-    volumes:
-      - ./spring-app:/app
-    ports:
-      - "8181:8181"
-    command: ["java", "-jar", "/app/consumer.jar"]
-    stop_grace_period: 30s
-    stop_signal: SIGTERM
-    depends_on:
-      - kafka
-      - mysql
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/mydatabase
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: MyStrong!Passw0rd
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SPRING_KAFKA_CONSUMER_GROUP_ID: my-group
-      SPRING_KAFKA_PRODUCER_KEY_SERIALIZER: org.apache.kafka.common.serialization.StringSerializer
-      SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER: org.apache.kafka.common.serialization.StringSerializer
-      SPRING_KAFKA_CONSUMER_KEY_DESERIALIZER: org.apache.kafka.common.serialization.StringDeserializer
-      SPRING_KAFKA_CONSUMER_VALUE_DESERIALIZER: org.apache.kafka.common.serialization.StringDeserializer
-
-  mysql:
-    image: mysql:8.0
-    container_name: mysql
-    restart: always
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: "MyStrong!Passw0rd"
-      MYSQL_DATABASE: "mydatabase"
-
+  # Kafdrop - Kafka UI
   kafdrop:
     image: obsidiandynamics/kafdrop:latest
     container_name: kafdrop
@@ -93,7 +64,121 @@ services:
       - "9000:9000"
     environment:
       KAFKA_BROKERCONNECT: kafka:9092
+      JVM_OPTS: "-Xms32M -Xmx64M"
+      SERVER_SERVLET_CONTEXTPATH: "/"
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
+    networks:
+      - restaurant-platform-network
 
+  # MySQL for User Service
+  mysql-user-service:
+    image: mysql:8.0
+    container_name: mysql-user-service
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: user_service
+      MYSQL_USER: user_service
+      MYSQL_PASSWORD: user_password
+    volumes:
+      - mysql-user-data:/var/lib/mysql
+      - ${PWD}/scripts/mysql/init-user-db.sql:/docker-entrypoint-initdb.d/init-user-db.sql
+    networks:
+      - restaurant-platform-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # MySQL for Restaurant Service
+  mysql-restaurant-service:
+    image: mysql:8.0
+    container_name: mysql-restaurant-service
+    restart: always
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: restaurant_service
+      MYSQL_USER: restaurant_service
+      MYSQL_PASSWORD: restaurant_password
+    volumes:
+      - mysql-restaurant-data:/var/lib/mysql
+      - ${PWD}/scripts/mysql/init-restaurant-db.sql:/docker-entrypoint-initdb.d/init-restaurant-db.sql
+    networks:
+      - restaurant-platform-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Kafka Topic Initialize Tool
+  kafka-init:
+    build:
+      context: ./scripts
+      dockerfile: Dockerfile.kafka-init
+    container_name: kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ${PWD}/scripts/init-kafka.sh:/scripts/init-kafka.sh
+    command: ["bash", "/scripts/init-kafka.sh"]
+    networks:
+      - restaurant-platform-network
+
+  # Optional services for local development and testing
+  # Uncomment these when needed
+
+  # # User Service
+  # user-service:
+  #   build: ../user-service
+  #   container_name: user-service
+  #   restart: always
+  #   depends_on:
+  #     - kafka
+  #     - mysql-user-service
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:mysql://mysql-user-service:3306/user_service
+  #     SPRING_DATASOURCE_USERNAME: user_service
+  #     SPRING_DATASOURCE_PASSWORD: user_password
+  #     SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  #   networks:
+  #     - restaurant-platform-network
+
+  # # Restaurant Service
+  # restaurant-service:
+  #   build: ../restaurant-service
+  #   container_name: restaurant-service
+  #   restart: always
+  #   depends_on:
+  #     - kafka
+  #     - mysql-restaurant-service
+  #   ports:
+  #     - "8082:8082"
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:mysql://mysql-restaurant-service:3306/restaurant_service
+  #     SPRING_DATASOURCE_USERNAME: restaurant_service
+  #     SPRING_DATASOURCE_PASSWORD: restaurant_password
+  #     SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  #   networks:
+  #     - restaurant-platform-network
+
+volumes:
+  zookeeper-data:
+  zookeeper-log:
+  kafka-data:
+  mysql-user-data:
+  mysql-restaurant-data:
+
+networks:
+  restaurant-platform-network:
+    driver: bridge
