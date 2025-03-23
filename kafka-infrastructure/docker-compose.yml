@@ -137,40 +137,40 @@ services:
   # Uncomment these when needed
 
   # # User Service
-  # user-service:
-  #   build: ../user-service
-  #   container_name: user-service
-  #   restart: always
-  #   depends_on:
-  #     - kafka
-  #     - mysql-user-service
-  #   ports:
-  #     - "8081:8081"
-  #   environment:
-  #     SPRING_DATASOURCE_URL: jdbc:mysql://mysql-user-service:3306/user_service
-  #     SPRING_DATASOURCE_USERNAME: user_service
-  #     SPRING_DATASOURCE_PASSWORD: user_password
-  #     SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-  #   networks:
-  #     - restaurant-platform-network
+  user-service:
+    build: ../user-service
+    container_name: user-service
+    restart: always
+    depends_on:
+      - kafka
+      - mysql-user-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-user-service:3306/user_service
+      SPRING_DATASOURCE_USERNAME: user_service
+      SPRING_DATASOURCE_PASSWORD: user_password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - restaurant-platform-network
 
   # # Restaurant Service
-  # restaurant-service:
-  #   build: ../restaurant-service
-  #   container_name: restaurant-service
-  #   restart: always
-  #   depends_on:
-  #     - kafka
-  #     - mysql-restaurant-service
-  #   ports:
-  #     - "8082:8082"
-  #   environment:
-  #     SPRING_DATASOURCE_URL: jdbc:mysql://mysql-restaurant-service:3306/restaurant_service
-  #     SPRING_DATASOURCE_USERNAME: restaurant_service
-  #     SPRING_DATASOURCE_PASSWORD: restaurant_password
-  #     SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-  #   networks:
-  #     - restaurant-platform-network
+  restaurant-service:
+    build: ../restaurant-service
+    container_name: restaurant-service
+    restart: always
+    depends_on:
+      - kafka
+      - mysql-restaurant-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-restaurant-service:3306/restaurant_service
+      SPRING_DATASOURCE_USERNAME: restaurant_service
+      SPRING_DATASOURCE_PASSWORD: restaurant_password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - restaurant-platform-network
 
 volumes:
   zookeeper-data:
