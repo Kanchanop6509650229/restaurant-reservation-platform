@@ -19,7 +19,6 @@
         <dependency>
             <groupId>com.restaurant</groupId>
             <artifactId>common</artifactId>
-            <version>${project.version}</version>
         </dependency>
         
         <!-- Spring Boot Starters -->
