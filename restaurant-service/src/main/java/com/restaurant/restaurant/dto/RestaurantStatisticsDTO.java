@@ -1,5 +1,7 @@
 package com.restaurant.restaurant.dto;
 
+import java.math.BigDecimal;
+
 public class RestaurantStatisticsDTO {
     private String restaurantId;
     private String restaurantName;
@@ -8,7 +10,7 @@ public class RestaurantStatisticsDTO {
     private int availableTables;
     private int reservedTables;
     private int occupiedTables;
-    private float averageRating;
+    private BigDecimal averageRating;
     private int totalRatings;
     
     // Constructors
@@ -77,11 +79,11 @@ public class RestaurantStatisticsDTO {
         this.occupiedTables = occupiedTables;
     }
 
-    public float getAverageRating() {
+    public BigDecimal getAverageRating() {
         return averageRating;
     }
 
-    public void setAverageRating(float averageRating) {
+    public void setAverageRating(BigDecimal averageRating) {
         this.averageRating = averageRating;
     }
 
