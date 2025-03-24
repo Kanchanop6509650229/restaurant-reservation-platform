@@ -31,6 +31,13 @@ public class SecurityConfig {
     }
 
     @Bean
+    public JwtAuthorizationFilter jwtAuthorizationFilter() {
+        JwtAuthorizationFilter filter = new JwtAuthorizationFilter(jwtTokenProvider);
+        filter.setUserDetailsService(userDetailsService);
+        return filter;
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf().disable()
@@ -42,7 +49,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/users/register").permitAll()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(new JwtAuthorizationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class);
         
         // Enable h2-console
         http.headers().frameOptions().disable();
