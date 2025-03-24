@@ -1,11 +1,22 @@
 package com.restaurant.restaurant.domain.models;
 
-import jakarta.persistence.*;
-import org.locationtech.jts.geom.Point;
-
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.locationtech.jts.geom.Point;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "restaurants")
@@ -47,7 +58,7 @@ public class Restaurant {
     private int totalCapacity;
     
     @Column(precision = 3, scale = 2)
-    private float averageRating;
+    private BigDecimal averageRating;
     
     private int totalRatings;
 
@@ -263,11 +274,11 @@ public class Restaurant {
         this.totalCapacity = totalCapacity;
     }
 
-    public float getAverageRating() {
+    public BigDecimal getAverageRating() {
         return averageRating;
     }
 
-    public void setAverageRating(float averageRating) {
+    public void setAverageRating(BigDecimal averageRating) {
         this.averageRating = averageRating;
     }
 
