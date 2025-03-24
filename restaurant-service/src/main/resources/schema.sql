@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS restaurants (
     phone_number VARCHAR(20) NOT NULL,
     email VARCHAR(255),
     website VARCHAR(255),
-    location GEOMETRY(Point, 4326),
+    location GEOMETRY(Point, 4326) SRID 4326,
     latitude DOUBLE PRECISION,
     longitude DOUBLE PRECISION,
     cuisine_type VARCHAR(100) NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS restaurant_tables (
     table_number VARCHAR(10) NOT NULL,
     capacity INTEGER NOT NULL,
     status VARCHAR(20) NOT NULL,
-    location VARCHAR(50),
+    location VARCHAR(255),
     accessible BOOLEAN DEFAULT FALSE,
     shape VARCHAR(20),
     min_capacity INTEGER,
@@ -87,4 +87,3 @@ CREATE TABLE IF NOT EXISTS staff (
 -- Create spatial indexes for performance
 CREATE INDEX IF NOT EXISTS idx_restaurant_location ON restaurants USING GIST(location);
 CREATE INDEX IF NOT EXISTS idx_branch_location ON branches USING GIST(location);
-*/
