@@ -33,6 +33,7 @@ public class RestaurantTable {
 
     private String location; // INDOOR, OUTDOOR, PRIVATE_ROOM, etc.
 
+    @Column(name = "`accessible`")
     private boolean accessible; // For accessibility needs
 
     @Column(nullable = false)
