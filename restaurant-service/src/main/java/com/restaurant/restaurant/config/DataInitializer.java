@@ -5,9 +5,6 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,7 +21,7 @@ import com.restaurant.restaurant.domain.repositories.RestaurantTableRepository;
 @Configuration
 public class DataInitializer {
 
-    private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
+    // Removing the GeometryFactory to avoid issues with spatial data
 
     @Bean
     @Profile("!test")
@@ -70,7 +67,6 @@ public class DataInitializer {
         restaurant1.setTotalCapacity(60);
         restaurant1.setLatitude(40.7128);
         restaurant1.setLongitude(-74.0060);
-        restaurant1.setLocation(geometryFactory.createPoint(new Coordinate(-74.0060, 40.7128)));
         restaurant1.setActive(true);
         
         // Restaurant 2
@@ -89,7 +85,6 @@ public class DataInitializer {
         restaurant2.setTotalCapacity(45);
         restaurant2.setLatitude(37.7749);
         restaurant2.setLongitude(-122.4194);
-        restaurant2.setLocation(geometryFactory.createPoint(new Coordinate(-122.4194, 37.7749)));
         restaurant2.setActive(true);
         
         // Restaurant 3
@@ -108,7 +103,6 @@ public class DataInitializer {
         restaurant3.setTotalCapacity(75);
         restaurant3.setLatitude(41.8781);
         restaurant3.setLongitude(-87.6298);
-        restaurant3.setLocation(geometryFactory.createPoint(new Coordinate(-87.6298, 41.8781)));
         restaurant3.setActive(true);
         
         restaurants.add(restaurant1);
