@@ -2,9 +2,10 @@ FROM confluentinc/cp-kafka:7.3.2
 
 WORKDIR /scripts
 
-# Adding the initialization script
-COPY init-kafka.sh /scripts/init-kafka.sh
-RUN chmod +x /scripts/init-kafka.sh
+# Adding the initialization script and set permissions in one layer
+COPY init-kafka.sh /scripts/
+USER root
+RUN chmod +x /scripts/init-kafka.sh || true
 
 # Keep container running during development for debugging purposes
 CMD ["tail", "-f", "/dev/null"]
