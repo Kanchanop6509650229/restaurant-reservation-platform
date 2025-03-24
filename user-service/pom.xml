@@ -98,7 +98,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.restaurant.restaurant.RestaurantServiceApplication</mainClass>
+                    <mainClass>com.restaurant.user.UserServiceApplication</mainClass>
                     <layout>JAR</layout>
                     <executable>true</executable>
                 </configuration>
