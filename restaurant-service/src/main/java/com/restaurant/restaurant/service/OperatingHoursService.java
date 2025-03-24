@@ -1,5 +1,15 @@
 package com.restaurant.restaurant.service;
 
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
 import com.restaurant.common.events.restaurant.OperatingHoursChangedEvent;
 import com.restaurant.common.exceptions.EntityNotFoundException;
 import com.restaurant.common.exceptions.ValidationException;
@@ -10,16 +20,8 @@ import com.restaurant.restaurant.domain.repositories.RestaurantRepository;
 import com.restaurant.restaurant.dto.OperatingHoursDTO;
 import com.restaurant.restaurant.dto.OperatingHoursUpdateRequest;
 import com.restaurant.restaurant.kafka.producers.RestaurantEventProducer;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
-import java.time.DayOfWeek;
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import jakarta.transaction.Transactional;
 
 @Service
 public class OperatingHoursService {

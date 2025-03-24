@@ -1,6 +1,16 @@
 package com.restaurant.restaurant.service;
 
-import com.restaurant.common.constants.StatusCodes;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
 import com.restaurant.common.dto.restaurant.RestaurantDTO;
 import com.restaurant.common.events.restaurant.RestaurantUpdatedEvent;
 import com.restaurant.common.exceptions.EntityNotFoundException;
@@ -11,17 +21,8 @@ import com.restaurant.restaurant.dto.RestaurantCreateRequest;
 import com.restaurant.restaurant.dto.RestaurantSearchCriteria;
 import com.restaurant.restaurant.dto.RestaurantUpdateRequest;
 import com.restaurant.restaurant.kafka.producers.RestaurantEventProducer;
-import jakarta.transaction.Transactional;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.PrecisionModel;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import jakarta.transaction.Transactional;
 
 @Service
 public class RestaurantService {
