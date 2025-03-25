@@ -45,7 +45,7 @@ mvn clean package
 chmod +x kafka-infrastructure/scripts/init-kafka.sh
 ```
 
-### 3. Start the Kafka Infrastructure
+### 3. Start All Services with Docker Compose
 
 ```bash
 cd kafka-infrastructure
@@ -55,23 +55,27 @@ docker-compose up -d
 This will start:
 - Zookeeper
 - Kafka broker
-- MySQL database with initialized schemas
+- MySQL databases with initialized schemas
 - Kafka initialization scripts
+- User Service (running on port 8081)
+- Restaurant Service (running on port 8082)
+- Kafdrop UI for Kafka monitoring (accessible at http://localhost:9000)
 
-### 4. Run the Services
-
-#### Start the User Service
+You can check the status of all services using:
 
 ```bash
-cd user-service
-java -jar target/user-service-0.0.1-SNAPSHOT.jar
+docker-compose ps
 ```
 
-#### Start the Restaurant Service
+To view the logs of a specific service:
 
 ```bash
-cd restaurant-service
-java -jar target/restaurant-service-0.0.1-SNAPSHOT.jar
+docker-compose logs -f [service-name]
+```
+
+For example:
+```bash
+docker-compose logs -f restaurant-service
 ```
 
 ## Available APIs
