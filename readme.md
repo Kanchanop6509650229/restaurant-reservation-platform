@@ -80,7 +80,7 @@ docker-compose logs -f restaurant-service
 
 ## Available APIs
 
-### User Service APIs
+### User Service APIs (Port 8081)
 
 #### Authentication
 
@@ -105,14 +105,14 @@ docker-compose logs -f restaurant-service
     "phoneNumber": "string"
   }
   ```
-- **GET /api/users/{id}**: Get user by ID
+- **GET /api/users/{id}**: Get user by ID (requires authentication)
 - **GET /api/users**: Get all users (admin only)
 - **DELETE /api/users/{id}**: Delete a user (admin only)
 
 #### Profile Management
 
-- **GET /api/users/{id}/profile**: Get user profile
-- **PUT /api/users/{id}/profile**: Update user profile
+- **GET /api/users/{id}/profile**: Get user profile (requires authentication)
+- **PUT /api/users/{id}/profile**: Update user profile (requires authentication)
   ```json
   {
     "firstName": "string",
@@ -127,7 +127,7 @@ docker-compose logs -f restaurant-service
   }
   ```
 
-### Restaurant Service APIs
+### Restaurant Service APIs (Port 8082)
 
 #### Restaurant Management
 
@@ -206,51 +206,106 @@ docker-compose logs -f restaurant-service
   }
   ```
 
-#### Other Endpoints
+#### Branch Management
 
-- **GET /api/restaurants/{restaurantId}/statistics**: Get restaurant statistics
 - **GET /api/restaurants/{restaurantId}/branches**: Get restaurant branches
 - **GET /api/restaurants/{restaurantId}/branches/nearby**: Find nearby branches
   ```
   ?latitude=40.7128&longitude=-74.0060&distance=5.0
   ```
+
+#### Staff Management
+
 - **GET /api/restaurants/{restaurantId}/staff**: Get restaurant staff
 - **GET /api/restaurants/{restaurantId}/staff/position/{position}**: Get staff by position
-- **GET /api/health**: Health check endpoint
 
-## Event-Driven Communication
+#### Statistics
 
-The services communicate with each other through Kafka events:
+- **GET /api/restaurants/{restaurantId}/statistics**: Get restaurant statistics
 
-- Restaurant updates (name changes, capacity changes)
-- Table status changes (available, reserved, occupied)
-- User activities (registration, login)
+## Service Communication
 
-This allows for real-time updates and loose coupling between services.
+The services communicate with each other through Kafka events. Here are the main topics and their purposes:
 
-## Configuration
+### User Service Topics
 
-### Service Configuration
-Each service has its own application.properties file in the src/main/resources directory.
+- **user-events**: General user-related events
+- **user-registration**: User registration events
+- **user-login**: User login events
+- **user-profile**: User profile update events
 
-### Kafka Configuration
-The Kafka configuration is defined in the kafka-infrastructure directory:
-- docker-compose.yml: Sets up the Kafka infrastructure
-- config/kafka/server.properties: Kafka broker configuration
-- scripts/init-kafka.sh: Initializes Kafka topics
+### Restaurant Service Topics
 
-### Database Configuration
-MySQL databases are initialized with the scripts in the kafka-infrastructure/scripts/mysql directory:
-- init-restaurant-db.sql: Schema for the restaurant database
-- init-user-db.sql: Schema for the user database
+- **restaurant-events**: General restaurant-related events
+- **restaurant-update**: Restaurant information update events
+- **table-status**: Table status change events
+- **capacity-change**: Restaurant capacity change events
 
-## Docker Configuration
+### Future Implementation Topics
 
-The docker-compose.yml file includes services for:
-- Zookeeper
-- Kafka
-- MySQL database
+#### Reservation Service Topics
+- **reservation-events**: General reservation events
+- **reservation-create**: Reservation creation events
+- **reservation-update**: Reservation update events
+- **reservation-cancel**: Reservation cancellation events
+
+#### Notification Service Topics
+- **notification-events**: General notification events
+
+## Database Configuration
+
+### User Service Database
+- Host: localhost
+- Port: 3306
+- Database: user_service
+- Username: user_service
+- Password: user_password
+
+### Restaurant Service Database
+- Host: localhost
+- Port: 3307
+- Database: restaurant_service
+- Username: restaurant_service
+- Password: restaurant_password
 
 ## Security
 
-The platform implements JWT-based authentication. The user-service handles authentication and generates tokens that are used to secure endpoints in both services.
+- JWT-based authentication for user service
+- Role-based access control (ADMIN, USER)
+- Secure password hashing
+- Input validation and sanitization
+
+## Monitoring and Management
+
+- Kafdrop UI available at http://localhost:9000 for Kafka monitoring
+- Health check endpoints available for each service
+- Docker container logs for service monitoring
+
+## Future Enhancements
+
+1. Reservation Service Implementation
+   - Table reservation management
+   - Reservation confirmation
+   - Cancellation handling
+   - Waitlist management
+
+2. Notification Service Implementation
+   - Email notifications
+   - SMS notifications
+   - Push notifications
+   - Reservation reminders
+
+3. Payment Service Integration
+   - Payment processing
+   - Refund handling
+   - Payment history
+
+4. Review and Rating System
+   - Restaurant reviews
+   - User ratings
+   - Review moderation
+
+5. Analytics Dashboard
+   - Business intelligence
+   - Customer insights
+   - Performance metrics
