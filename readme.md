@@ -1,93 +1,252 @@
-# Kafka Microservices Demo
+# Restaurant Reservation Platform
 
-This project demonstrates a simple Kafka-based microservices architecture using Spring Boot. The application consists of a producer service, a consumer service, and a Kafka infrastructure setup with Docker.
+This project demonstrates a microservices architecture using Spring Boot and Kafka. The application consists of multiple services that communicate via Kafka messaging to provide a complete restaurant reservation system.
+
+## Project Overview
+
+The Restaurant Reservation Platform is designed to help restaurants manage their tables, reservations, and customers effectively. The platform uses event-driven architecture with Kafka to ensure real-time updates across services.
+
+### Key Features
+
+- Restaurant management (add, update, delete restaurants)
+- Table management with statuses and availability
+- User registration and authentication with JWT
+- Profile management for users
+- Restaurant search by location, cuisine type, and keywords
+- Operating hours management
+- Staff management by restaurant
+- Branch management with location-based search
+- Restaurant statistics for business intelligence
 
 ## Project Structure
 
-- **KafkaProducerApp**: Spring Boot application that produces messages to Kafka topics
-- **KafkaConsumer**: Spring Boot application that consumes messages from Kafka topics
-- **KafkaDocker**: Docker Compose configuration for setting up the Kafka infrastructure
+- **common**: Shared library with common code, DTOs, utilities, and constants
+- **restaurant-service**: Service for managing restaurant information and reservations
+- **user-service**: Service for managing user accounts and authentication
+- **kafka-infrastructure**: Docker Compose configuration for setting up the Kafka infrastructure
 
 ## Prerequisites
 
-- Java 17+ (Java 23 recommended as specified in the producer POM)
+- Java 17+
 - Docker and Docker Compose
 - Maven
 
 ## Getting Started
 
-### 1. Start the Kafka Infrastructure
+### 1. Build the Project
 
 ```bash
-cd KafkaDocker
+mvn clean package
+```
+
+### 2. Initialize Kafka Scripts
+
+```bash
+chmod +x kafka-infrastructure/scripts/init-kafka.sh
+```
+
+### 3. Start the Kafka Infrastructure
+
+```bash
+cd kafka-infrastructure
 docker-compose up -d
 ```
 
 This will start:
 - Zookeeper
 - Kafka broker
-- MySQL database
-- Kafdrop (Kafka UI for monitoring) accessible at http://localhost:9000
+- MySQL database with initialized schemas
+- Kafka initialization scripts
 
-### 2. Build and Run the Consumer Service
+### 4. Run the Services
 
-```bash
-cd KafkaConsumer
-./mvnw clean package
-java -jar target/KafkaConsumer-0.0.1.jar
-```
-
-### 3. Build and Run the Producer Service
+#### Start the User Service
 
 ```bash
-cd kafkaproducerapp
-./mvnw clean package
-java -jar target/kafkaproducerapp-0.0.1-SNAPSHOT.jar
+cd user-service
+java -jar target/user-service-0.0.1-SNAPSHOT.jar
 ```
 
-## Testing the Application
-
-Send a message to Kafka using the producer's REST endpoint:
+#### Start the Restaurant Service
 
 ```bash
-curl "http://localhost:8080/kafka/send?message=Hello%20Kafka"
+cd restaurant-service
+java -jar target/restaurant-service-0.0.1-SNAPSHOT.jar
 ```
 
-The consumer service should log the received message in its console output.
+## Available APIs
 
-## Available Endpoints
+### User Service APIs
 
-### Producer Service:
-- `GET /kafka/send?message={message}` - Send a string message to the "test-topic" Kafka topic
-- `POST /kafka/postItem` - Send a JSON model object to Kafka (currently commented out in the code)
+#### Authentication
 
-## Monitoring
+- **POST /api/auth/login**: Authenticate a user and receive a JWT token
+  ```json
+  {
+    "username": "string",
+    "password": "string"
+  }
+  ```
 
-You can monitor Kafka topics and messages using Kafdrop at http://localhost:9000
+#### User Management
+
+- **POST /api/users/register**: Register a new user
+  ```json
+  {
+    "username": "string",
+    "email": "string",
+    "password": "string",
+    "firstName": "string",
+    "lastName": "string",
+    "phoneNumber": "string"
+  }
+  ```
+- **GET /api/users/{id}**: Get user by ID
+- **GET /api/users**: Get all users (admin only)
+- **DELETE /api/users/{id}**: Delete a user (admin only)
+
+#### Profile Management
+
+- **GET /api/users/{id}/profile**: Get user profile
+- **PUT /api/users/{id}/profile**: Update user profile
+  ```json
+  {
+    "firstName": "string",
+    "lastName": "string",
+    "phoneNumber": "string",
+    "address": "string",
+    "city": "string",
+    "state": "string",
+    "zipCode": "string",
+    "country": "string",
+    "preferences": "string"
+  }
+  ```
+
+### Restaurant Service APIs
+
+#### Restaurant Management
+
+- **GET /api/restaurants/public/all**: Get all active restaurants
+- **GET /api/restaurants/public**: Get paginated list of active restaurants
+- **GET /api/restaurants/public/{id}**: Get restaurant by ID
+- **GET /api/restaurants/public/search**: Search restaurants by criteria
+  ```
+  ?keyword=italian&page=0&size=10
+  ```
+- **GET /api/restaurants/public/nearby**: Find nearby restaurants
+  ```
+  ?latitude=40.7128&longitude=-74.0060&distance=5.0
+  ```
+- **POST /api/restaurants**: Create a new restaurant
+  ```json
+  {
+    "name": "string",
+    "description": "string",
+    "address": "string",
+    "city": "string",
+    "state": "string",
+    "zipCode": "string",
+    "country": "string",
+    "phoneNumber": "string",
+    "email": "string",
+    "website": "string",
+    "cuisineType": "string",
+    "totalCapacity": 0,
+    "latitude": 0,
+    "longitude": 0
+  }
+  ```
+- **PUT /api/restaurants/{id}**: Update a restaurant
+- **PATCH /api/restaurants/{id}/active**: Activate or deactivate a restaurant
+  ```
+  ?active=true
+  ```
+- **DELETE /api/restaurants/{id}**: Delete a restaurant
+
+#### Table Management
+
+- **GET /api/restaurants/{restaurantId}/tables**: Get all tables for a restaurant
+- **GET /api/restaurants/{restaurantId}/tables/available**: Get available tables
+- **GET /api/restaurants/{restaurantId}/tables/{tableId}**: Get table by ID
+- **POST /api/restaurants/{restaurantId}/tables**: Create a new table
+  ```json
+  {
+    "tableNumber": "string",
+    "capacity": 0,
+    "status": "string",
+    "location": "string",
+    "accessible": true,
+    "shape": "string",
+    "minCapacity": 0,
+    "combinable": true,
+    "specialFeatures": "string"
+  }
+  ```
+- **PUT /api/restaurants/{restaurantId}/tables/{tableId}**: Update a table
+- **PATCH /api/restaurants/{restaurantId}/tables/{tableId}/status**: Update table status
+  ```
+  ?status=AVAILABLE&reservationId=string
+  ```
+- **DELETE /api/restaurants/{restaurantId}/tables/{tableId}**: Delete a table
+
+#### Operating Hours Management
+
+- **GET /api/restaurants/{restaurantId}/operating-hours**: Get operating hours
+- **PUT /api/restaurants/{restaurantId}/operating-hours/{day}**: Update operating hours
+  ```json
+  {
+    "openTime": "09:00",
+    "closeTime": "22:00",
+    "closed": false
+  }
+  ```
+
+#### Other Endpoints
+
+- **GET /api/restaurants/{restaurantId}/statistics**: Get restaurant statistics
+- **GET /api/restaurants/{restaurantId}/branches**: Get restaurant branches
+- **GET /api/restaurants/{restaurantId}/branches/nearby**: Find nearby branches
+  ```
+  ?latitude=40.7128&longitude=-74.0060&distance=5.0
+  ```
+- **GET /api/restaurants/{restaurantId}/staff**: Get restaurant staff
+- **GET /api/restaurants/{restaurantId}/staff/position/{position}**: Get staff by position
+- **GET /api/health**: Health check endpoint
+
+## Event-Driven Communication
+
+The services communicate with each other through Kafka events:
+
+- Restaurant updates (name changes, capacity changes)
+- Table status changes (available, reserved, occupied)
+- User activities (registration, login)
+
+This allows for real-time updates and loose coupling between services.
 
 ## Configuration
 
-### Producer Configuration
-- Bootstrap server: localhost:9092
-- Key/Value serializer: StringSerializer
+### Service Configuration
+Each service has its own application.properties file in the src/main/resources directory.
 
-### Consumer Configuration
-- Bootstrap server: kafka:9092 
-- Group ID: my-group
-- Key/Value deserializer: StringDeserializer
-- Auto-offset-reset: earliest
+### Kafka Configuration
+The Kafka configuration is defined in the kafka-infrastructure directory:
+- docker-compose.yml: Sets up the Kafka infrastructure
+- config/kafka/server.properties: Kafka broker configuration
+- scripts/init-kafka.sh: Initializes Kafka topics
+
+### Database Configuration
+MySQL databases are initialized with the scripts in the kafka-infrastructure/scripts/mysql directory:
+- init-restaurant-db.sql: Schema for the restaurant database
+- init-user-db.sql: Schema for the user database
 
 ## Docker Configuration
 
 The docker-compose.yml file includes services for:
 - Zookeeper
 - Kafka
-- Spring Boot applications
 - MySQL database
-- Kafdrop UI
 
-## Notes
+## Security
 
-The default topics used in the application are:
-- test-topic: For simple string messages
-- models-topic: For JSON model objects (commented out in the code)
+The platform implements JWT-based authentication. The user-service handles authentication and generates tokens that are used to secure endpoints in both services.
