@@ -111,12 +111,12 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
 (@admin_role_id, @restaurant_read_permission);
 
 -- Create an admin user (password: admin123)
-INSERT IGNORE INTO users (id, username, email, password, enabled) VALUES 
-(UUID(), 'admin', 'admin@example.com', '$2a$10$EblZqNptyYvcLm/VwDCVAuBjzZOI7khzdyGPBr08PpIi0na624b8.', TRUE);
+-- INSERT IGNORE INTO users (id, username, email, password, enabled) VALUES 
+-- (UUID(), 'admin', 'admin@example.com', '$2a$10$EblZqNptyYvcLm/VwDCVAuBjzZOI7khzdyGPBr08PpIi0na624b8.', TRUE);
 
-SET @admin_user_id = (SELECT id FROM users WHERE username = 'admin');
-INSERT IGNORE INTO user_roles (user_id, role_id) VALUES 
-(@admin_user_id, @admin_role_id);
+-- SET @admin_user_id = (SELECT id FROM users WHERE username = 'admin');
+-- INSERT IGNORE INTO user_roles (user_id, role_id) VALUES 
+-- (@admin_user_id, @admin_role_id);
 
 -- Create indices for faster queries
 CREATE INDEX idx_users_username ON users(username);

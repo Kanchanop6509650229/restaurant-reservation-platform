@@ -1,26 +1,45 @@
 package com.restaurant.user.config;
 
-import com.restaurant.user.domain.models.Permission;
-import com.restaurant.user.domain.models.Role;
-import com.restaurant.user.domain.repositories.PermissionRepository;
-import com.restaurant.user.domain.repositories.RoleRepository;
+import java.util.Arrays;
+import java.util.List;
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
+import com.restaurant.user.domain.models.Permission;
+import com.restaurant.user.domain.models.Role;
+import com.restaurant.user.domain.models.User;
+import com.restaurant.user.domain.repositories.PermissionRepository;
+import com.restaurant.user.domain.repositories.RoleRepository;
+import com.restaurant.user.domain.repositories.UserRepository;
 
 @Configuration
 public class DataInitializer {
 
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PermissionRepository permissionRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    // เพิ่ม constructor ที่รับ dependencies ทั้งหมด
+    public DataInitializer(UserRepository userRepository, 
+                          RoleRepository roleRepository,
+                          PermissionRepository permissionRepository,
+                          PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.permissionRepository = permissionRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
     @Bean
     @Profile("!test")
-    public CommandLineRunner initData(RoleRepository roleRepository, PermissionRepository permissionRepository) {
+    public CommandLineRunner initData() {
         return args -> {
-            // Create permissions if they don't exist
+            // สร้าง permissions
             List<String> permissionNames = Arrays.asList(
                     "user:read", "user:write", "user:delete",
                     "profile:read", "profile:write",
@@ -34,7 +53,7 @@ public class DataInitializer {
                 }
             }
 
-            // Create roles if they don't exist
+            // สร้าง roles
             if (!roleRepository.findByName("USER").isPresent()) {
                 Role userRole = new Role("USER", "Standard user role");
                 userRole.addPermission(permissionRepository.findByName("user:read").get());
@@ -53,6 +72,23 @@ public class DataInitializer {
                 adminRole.addPermission(permissionRepository.findByName("profile:write").get());
                 adminRole.addPermission(permissionRepository.findByName("restaurant:read").get());
                 roleRepository.save(adminRole);
+            }
+
+            // สร้าง admin user
+            if (!userRepository.existsByUsername("admin")) {
+                User adminUser = new User();
+                adminUser.setUsername("admin");
+                adminUser.setEmail("admin@example.com");
+                adminUser.setPassword(passwordEncoder.encode("admin123"));
+                adminUser.setEnabled(true);
+                
+                // กำหนด ADMIN role
+                Role adminRole = roleRepository.findByName("ADMIN")
+                        .orElseThrow(() -> new RuntimeException("Admin role not found"));
+                adminUser.addRole(adminRole);
+                
+                userRepository.save(adminUser);
+                System.out.println("Default admin user created with username: admin and password: admin123");
             }
         };
     }
