@@ -19,6 +19,10 @@ public class AuthenticationException extends BaseException {
         return new AuthenticationException("Account is locked");
     }
     
+    public static AuthenticationException accountDisabled() {
+        return new AuthenticationException("Account is disabled");
+    }
+    
     public static AuthenticationException accessDenied() {
         return new AuthenticationException("Access denied");
     }
