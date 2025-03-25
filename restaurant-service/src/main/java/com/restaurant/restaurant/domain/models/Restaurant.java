@@ -17,6 +17,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "restaurants")
@@ -47,6 +48,7 @@ public class Restaurant {
     private String website;
     
     // Geo-location for mapping and distance calculation
+    @Transient
     private Point location;
     
     private double latitude;

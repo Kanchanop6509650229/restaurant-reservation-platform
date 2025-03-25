@@ -3,10 +3,10 @@ package com.restaurant.restaurant.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -27,6 +27,7 @@ import jakarta.transaction.Transactional;
 @Service
 public class RestaurantService {
 
+    private static final Logger logger = LoggerFactory.getLogger(RestaurantService.class);
     private final RestaurantRepository restaurantRepository;
     private final OperatingHoursService operatingHoursService;
     private final RestaurantEventProducer restaurantEventProducer;
@@ -101,9 +102,9 @@ public class RestaurantService {
             restaurant.setLongitude(createRequest.getLongitude());
             
             // Create Point geometry for spatial queries
-            Point point = geometryFactory.createPoint(
-                    new Coordinate(createRequest.getLongitude(), createRequest.getLatitude()));
-            restaurant.setLocation(point);
+            // Point point = geometryFactory.createPoint(
+            //         new Coordinate(createRequest.getLongitude(), createRequest.getLatitude()));
+            // restaurant.setLocation(point);
         }
 
         Restaurant savedRestaurant = restaurantRepository.save(restaurant);
@@ -119,75 +120,80 @@ public class RestaurantService {
         Restaurant restaurant = restaurantRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", id));
 
-        // Track changes for event publishing
-        if (updateRequest.getName() != null && !updateRequest.getName().equals(restaurant.getName())) {
-            String oldValue = restaurant.getName();
-            restaurant.setName(updateRequest.getName());
-            
-            // Publish restaurant updated event
-            restaurantEventProducer.publishRestaurantUpdatedEvent(
-                    new RestaurantUpdatedEvent(id, "name", oldValue, updateRequest.getName()));
-        }
-
-        if (updateRequest.getDescription() != null) {
-            restaurant.setDescription(updateRequest.getDescription());
-        }
-
-        if (updateRequest.getAddress() != null) {
-            restaurant.setAddress(updateRequest.getAddress());
-        }
-
-        if (updateRequest.getCity() != null) {
-            restaurant.setCity(updateRequest.getCity());
-        }
-
-        if (updateRequest.getState() != null) {
-            restaurant.setState(updateRequest.getState());
-        }
-
-        if (updateRequest.getZipCode() != null) {
-            restaurant.setZipCode(updateRequest.getZipCode());
-        }
-
-        if (updateRequest.getCountry() != null) {
-            restaurant.setCountry(updateRequest.getCountry());
-        }
-
-        if (updateRequest.getPhoneNumber() != null) {
-            restaurant.setPhoneNumber(updateRequest.getPhoneNumber());
-        }
-
-        if (updateRequest.getEmail() != null) {
-            restaurant.setEmail(updateRequest.getEmail());
-        }
-
-        if (updateRequest.getWebsite() != null) {
-            restaurant.setWebsite(updateRequest.getWebsite());
-        }
-
-        if (updateRequest.getCuisineType() != null) {
-            restaurant.setCuisineType(updateRequest.getCuisineType());
-        }
-
-        if (updateRequest.getTotalCapacity() != 0 && 
-            updateRequest.getTotalCapacity() != restaurant.getTotalCapacity()) {
-            int oldCapacity = restaurant.getTotalCapacity();
-            restaurant.setTotalCapacity(updateRequest.getTotalCapacity());
-            
-            // Publish capacity changed event
-            restaurantEventProducer.publishCapacityChangedEvent(
-                    id, oldCapacity, updateRequest.getTotalCapacity(), "Manual Update");
-        }
-
-        // Update geolocation if provided
-        if (updateRequest.getLatitude() != 0 && updateRequest.getLongitude() != 0) {
-            restaurant.setLatitude(updateRequest.getLatitude());
-            restaurant.setLongitude(updateRequest.getLongitude());
-            
-            // Update Point geometry
-            Point point = geometryFactory.createPoint(
-                    new Coordinate(updateRequest.getLongitude(), updateRequest.getLatitude()));
-            restaurant.setLocation(point);
+        try {
+            // Track changes for event publishing
+            if (updateRequest.getName() != null && !updateRequest.getName().equals(restaurant.getName())) {
+                String oldValue = restaurant.getName();
+                restaurant.setName(updateRequest.getName());
+                
+                // Publish restaurant updated event
+                restaurantEventProducer.publishRestaurantUpdatedEvent(
+                        new RestaurantUpdatedEvent(id, "name", oldValue, updateRequest.getName()));
+            }
+    
+            if (updateRequest.getDescription() != null) {
+                restaurant.setDescription(updateRequest.getDescription());
+            }
+    
+            if (updateRequest.getAddress() != null) {
+                restaurant.setAddress(updateRequest.getAddress());
+            }
+    
+            if (updateRequest.getCity() != null) {
+                restaurant.setCity(updateRequest.getCity());
+            }
+    
+            if (updateRequest.getState() != null) {
+                restaurant.setState(updateRequest.getState());
+            }
+    
+            if (updateRequest.getZipCode() != null) {
+                restaurant.setZipCode(updateRequest.getZipCode());
+            }
+    
+            if (updateRequest.getCountry() != null) {
+                restaurant.setCountry(updateRequest.getCountry());
+            }
+    
+            if (updateRequest.getPhoneNumber() != null) {
+                restaurant.setPhoneNumber(updateRequest.getPhoneNumber());
+            }
+    
+            if (updateRequest.getEmail() != null) {
+                restaurant.setEmail(updateRequest.getEmail());
+            }
+    
+            if (updateRequest.getWebsite() != null) {
+                restaurant.setWebsite(updateRequest.getWebsite());
+            }
+    
+            if (updateRequest.getCuisineType() != null) {
+                restaurant.setCuisineType(updateRequest.getCuisineType());
+            }
+    
+            if (updateRequest.getTotalCapacity() != 0 && 
+                updateRequest.getTotalCapacity() != restaurant.getTotalCapacity()) {
+                int oldCapacity = restaurant.getTotalCapacity();
+                restaurant.setTotalCapacity(updateRequest.getTotalCapacity());
+                
+                // Publish capacity changed event
+                restaurantEventProducer.publishCapacityChangedEvent(
+                        id, oldCapacity, updateRequest.getTotalCapacity(), "Manual Update");
+            }
+    
+            // Update geolocation if provided
+            if (updateRequest.getLatitude() != 0 && updateRequest.getLongitude() != 0) {
+                restaurant.setLatitude(updateRequest.getLatitude());
+                restaurant.setLongitude(updateRequest.getLongitude());
+                
+                // Update Point geometry
+                // Point point = geometryFactory.createPoint(
+                //         new Coordinate(updateRequest.getLongitude(), updateRequest.getLatitude()));
+                // restaurant.setLocation(point);
+            }
+        } catch (Exception e) {
+            // Log the error but continue with the update
+            logger.error("Error publishing event during restaurant update: {}", e.getMessage(), e);
         }
 
         Restaurant updatedRestaurant = restaurantRepository.save(restaurant);
