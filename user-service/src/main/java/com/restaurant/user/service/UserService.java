@@ -1,5 +1,11 @@
 package com.restaurant.user.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
 import com.restaurant.common.dto.user.UserDTO;
 import com.restaurant.common.events.user.UserRegisteredEvent;
 import com.restaurant.common.exceptions.EntityNotFoundException;
@@ -10,12 +16,8 @@ import com.restaurant.user.domain.repositories.RoleRepository;
 import com.restaurant.user.domain.repositories.UserRepository;
 import com.restaurant.user.dto.UserRegistrationRequest;
 import com.restaurant.user.kafka.producers.UserEventProducer;
-import jakarta.transaction.Transactional;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import jakarta.transaction.Transactional;
 
 @Service
 public class UserService {
@@ -113,7 +115,28 @@ public class UserService {
                 user.getUsername(),
                 user.getEmail()
         );
-        // Set other fields as needed
+        
+        // Set additional fields
+        dto.setEnabled(user.isEnabled());
+        
+        // Set profile information if available
+        if (user.getProfile() != null) {
+            dto.setFirstName(user.getProfile().getFirstName());
+            dto.setLastName(user.getProfile().getLastName());
+            dto.setPhoneNumber(user.getProfile().getPhoneNumber());
+        }
+        
+        // Set time information
+        dto.setCreatedAt(user.getCreatedAt());
+        dto.setUpdatedAt(user.getUpdatedAt());
+        
+        // Set roles if available
+        if (user.getRoles() != null && !user.getRoles().isEmpty()) {
+            dto.setRoles(user.getRoles().stream()
+                    .map(Role::getName)
+                    .collect(Collectors.toSet()));
+        }
+        
         return dto;
     }
 }
