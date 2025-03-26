@@ -60,14 +60,17 @@ public class AuthService {
                 userDetails = (UserDetails) authentication.getPrincipal();
                 String token = jwtTokenProvider.generateToken(userDetails);
                 
+                // Get user ID
+                String userId = userDetailsService.getUserIdByUsername(userDetails.getUsername());
+                
                 // Publish login event
                 userEventProducer.publishUserLoggedInEvent(new UserLoggedInEvent(
-                        userDetailsService.getUserIdByUsername(userDetails.getUsername()),
+                        userId,
                         userDetails.getUsername(),
                         getClientIP(request)
                 ));
                 
-                return new LoginResponse(token, "Authentication successful");
+                return new LoginResponse(token, "Authentication successful", userId);
             } catch (BadCredentialsException e) {
                 logger.error("Bad credentials for user: {}", loginRequest.getUsername());
                 throw AuthenticationException.invalidCredentials();

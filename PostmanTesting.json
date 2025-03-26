@@ -1,0 +1,1441 @@
+{
+	"info": {
+		"_postman_id": "YOUR_COLLECTION_ID",
+		"name": "Restaurant Reservation Platform API Tests",
+		"description": "ชุดทดสอบ API สำหรับโปรเจกต์ Restaurant Reservation Platform ทั้งหมด ประกอบด้วย User Service, Restaurant Service และ Reservation Service",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "User Service",
+			"description": "API ที่เกี่ยวข้องกับการจัดการผู้ใช้และการยืนยันตัวตน",
+			"item": [
+				{
+					"name": "Auth",
+					"item": [
+						{
+							"name": "Register New User",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"username\": \"testuser_{{$randomInt}}\",\n    \"password\": \"password123\",\n    \"email\": \"testuser_{{$randomInt}}@example.com\",\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"phoneNumber\": \"1234567890\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrlUser}}/api/users/register",
+									"host": [
+										"{{baseUrlUser}}"
+									],
+									"path": [
+										"api",
+										"auth",
+										"register"
+									]
+								},
+								"description": "ลงทะเบียนผู้ใช้ใหม่"
+							},
+							"response": []
+						},
+						{
+							"name": "Login User",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+												"// 1. Parse JSON response body",
+												"const responseBody = pm.response.json();",
+												"",
+												"// 2. Test: Check for overall success in response",
+												"pm.test(\"API call successful (success: true)\", function () {",
+												"    pm.expect(responseBody.success).to.be.true;",
+												"});",
+												"",
+												"// 3. Test: Check if 'data' object exists",
+												"pm.test(\"Response data object exists\", function () {",
+												"    pm.expect(responseBody.data).to.exist.and.not.be.null;",
+												"});",
+												"",
+												"// 4. Test: Check if token exists within 'data' and is a non-empty string",
+												"pm.test(\"Token is received and is not empty\", function () {",
+												"    // Check if data object exists first (important!)",
+												"    pm.expect(responseBody.data).to.exist.and.not.be.null;",
+												"    // Now check the token inside data",
+												"    pm.expect(responseBody.data.token).to.be.a('string', \"Token should be a string\").and.not.be.empty;",
+												"});",
+												"",
+												"// 5. Set collection variable 'authToken' if token exists",
+												"if (responseBody.data && responseBody.data.token) {",
+												"    pm.collectionVariables.set(\"authToken\", responseBody.data.token);",
+												"    console.log(\"authToken successfully set in collection variables.\");",
+												"} else {",
+												"    console.error(\"Failed to find token in response body to set collection variable.\");",
+												"    // Optionally fail the test run if token is mandatory",
+												"    // pm.expect.fail(\"Token not found in response data\");",
+												"}",
+												"",
+												"// --- เพิ่มเติม: ดึง User ID (ถ้ามี) ---",
+												"// สมมติว่า API ส่ง userId กลับมาใน data ด้วย (ต้องปรับตาม API จริง)",
+												"if (responseBody.data && responseBody.data.userId) {",
+												"    pm.collectionVariables.set(\"loggedInUserId\", responseBody.data.userId);",
+												"    console.log(\"loggedInUserId set in collection variables.\");",
+												"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"username\": \"admin\", // หรือ username ที่ลงทะเบียนไว้\n    \"password\": \"admin123\" // หรือ password ที่ลงทะเบียนไว้\n}"
+								},
+								"url": {
+									"raw": "{{baseUrlUser}}/api/auth/login",
+									"host": [
+										"{{baseUrlUser}}"
+									],
+									"path": [
+										"api",
+										"auth",
+										"login"
+									]
+								},
+								"description": "เข้าสู่ระบบเพื่อรับ JWT Token"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "User",
+					"item": [
+						{
+							"name": "Get Current User Info",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlUser}}/api/users/me",
+									"host": [
+										"{{baseUrlUser}}"
+									],
+									"path": [
+										"api",
+										"users",
+										"me"
+									]
+								},
+								"description": "ดึงข้อมูลผู้ใช้ที่กำลังล็อกอินอยู่ (ต้องใช้ Token)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get User by ID",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlUser}}/api/users/{{userId}}",
+									"host": [
+										"{{baseUrlUser}}"
+									],
+									"path": [
+										"api",
+										"users",
+										"{{userId}}"
+									],
+									"variable": [
+										{
+											"key": "userId",
+											"value": "{{loggedInUserId}}",
+											"description": "ID ของผู้ใช้ที่ต้องการดึงข้อมูล (ใช้ ID จาก Login หรือตัวแปรอื่น)"
+										}
+									]
+								},
+								"description": "ดึงข้อมูลผู้ใช้ตาม ID (ต้องใช้ Token, อาจต้องมีสิทธิ์ Admin สำหรับดูคนอื่น)"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Current User Profile",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"firstName\": \"UpdatedFirstName\",\n    \"lastName\": \"UpdatedLastName\",\n    \"phoneNumber\": \"0987654321\",\n    \"preferences\": \"ชอบอาหารไทย ไม่เผ็ด\",\n    \"allergies\": \"แพ้กุ้ง\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrlUser}}/api/users/me/profile",
+									"host": [
+										"{{baseUrlUser}}"
+									],
+									"path": [
+										"api",
+										"users",
+										"me",
+										"profile"
+									]
+								},
+								"description": "อัปเดตข้อมูลโปรไฟล์ของผู้ใช้ที่กำลังล็อกอิน (ต้องใช้ Token)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get All Users (Admin)",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlUser}}/api/users?page=0&size=10&sortBy=username&sortDir=ASC",
+									"host": [
+										"{{baseUrlUser}}"
+									],
+									"path": [
+										"api",
+										"users"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "0"
+										},
+										{
+											"key": "size",
+											"value": "10"
+										},
+										{
+											"key": "sortBy",
+											"value": "username"
+										},
+										{
+											"key": "sortDir",
+											"value": "ASC"
+										}
+									]
+								},
+								"description": "ดึงรายชื่อผู้ใช้ทั้งหมด (อาจต้องใช้สิทธิ์ Admin และ Token)"
+							},
+							"response": []
+						}
+					]
+				}
+			],
+			"variable": [
+				{
+					"key": "baseUrlUser",
+					"value": "http://localhost:8081",
+					"type": "string"
+				},
+				{
+					"key": "userId",
+					"value": "1",
+					"type": "string"
+				}
+			]
+		},
+		{
+			"name": "Restaurant Service",
+			"description": "API ที่เกี่ยวข้องกับการจัดการข้อมูลร้านอาหาร โต๊ะ เวลาทำการ และสาขา",
+			"item": [
+				{
+					"name": "Health Check",
+					"item": [
+						{
+							"name": "Check Service Health",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/health",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"health"
+									]
+								},
+								"description": "ตรวจสอบสถานะของ Service"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Restaurants",
+					"item": [
+						{
+							"name": "Create Restaurant",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"ร้านอาหารตัวอย่าง {{$randomInt}}\",\n    \"description\": \"คำอธิบายร้านอาหาร\",\n    \"cuisineType\": \"อาหารไทย\",\n    \"address\": \"123 ถนน ตัวอย่าง แขวง ตัวอย่าง เขต ตัวอย่าง กรุงเทพฯ 10110\",\n    \"latitude\": 13.7563,\n    \"longitude\": 100.5018,\n    \"phoneNumber\": \"021234567\",\n    \"website\": \"http://example-restaurant.com\",\n    \"ownerId\": {{loggedInUserId}} \n}"
+								},
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/restaurants",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"api",
+										"restaurants"
+									]
+								},
+								"description": "สร้างร้านอาหารใหม่ (อาจต้องใช้ Token และสิทธิ์)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get All Restaurants",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/restaurants?page=0&size=10&sortBy=name&sortDir=ASC",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"api",
+										"restaurants"
+									],
+									"query": [
+										{
+											"key": "name",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "cuisine",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "location",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "radius",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": "0"
+										},
+										{
+											"key": "size",
+											"value": "10"
+										},
+										{
+											"key": "sortBy",
+											"value": "name"
+										},
+										{
+											"key": "sortDir",
+											"value": "ASC"
+										}
+									]
+								},
+								"description": "ดึงรายชื่อร้านอาหารทั้งหมด พร้อมตัวเลือกการกรองและ phân trang"
+							},
+							"response": []
+						},
+						{
+							"name": "Search Restaurants",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"ตัวอย่าง\",\n    \"cuisineType\": \"อาหารไทย\",\n    \"latitude\": 13.75,\n    \"longitude\": 100.50,\n    \"radiusKm\": 5 \n}"
+								},
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/search?page=0&size=10",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"api",
+										"restaurants",
+										"search"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "0"
+										},
+										{
+											"key": "size",
+											"value": "10"
+										}
+									]
+								},
+								"description": "ค้นหาร้านอาหารตามเงื่อนไขที่ซับซ้อนขึ้น"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Restaurant by ID",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"// สามารถตั้งค่าตัวแปร restaurantId จาก response ได้ที่นี่ หากต้องการใช้ใน request อื่น",
+											"// var jsonData = pm.response.json();",
+											"// pm.collectionVariables.set(\"restaurantId\", jsonData.id);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"api",
+										"restaurants",
+										"{{restaurantId}}"
+									]
+								},
+								"description": "ดึงข้อมูลร้านอาหารตาม ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Restaurant",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"ร้านอาหารตัวอย่าง อัปเดต\",\n    \"description\": \"คำอธิบายร้านอาหาร (อัปเดต)\",\n    \"cuisineType\": \"อาหารอิตาเลียน\",\n    \"address\": \"456 ถนน อัปเดต แขวง อัปเดต เขต อัปเดต กรุงเทพฯ 10220\",\n    \"latitude\": 13.7600,\n    \"longitude\": 100.5100,\n    \"phoneNumber\": \"029876543\",\n    \"website\": \"http://updated-example-restaurant.com\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"api",
+										"restaurants",
+										"{{restaurantId}}"
+									]
+								},
+								"description": "อัปเดตข้อมูลร้านอาหาร (อาจต้องใช้ Token และสิทธิ์เจ้าของ)"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Restaurant",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"api",
+										"restaurants",
+										"{{restaurantId}}"
+									]
+								},
+								"description": "ลบร้านอาหาร (อาจต้องใช้ Token และสิทธิ์เจ้าของ/Admin)"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Tables",
+					"item": [
+						{
+							"name": "Add Table to Restaurant",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"tableNumber\": \"A{{$randomInt}}\",\n    \"capacity\": 4,\n    \"status\": \"AVAILABLE\", // AVAILABLE, RESERVED, OCCUPIED, MAINTENANCE\n    \"locationDescription\": \"ใกล้หน้าต่าง\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/tables",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"api",
+										"restaurants",
+										"{{restaurantId}}",
+										"tables"
+									]
+								},
+								"description": "เพิ่มโต๊ะใหม่ให้กับร้านอาหาร (อาจต้องใช้ Token และสิทธิ์)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Tables for Restaurant",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/tables?page=0&size=20",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"api",
+										"restaurants",
+										"{{restaurantId}}",
+										"tables"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "0"
+										},
+										{
+											"key": "size",
+											"value": "20"
+										}
+									]
+								},
+								"description": "ดึงรายชื่อโต๊ะทั้งหมดของร้านอาหาร"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Table by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/tables/{{tableId}}",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"api",
+										"restaurants",
+										"{{restaurantId}}",
+										"tables",
+										"{{tableId}}"
+									]
+								},
+								"description": "ดึงข้อมูลโต๊ะตาม ID ของโต๊ะและร้านอาหาร"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Table",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"capacity\": 6,\n    \"status\": \"MAINTENANCE\",\n    \"locationDescription\": \"ชั้น 2\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/tables/{{tableId}}",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"api",
+										"restaurants",
+										"{{restaurantId}}",
+										"tables",
+										"{{tableId}}"
+									]
+								},
+								"description": "อัปเดตข้อมูลโต๊ะ (อาจต้องใช้ Token และสิทธิ์)"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Table",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/tables/{{tableId}}",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"api",
+										"restaurants",
+										"{{restaurantId}}",
+										"tables",
+										"{{tableId}}"
+									]
+								},
+								"description": "ลบโต๊ะ (อาจต้องใช้ Token และสิทธิ์)"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Operating Hours",
+					"item": [
+						{
+							"name": "Get Operating Hours",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/operating-hours",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"api",
+										"restaurants",
+										"{{restaurantId}}",
+										"operating-hours"
+									]
+								},
+								"description": "ดึงข้อมูลเวลาทำการของร้านอาหาร"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Operating Hours",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"operatingHours\": [\n        {\n            \"dayOfWeek\": \"MONDAY\",\n            \"openTime\": \"10:00\",\n            \"closeTime\": \"22:00\"\n        },\n        {\n            \"dayOfWeek\": \"TUESDAY\",\n            \"openTime\": \"10:00\",\n            \"closeTime\": \"22:00\"\n        },\n         {\n            \"dayOfWeek\": \"WEDNESDAY\",\n            \"openTime\": \"10:00\",\n            \"closeTime\": \"22:00\"\n        },\n        {\n            \"dayOfWeek\": \"THURSDAY\",\n            \"openTime\": \"10:00\",\n            \"closeTime\": \"22:00\"\n        },\n        {\n            \"dayOfWeek\": \"FRIDAY\",\n            \"openTime\": \"10:00\",\n            \"closeTime\": \"23:00\"\n        },\n        {\n            \"dayOfWeek\": \"SATURDAY\",\n            \"openTime\": \"11:00\",\n            \"closeTime\": \"23:00\"\n        }\n        // SUNDAY is closed by default if not provided\n    ]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/operating-hours",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"api",
+										"restaurants",
+										"{{restaurantId}}",
+										"operating-hours"
+									]
+								},
+								"description": "อัปเดตเวลาทำการของร้านอาหาร (อาจต้องใช้ Token และสิทธิ์)"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Statistics",
+					"item": [
+						{
+							"name": "Get Restaurant Statistics",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/statistics",
+									"host": [
+										"{{baseUrlRestaurant}}"
+									],
+									"path": [
+										"api",
+										"restaurants",
+										"{{restaurantId}}",
+										"statistics"
+									]
+								},
+								"description": "ดึงข้อมูลสถิติของร้านอาหาร (เช่น จำนวนการจอง, เรตติ้งเฉลี่ย) (อาจต้องใช้ Token และสิทธิ์)"
+							},
+							"response": []
+						}
+					]
+				}
+			],
+			"variable": [
+				{
+					"key": "baseUrlRestaurant",
+					"value": "http://localhost:8082",
+					"type": "string"
+				},
+				{
+					"key": "restaurantId",
+					"value": "1",
+					"type": "string"
+				},
+				{
+					"key": "tableId",
+					"value": "1",
+					"type": "string"
+				}
+			]
+		},
+		{
+			"name": "Reservation Service",
+			"description": "API ที่เกี่ยวข้องกับการจัดการการจอง, คิว, และตารางเวลา",
+			"item": [
+				{
+					"name": "Health Check",
+					"item": [
+						{
+							"name": "Check Service Health",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlReservation}}/health",
+									"host": [
+										"{{baseUrlReservation}}"
+									],
+									"path": [
+										"health"
+									]
+								},
+								"description": "ตรวจสอบสถานะของ Service"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Reservations",
+					"item": [
+						{
+							"name": "Check Table Availability",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlReservation}}/api/reservations/availability?restaurantId={{restaurantId}}&date={{currentDate}}&time={{currentTime}}&partySize=4",
+									"host": [
+										"{{baseUrlReservation}}"
+									],
+									"path": [
+										"api",
+										"reservations",
+										"availability"
+									],
+									"query": [
+										{
+											"key": "restaurantId",
+											"value": "{{restaurantId}}"
+										},
+										{
+											"key": "date",
+											"value": "{{currentDate}}",
+											"description": "YYYY-MM-DD"
+										},
+										{
+											"key": "time",
+											"value": "{{currentTime}}",
+											"description": "HH:MM"
+										},
+										{
+											"key": "partySize",
+											"value": "4"
+										}
+									]
+								},
+								"description": "ตรวจสอบว่ามีโต๊ะว่างสำหรับวันที่ เวลา และจำนวนคนที่ระบุหรือไม่"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Reservation",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"restaurantId\": {{restaurantId}},\n    \"userId\": {{loggedInUserId}},\n    \"reservationTime\": \"{{currentDate}}T{{currentTime}}:00\", \n    \"partySize\": 4,\n    \"specialRequests\": \"ขอโต๊ะริมหน้าต่าง ถ้าเป็นไปได้\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrlReservation}}/api/reservations",
+									"host": [
+										"{{baseUrlReservation}}"
+									],
+									"path": [
+										"api",
+										"reservations"
+									]
+								},
+								"description": "สร้างการจองใหม่ (ต้องใช้ Token)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Reservations",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlReservation}}/api/reservations?userId={{loggedInUserId}}&page=0&size=10",
+									"host": [
+										"{{baseUrlReservation}}"
+									],
+									"path": [
+										"api",
+										"reservations"
+									],
+									"query": [
+										{
+											"key": "userId",
+											"value": "{{loggedInUserId}}",
+											"description": "กรองตาม User ID (จำเป็นสำหรับผู้ใช้ทั่วไป)"
+										},
+										{
+											"key": "restaurantId",
+											"value": null,
+											"disabled": true,
+											"description": "กรองตาม Restaurant ID (อาจใช้โดย Admin หรือเจ้าของร้าน)"
+										},
+										{
+											"key": "status",
+											"value": null,
+											"disabled": true,
+											"description": "กรองตามสถานะ (e.g., PENDING, CONFIRMED, CANCELLED)"
+										},
+										{
+											"key": "date",
+											"value": null,
+											"disabled": true,
+											"description": "กรองตามวันที่ (YYYY-MM-DD)"
+										},
+										{
+											"key": "page",
+											"value": "0"
+										},
+										{
+											"key": "size",
+											"value": "10"
+										},
+										{
+											"key": "sortBy",
+											"value": "reservationTime",
+											"disabled": true
+										},
+										{
+											"key": "sortDir",
+											"value": "DESC",
+											"disabled": true
+										}
+									]
+								},
+								"description": "ดึงรายการจอง (ผู้ใช้ทั่วไปดูได้เฉพาะของตัวเอง, Admin/เจ้าของร้านอาจดูได้ทั้งหมดสำหรับร้าน)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Reservation by ID",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlReservation}}/api/reservations/{{reservationId}}",
+									"host": [
+										"{{baseUrlReservation}}"
+									],
+									"path": [
+										"api",
+										"reservations",
+										"{{reservationId}}"
+									]
+								},
+								"description": "ดึงข้อมูลการจองตาม ID (ต้องใช้ Token และต้องเป็นการจองของผู้ใช้ หรือมีสิทธิ์ Admin/เจ้าของร้าน)"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Reservation",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"reservationTime\": \"{{currentDate}}T{{updatedTime}}:00\", \n    \"partySize\": 5, \n    \"specialRequests\": \"ขอเก้าอี้เด็กเพิ่ม 1 ตัว\",\n    \"status\": \"CONFIRMED\" // สามารถเปลี่ยนสถานะได้โดย Admin/เจ้าของร้าน\n}"
+								},
+								"url": {
+									"raw": "{{baseUrlReservation}}/api/reservations/{{reservationId}}",
+									"host": [
+										"{{baseUrlReservation}}"
+									],
+									"path": [
+										"api",
+										"reservations",
+										"{{reservationId}}"
+									]
+								},
+								"description": "อัปเดตข้อมูลการจอง (ต้องใช้ Token และต้องเป็นการจองของผู้ใช้ หรือมีสิทธิ์ Admin/เจ้าของร้าน)"
+							},
+							"response": []
+						},
+						{
+							"name": "Cancel Reservation",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlReservation}}/api/reservations/{{reservationId}}",
+									"host": [
+										"{{baseUrlReservation}}"
+									],
+									"path": [
+										"api",
+										"reservations",
+										"{{reservationId}}"
+									]
+								},
+								"description": "ยกเลิกการจอง (ต้องใช้ Token และต้องเป็นการจองของผู้ใช้ หรือมีสิทธิ์ Admin/เจ้าของร้าน)"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Queues",
+					"item": [
+						{
+							"name": "Add User to Queue",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"restaurantId\": {{restaurantId}},\n    \"userId\": {{loggedInUserId}},\n    \"partySize\": 2\n}"
+								},
+								"url": {
+									"raw": "{{baseUrlReservation}}/api/queues",
+									"host": [
+										"{{baseUrlReservation}}"
+									],
+									"path": [
+										"api",
+										"queues"
+									]
+								},
+								"description": "เพิ่มผู้ใช้เข้าสู่ระบบคิวรอโต๊ะ (Walk-in) (ต้องใช้ Token)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Queue for Restaurant",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlReservation}}/api/queues/restaurant/{{restaurantId}}",
+									"host": [
+										"{{baseUrlReservation}}"
+									],
+									"path": [
+										"api",
+										"queues",
+										"restaurant",
+										"{{restaurantId}}"
+									]
+								},
+								"description": "ดูสถานะคิวปัจจุบันของร้านอาหาร (อาจต้องใช้ Token และสิทธิ์)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Queue Entry by ID",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlReservation}}/api/queues/{{queueId}}",
+									"host": [
+										"{{baseUrlReservation}}"
+									],
+									"path": [
+										"api",
+										"queues",
+										"{{queueId}}"
+									]
+								},
+								"description": "ดูข้อมูลรายการคิวเฉพาะ (อาจต้องใช้ Token และเป็นคิวของตัวเอง หรือมีสิทธิ์)"
+							},
+							"response": []
+						},
+						{
+							"name": "Remove User from Queue",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlReservation}}/api/queues/{{queueId}}",
+									"host": [
+										"{{baseUrlReservation}}"
+									],
+									"path": [
+										"api",
+										"queues",
+										"{{queueId}}"
+									]
+								},
+								"description": "นำผู้ใช้ออกจากคิว (อาจต้องใช้ Token และเป็นคิวของตัวเอง หรือมีสิทธิ์ Admin/เจ้าของร้าน)"
+							},
+							"response": []
+						},
+						{
+							"name": "Process Next in Queue",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlReservation}}/api/queues/{{restaurantId}}/process-next",
+									"host": [
+										"{{baseUrlReservation}}"
+									],
+									"path": [
+										"api",
+										"queues",
+										"{{restaurantId}}",
+										"process-next"
+									]
+								},
+								"description": "ดำเนินการกับคิวถัดไป (เรียกคิว/จัดโต๊ะ) (ต้องใช้ Token และสิทธิ์ Admin/เจ้าของร้าน)"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Schedules",
+					"item": [
+						{
+							"name": "Get Restaurant Schedule",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrlReservation}}/api/schedules/{{restaurantId}}",
+									"host": [
+										"{{baseUrlReservation}}"
+									],
+									"path": [
+										"api",
+										"schedules",
+										"{{restaurantId}}"
+									]
+								},
+								"description": "ดึงข้อมูลตารางเวลา/โควต้าการจองของร้านอาหาร"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Restaurant Schedule",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{authToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"quotas\": [\n        {\n            \"startTime\": \"12:00\",\n            \"endTime\": \"14:00\",\n            \"quota\": 10, // จำนวนโต๊ะสูงสุดที่จองได้ในช่วงเวลานี้\n            \"daysOfWeek\": [\"MONDAY\", \"TUESDAY\", \"WEDNESDAY\", \"THURSDAY\", \"FRIDAY\"]\n        },\n        {\n            \"startTime\": \"18:00\",\n            \"endTime\": \"21:00\",\n            \"quota\": 15,\n            \"daysOfWeek\": [\"MONDAY\", \"TUESDAY\", \"WEDNESDAY\", \"THURSDAY\", \"FRIDAY\", \"SATURDAY\", \"SUNDAY\"]\n        }\n    ]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrlReservation}}/api/schedules/{{restaurantId}}",
+									"host": [
+										"{{baseUrlReservation}}"
+									],
+									"path": [
+										"api",
+										"schedules",
+										"{{restaurantId}}"
+									]
+								},
+								"description": "อัปเดตตารางเวลา/โควต้าการจองของร้านอาหาร (ต้องใช้ Token และสิทธิ์ Admin/เจ้าของร้าน)"
+							},
+							"response": []
+						}
+					]
+				}
+			],
+			"variable": [
+				{
+					"key": "baseUrlReservation",
+					"value": "http://localhost:8083",
+					"type": "string"
+				},
+				{
+					"key": "reservationId",
+					"value": "1",
+					"type": "string"
+				},
+				{
+					"key": "queueId",
+					"value": "1",
+					"type": "string"
+				},
+				{
+					"key": "currentDate",
+					"value": "2025-03-27",
+					"type": "string",
+					"description": "ตั้งค่าเป็นวันปัจจุบัน (YYYY-MM-DD)"
+				},
+				{
+					"key": "currentTime",
+					"value": "19:00",
+					"type": "string",
+					"description": "ตั้งค่าเป็นเวลาที่ต้องการ (HH:MM)"
+				},
+				{
+					"key": "updatedTime",
+					"value": "20:00",
+					"type": "string"
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "authToken",
+			"value": "",
+			"type": "string",
+			"description": "JWT Token ที่ได้จากการ Login"
+		},
+		{
+			"key": "loggedInUserId",
+			"value": "",
+			"type": "string",
+			"description": "User ID ที่ได้จากการ Login"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
