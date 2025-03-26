@@ -118,6 +118,29 @@ services:
       timeout: 5s
       retries: 5
 
+  # MySQL for Reservation Service
+  mysql-reservation-service:
+    image: mysql:8.0
+    container_name: mysql-reservation-service
+    restart: always
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: reservation_service
+      MYSQL_USER: reservation_service
+      MYSQL_PASSWORD: reservation_password
+    volumes:
+      - mysql-reservation-data:/var/lib/mysql
+      - ${PWD}/scripts/mysql/init-reservation-db.sql:/docker-entrypoint-initdb.d/init-reservation-db.sql
+    networks:
+      - restaurant-platform-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Kafka Topic Initialize Tool
   kafka-init:
     build:
@@ -172,12 +195,31 @@ services:
     networks:
       - restaurant-platform-network
 
+  # # Reservation Service
+  reservation-service:
+    build: ../reservation-service
+    container_name: reservation-service
+    restart: always
+    depends_on:
+      - kafka
+      - mysql-reservation-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-reservation-service:3306/reservation_service
+      SPRING_DATASOURCE_USERNAME: reservation_service
+      SPRING_DATASOURCE_PASSWORD: reservation_password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - restaurant-platform-network
+
 volumes:
   zookeeper-data:
   zookeeper-log:
   kafka-data:
   mysql-user-data:
   mysql-restaurant-data:
+  mysql-reservation-data:
 
 networks:
   restaurant-platform-network:

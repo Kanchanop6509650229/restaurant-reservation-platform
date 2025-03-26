@@ -85,3 +85,7 @@ Thumbs.db
 
 # Application specific
 /spring-app/*.jar
+
+# Application properties
+**/application.properties
+!**/application.properties.example

@@ -21,8 +21,9 @@ The Restaurant Reservation Platform is designed to help restaurants manage their
 ## Project Structure
 
 - **common**: Shared library with common code, DTOs, utilities, and constants
-- **restaurant-service**: Service for managing restaurant information and reservations
+- **restaurant-service**: Service for managing restaurant information and operations
 - **user-service**: Service for managing user accounts and authentication
+- **reservation-service**: Service for managing table reservations, waitlists, and scheduling
 - **kafka-infrastructure**: Docker Compose configuration for setting up the Kafka infrastructure
 
 ## Prerequisites
@@ -222,6 +223,87 @@ docker-compose logs -f restaurant-service
 #### Statistics
 
 - **GET /api/restaurants/{restaurantId}/statistics**: Get restaurant statistics
+
+### Reservation Service APIs (Port 8083)
+
+#### Reservation Management
+
+- **GET /api/reservations/{id}**: Get reservation by ID
+- **GET /api/users/{userId}/reservations**: Get user's reservations
+- **GET /api/restaurants/{restaurantId}/reservations**: Get restaurant's reservations
+- **POST /api/reservations**: Create a new reservation
+  ```json
+  {
+    "restaurantId": "string",
+    "reservationTime": "2025-03-26T19:00:00",
+    "partySize": 4,
+    "customerName": "string",
+    "customerPhone": "string",
+    "customerEmail": "string",
+    "specialRequests": "string",
+    "remindersEnabled": true
+  }
+  ```
+- **PUT /api/reservations/{id}**: Update a reservation
+  ```json
+  {
+    "reservationTime": "2025-03-26T19:00:00",
+    "partySize": 4,
+    "customerName": "string",
+    "customerPhone": "string",
+    "customerEmail": "string",
+    "specialRequests": "string",
+    "durationMinutes": 120
+  }
+  ```
+- **POST /api/reservations/{id}/confirm**: Confirm a reservation
+- **POST /api/reservations/{id}/cancel**: Cancel a reservation
+  ```json
+  {
+    "reason": "string"
+  }
+  ```
+
+#### Queue Management
+
+- **GET /api/restaurants/{restaurantId}/queue**: Get restaurant's waiting queue
+- **POST /api/restaurants/{restaurantId}/queue**: Add to waiting queue
+  ```json
+  {
+    "customerName": "string",
+    "partySize": 4,
+    "notes": "string"
+  }
+  ```
+- **POST /api/queue/{id}/notify**: Notify customer their table is ready
+- **POST /api/queue/{id}/seat**: Mark party as seated
+- **POST /api/queue/{id}/cancel**: Remove from queue
+  ```json
+  {
+    "reason": "string"
+  }
+  ```
+
+#### Schedule Management
+
+- **GET /api/restaurants/{restaurantId}/schedule**: Get restaurant's schedule
+- **PUT /api/restaurants/{restaurantId}/schedule/{dayOfWeek}**: Update schedule for a day
+  ```json
+  {
+    "openTime": "10:00",
+    "closeTime": "22:00",
+    "closed": false
+  }
+  ```
+
+Service Features:
+- Automatic table assignment based on party size and availability
+- Reservation quota management to prevent overbooking
+- Configurable session lengths (default 120 minutes)
+- Confirmation deadline enforcement (default 15 minutes)
+- Automatic processing of expired reservations
+- Walk-in queue management with estimated wait times
+- Real-time updates via Kafka events
 
 ## Service Communication
 
