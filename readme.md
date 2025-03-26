@@ -79,6 +79,36 @@ For example:
 docker-compose logs -f restaurant-service
 ```
 
+### 4. Using Postman for API Testing
+
+We provide a Postman collection to easily test all available APIs:
+
+#### Importing the Collection
+1. Open Postman
+2. Click on "Import" > "Upload Files"
+3. Select the provided JSON collection file
+
+#### Setting up Environment (Recommended)
+1. Click on the gear icon in the top-right corner > "Manage Environments"
+2. Click "Add" to create a new environment
+3. Define the following variables:
+   - `baseUrlUser`: http://localhost:8081
+   - `baseUrlRestaurant`: http://localhost:8082
+   - `baseUrlReservation`: http://localhost:8083
+   - `restaurantId`: (ID of an existing restaurant - may need to create one first)
+   - `tableId`: (ID of an existing table)
+   - `reservationId`: (ID of an existing reservation)
+   - `queueId`: (ID of an existing queue entry)
+   - `currentDate`: Current date in YYYY-MM-DD format
+   - `currentTime`: Current time in HH:MM format
+   - `updatedTime`: Alternative time for testing updates
+
+#### Using the Collection
+1. Start with "Register New User" or "Login User" requests to obtain `{{authToken}}` and `{{loggedInUserId}}`
+2. Once authenticated, you can run any of the other requests
+3. For requests requiring IDs (e.g., Get Restaurant by ID, Update Table), make sure to set the correct values for variables like `{{restaurantId}}`, `{{tableId}}`, etc.
+4. You may need to run creation requests first to obtain valid IDs for subsequent operations
+
 ## Available APIs
 
 ### User Service APIs (Port 8081)
