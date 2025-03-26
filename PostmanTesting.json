@@ -72,7 +72,7 @@
 												"",
 												"// 5. Set collection variable 'authToken' if token exists",
 												"if (responseBody.data && responseBody.data.token) {",
-												"    pm.collectionVariables.set(\"authToken\", responseBody.data.token);",
+												"    pm.environment.set(\"authToken\", responseBody.data.token);",
 												"    console.log(\"authToken successfully set in collection variables.\");",
 												"} else {",
 												"    console.error(\"Failed to find token in response body to set collection variable.\");",
@@ -83,7 +83,7 @@
 												"// --- เพิ่มเติม: ดึง User ID (ถ้ามี) ---",
 												"// สมมติว่า API ส่ง userId กลับมาใน data ด้วย (ต้องปรับตาม API จริง)",
 												"if (responseBody.data && responseBody.data.userId) {",
-												"    pm.collectionVariables.set(\"loggedInUserId\", responseBody.data.userId);",
+												"    pm.environment.set(\"loggedInUserId\", responseBody.data.userId);",
 												"    console.log(\"loggedInUserId set in collection variables.\");",
 												"}"
 										],
@@ -169,18 +169,18 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrlUser}}/api/users/{{userId}}",
+									"raw": "{{baseUrlUser}}/api/users/{{loggedInUserId}}",
 									"host": [
 										"{{baseUrlUser}}"
 									],
 									"path": [
 										"api",
 										"users",
-										"{{userId}}"
+										"{{loggedInUserId}}"
 									],
 									"variable": [
 										{
-											"key": "userId",
+											"key": "loggedInUserId",
 											"value": "{{loggedInUserId}}",
 											"description": "ID ของผู้ใช้ที่ต้องการดึงข้อมูล (ใช้ ID จาก Login หรือตัวแปรอื่น)"
 										}
@@ -870,7 +870,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrlReservation}}/health",
+									"raw": "{{baseUrlReservation}}/api/health",
 									"host": [
 										"{{baseUrlReservation}}"
 									],
