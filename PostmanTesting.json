@@ -367,7 +367,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants?page=0&size=10&sortBy=name&sortDir=ASC",
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/public/all?page=0&size=10&sortBy=name&sortDir=ASC",
 									"host": [
 										"{{baseUrlRestaurant}}"
 									],
@@ -433,7 +433,7 @@
 									"raw": "{\n    \"name\": \"ตัวอย่าง\",\n    \"cuisineType\": \"อาหารไทย\",\n    \"latitude\": 13.75,\n    \"longitude\": 100.50,\n    \"radiusKm\": 5 \n}"
 								},
 								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/search?page=0&size=10",
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/public/search?page=0&size=10",
 									"host": [
 										"{{baseUrlRestaurant}}"
 									],
