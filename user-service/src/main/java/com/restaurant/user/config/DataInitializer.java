@@ -6,13 +6,14 @@ import java.util.List;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.restaurant.user.domain.models.Permission;
+import com.restaurant.user.domain.models.Profile;
 import com.restaurant.user.domain.models.Role;
 import com.restaurant.user.domain.models.User;
 import com.restaurant.user.domain.repositories.PermissionRepository;
+import com.restaurant.user.domain.repositories.ProfileRepository;
 import com.restaurant.user.domain.repositories.RoleRepository;
 import com.restaurant.user.domain.repositories.UserRepository;
 
@@ -22,21 +23,24 @@ public class DataInitializer {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
 
     // เพิ่ม constructor ที่รับ dependencies ทั้งหมด
     public DataInitializer(UserRepository userRepository, 
                           RoleRepository roleRepository,
                           PermissionRepository permissionRepository,
+                          ProfileRepository profileRepository,
                           PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
+        this.profileRepository = profileRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Bean
-    @Profile("!test")
+    @org.springframework.context.annotation.Profile("!test")
     public CommandLineRunner initData() {
         return args -> {
             // สร้าง permissions
@@ -87,7 +91,22 @@ public class DataInitializer {
                         .orElseThrow(() -> new RuntimeException("Admin role not found"));
                 adminUser.addRole(adminRole);
                 
+                // Save the user first to get the ID
+                adminUser = userRepository.save(adminUser);
+                
+                // Create profile for admin
+                Profile adminProfile = new Profile(adminUser);
+                adminProfile.setFirstName("Admin");
+                adminProfile.setLastName("User");
+                adminProfile.setPhoneNumber("0000000000");
+                
+                // Save the profile
+                profileRepository.save(adminProfile);
+                
+                // Update user with profile reference
+                adminUser.setProfile(adminProfile);
                 userRepository.save(adminUser);
+                
                 System.out.println("Default admin user created with username: admin and password: admin123");
             }
         };
