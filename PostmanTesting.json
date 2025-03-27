@@ -617,7 +617,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/tables?page=0&size=20",
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/tables/public?page=0&size=20",
 									"host": [
 										"{{baseUrlRestaurant}}"
 									],
@@ -625,7 +625,8 @@
 										"api",
 										"restaurants",
 										"{{restaurantId}}",
-										"tables"
+										"tables",
+										"public"
 									],
 									"query": [
 										{
@@ -648,7 +649,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/tables/{{tableId}}",
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/tables/public/{{tableId}}",
 									"host": [
 										"{{baseUrlRestaurant}}"
 									],
@@ -657,6 +658,7 @@
 										"restaurants",
 										"{{restaurantId}}",
 										"tables",
+										"public",
 										"{{tableId}}"
 									]
 								},
@@ -748,7 +750,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/operating-hours",
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/operating-hours/public",
 									"host": [
 										"{{baseUrlRestaurant}}"
 									],
@@ -756,7 +758,8 @@
 										"api",
 										"restaurants",
 										"{{restaurantId}}",
-										"operating-hours"
+										"operating-hours",
+										"public"
 									]
 								},
 								"description": "ดึงข้อมูลเวลาทำการของร้านอาหาร"

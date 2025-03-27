@@ -33,21 +33,21 @@ public class TableController {
         this.tableService = tableService;
     }
 
-    @GetMapping
+    @GetMapping("/public")
     public ResponseEntity<ResponseDTO<List<TableDTO>>> getAllTablesByRestaurantId(
             @PathVariable String restaurantId) {
         List<TableDTO> tables = tableService.getAllTablesByRestaurantId(restaurantId);
         return ResponseEntity.ok(ResponseDTO.success(tables));
     }
 
-    @GetMapping("/available")
+    @GetMapping("/public/available")
     public ResponseEntity<ResponseDTO<List<TableDTO>>> getAvailableTablesByRestaurantId(
             @PathVariable String restaurantId) {
         List<TableDTO> tables = tableService.getAvailableTablesByRestaurantId(restaurantId);
         return ResponseEntity.ok(ResponseDTO.success(tables));
     }
 
-    @GetMapping("/{tableId}")
+    @GetMapping("/public/{tableId}")
     public ResponseEntity<ResponseDTO<TableDTO>> getTableById(
             @PathVariable String restaurantId,
             @PathVariable String tableId) {

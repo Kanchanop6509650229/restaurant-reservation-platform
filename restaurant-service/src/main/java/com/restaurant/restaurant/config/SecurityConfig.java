@@ -38,7 +38,8 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers("/api/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/restaurants/public/**").permitAll()
-                .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/restaurants/*/tables/public/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/restaurants/*/operating-hours/public/**").permitAll()
                 // All other endpoints require authentication
                 .anyRequest().authenticated()
             )

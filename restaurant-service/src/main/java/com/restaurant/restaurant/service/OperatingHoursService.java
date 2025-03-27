@@ -173,6 +173,17 @@ public class OperatingHoursService {
         return convertToDTO(updatedHours);
     }
 
+    public OperatingHoursDTO getOperatingHoursByDay(String restaurantId, DayOfWeek day) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
+                
+        OperatingHours hours = operatingHoursRepository.findByRestaurantIdAndDayOfWeek(restaurantId, day)
+                .orElseThrow(() -> new EntityNotFoundException("Operating Hours", 
+                        "Restaurant: " + restaurantId + ", Day: " + day));
+                        
+        return convertToDTO(hours);
+    }
+
     private OperatingHoursDTO convertToDTO(OperatingHours hours) {
         OperatingHoursDTO dto = new OperatingHoursDTO();
         dto.setId(hours.getId());
