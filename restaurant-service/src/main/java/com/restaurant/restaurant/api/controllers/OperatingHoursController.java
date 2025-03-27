@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.restaurant.common.dto.ResponseDTO;
+import com.restaurant.restaurant.dto.OperatingHoursBatchUpdateRequest;
 import com.restaurant.restaurant.dto.OperatingHoursDTO;
 import com.restaurant.restaurant.dto.OperatingHoursUpdateRequest;
 import com.restaurant.restaurant.service.OperatingHoursService;
@@ -50,6 +51,14 @@ public class OperatingHoursController {
             @PathVariable DayOfWeek day,
             @Valid @RequestBody OperatingHoursUpdateRequest updateRequest) {
         OperatingHoursDTO hours = operatingHoursService.updateOperatingHours(restaurantId, day, updateRequest);
+        return ResponseEntity.ok(ResponseDTO.success(hours, "Operating hours updated successfully"));
+    }
+
+    @PutMapping
+    public ResponseEntity<ResponseDTO<List<OperatingHoursDTO>>> updateAllOperatingHours(
+            @PathVariable String restaurantId,
+            @Valid @RequestBody OperatingHoursBatchUpdateRequest updateRequest) {
+        List<OperatingHoursDTO> hours = operatingHoursService.updateAllOperatingHours(restaurantId, updateRequest);
         return ResponseEntity.ok(ResponseDTO.success(hours, "Operating hours updated successfully"));
     }
 }

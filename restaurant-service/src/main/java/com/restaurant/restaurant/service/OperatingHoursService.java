@@ -5,6 +5,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +18,8 @@ import com.restaurant.restaurant.domain.models.OperatingHours;
 import com.restaurant.restaurant.domain.models.Restaurant;
 import com.restaurant.restaurant.domain.repositories.OperatingHoursRepository;
 import com.restaurant.restaurant.domain.repositories.RestaurantRepository;
+import com.restaurant.restaurant.dto.OperatingHoursBatchUpdateRequest;
+import com.restaurant.restaurant.dto.OperatingHoursBatchUpdateRequest.OperatingHourEntry;
 import com.restaurant.restaurant.dto.OperatingHoursDTO;
 import com.restaurant.restaurant.dto.OperatingHoursUpdateRequest;
 import com.restaurant.restaurant.kafka.producers.RestaurantEventProducer;
@@ -171,6 +174,43 @@ public class OperatingHoursService {
         }
         
         return convertToDTO(updatedHours);
+    }
+
+    @Transactional
+    public List<OperatingHoursDTO> updateAllOperatingHours(String restaurantId, OperatingHoursBatchUpdateRequest updateRequest) {
+        // Create a set of days that are included in the update
+        Set<DayOfWeek> includedDays = updateRequest.getOperatingHours().stream()
+                .map(OperatingHourEntry::getDayOfWeek)
+                .collect(Collectors.toSet());
+        
+        // Update each day in the request
+        for (OperatingHourEntry dayEntry : updateRequest.getOperatingHours()) {
+            if (dayEntry.getDayOfWeek() == null) {
+                throw new ValidationException("dayOfWeek", "Day of week is required");
+            }
+            
+            // Create an OperatingHoursUpdateRequest from the OperatingHourEntry
+            OperatingHoursUpdateRequest updateRequestForDay = new OperatingHoursUpdateRequest();
+            updateRequestForDay.setOpenTime(dayEntry.getOpenTime());
+            updateRequestForDay.setCloseTime(dayEntry.getCloseTime());
+            updateRequestForDay.setClosed(false);  // If a day is included, it's not closed
+            
+            // Use the existing method to update this day's hours
+            updateOperatingHours(restaurantId, dayEntry.getDayOfWeek(), updateRequestForDay);
+        }
+        
+        // For days not in the request, mark them as closed
+        for (DayOfWeek day : DayOfWeek.values()) {
+            if (!includedDays.contains(day)) {
+                OperatingHoursUpdateRequest closeRequest = new OperatingHoursUpdateRequest();
+                closeRequest.setClosed(true);
+                
+                updateOperatingHours(restaurantId, day, closeRequest);
+            }
+        }
+        
+        // Return all operating hours for the restaurant
+        return getOperatingHoursByRestaurantId(restaurantId);
     }
 
     public OperatingHoursDTO getOperatingHoursByDay(String restaurantId, DayOfWeek day) {
