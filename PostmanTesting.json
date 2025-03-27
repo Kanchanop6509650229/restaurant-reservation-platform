@@ -326,6 +326,68 @@
 					"item": [
 						{
 							"name": "Create Restaurant",
+							"event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "exec": [
+                                            "// Test 1: Check if the status code indicates success (e.g., 201 Created or 200 OK)",
+                                            "pm.test(\"Status code is 201 or 200\", function () {",
+                                            "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                                            "});",
+                                            "",
+                                            "// Test 2: Check if the response body is valid JSON",
+                                            "pm.test(\"Response body is valid JSON\", function () {",
+                                            "    try {",
+                                            "        pm.response.to.have.jsonBody();",
+                                            "    } catch (e) {",
+                                            "        pm.expect.fail(\"Response body is not valid JSON\");",
+                                            "    }",
+                                            "});",
+                                            "",
+                                            "// Parse the JSON response body only if the previous test passes",
+                                            "if (pm.response.code === 200 || pm.response.code === 201) {",
+                                            "    const responseBody = pm.response.json();",
+                                            "",
+                                            "    // Test 3: Check if the restaurant ID exists and is not empty/null",
+                                            "    pm.test(\"Restaurant ID exists in response\", function () {",
+                                            "        // Adjust the path if the ID is nested, e.g., responseBody.data.id",
+                                            "        // Check common variations: .id or .data.id",
+                                            "        let restaurantId = null;",
+                                            "        if (responseBody && responseBody.id) {",
+                                            "            restaurantId = responseBody.id;",
+                                            "        } else if (responseBody && responseBody.data && responseBody.data.id) {",
+                                            "            restaurantId = responseBody.data.id;",
+                                            "        }",
+                                            "        pm.expect(restaurantId).to.exist.and.not.be.null;",
+                                            "        // Optional: Check if it's a specific type, e.g., a number or string",
+                                            "        // pm.expect(restaurantId).to.be.a('string'); // or 'number'",
+                                            "    });",
+                                            "",
+                                            "    // Save the restaurant ID to an environment variable if it exists",
+                                            "    let restaurantIdToSave = null;",
+                                            "    if (responseBody && responseBody.id) {",
+                                            "        restaurantIdToSave = responseBody.id;",
+                                            "    } else if (responseBody && responseBody.data && responseBody.data.id) {",
+                                            "        restaurantIdToSave = responseBody.data.id;",
+                                            "    }",
+                                            "",
+                                            "    if (restaurantIdToSave !== null) {",
+                                            "        pm.environment.set(\"restaurantId\", restaurantIdToSave);",
+                                            "        console.log(\"Successfully set environment variable 'restaurantId' to: \" + restaurantIdToSave);",
+                                            "    } else {",
+                                            "        console.error(\"Could not find 'id' or 'data.id' in the response body to set environment variable 'restaurantId'.\");",
+                                            "        // Optionally fail the test if the ID is mandatory",
+                                            "        // pm.expect.fail(\"Restaurant ID not found in response\");",
+                                            "    }",
+                                            "} else {",
+                                            "    console.error(\"Skipping response body processing due to non-success status code: \" + pm.response.code);",
+                                            "}"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ],
 							"request": {
 								"auth": {
 									"type": "bearer",
