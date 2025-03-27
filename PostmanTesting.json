@@ -504,6 +504,7 @@
 									"path": [
 										"api",
 										"restaurants",
+										"public",
 										"search"
 									],
 									"query": [
