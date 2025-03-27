@@ -10,6 +10,7 @@ import com.restaurant.common.dto.user.UserDTO;
 import com.restaurant.common.events.user.UserRegisteredEvent;
 import com.restaurant.common.exceptions.EntityNotFoundException;
 import com.restaurant.common.exceptions.ValidationException;
+import com.restaurant.user.domain.models.Profile;
 import com.restaurant.user.domain.models.Role;
 import com.restaurant.user.domain.models.User;
 import com.restaurant.user.domain.repositories.RoleRepository;
@@ -61,7 +62,9 @@ public class UserService {
         User savedUser = userRepository.save(user);
 
         // Create profile
-        profileService.createProfile(savedUser.getId(), registrationRequest);
+        Profile profile = profileService.createProfile(savedUser.getId(), registrationRequest);
+
+        savedUser.setProfile(profile);
 
         // Publish event
         userEventProducer.publishUserRegisteredEvent(new UserRegisteredEvent(
