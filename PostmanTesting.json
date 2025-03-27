@@ -215,14 +215,14 @@
 									"raw": "{\n    \"firstName\": \"UpdatedFirstName\",\n    \"lastName\": \"UpdatedLastName\",\n    \"phoneNumber\": \"0987654321\",\n    \"preferences\": \"ชอบอาหารไทย ไม่เผ็ด\",\n    \"allergies\": \"แพ้กุ้ง\"\n}"
 								},
 								"url": {
-									"raw": "{{baseUrlUser}}/api/users/me/profile",
+									"raw": "{{baseUrlUser}}/api/users/{{loggedInUserId}}/profile",
 									"host": [
 										"{{baseUrlUser}}"
 									],
 									"path": [
 										"api",
 										"users",
-										"me",
+										"{{loggedInUserId}}",
 										"profile"
 									]
 								},
