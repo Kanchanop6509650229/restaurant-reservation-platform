@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import com.restaurant.common.events.user.UserLoggedInEvent;
 import com.restaurant.common.exceptions.AuthenticationException;
+import com.restaurant.user.domain.models.User;
 import com.restaurant.user.dto.LoginRequest;
 import com.restaurant.user.dto.LoginResponse;
 import com.restaurant.user.kafka.producers.UserEventProducer;
@@ -58,10 +59,12 @@ public class AuthService {
                 );
                 
                 userDetails = (UserDetails) authentication.getPrincipal();
-                String token = jwtTokenProvider.generateToken(userDetails);
                 
-                // Get user ID
-                String userId = userDetailsService.getUserIdByUsername(userDetails.getUsername());
+                // Get user ID for token and response
+                String userId = ((User) userDetails).getId();
+                
+                // Generate token with user ID included as claim
+                String token = jwtTokenProvider.generateToken(userDetails);
                 
                 // Publish login event
                 userEventProducer.publishUserLoggedInEvent(new UserLoggedInEvent(

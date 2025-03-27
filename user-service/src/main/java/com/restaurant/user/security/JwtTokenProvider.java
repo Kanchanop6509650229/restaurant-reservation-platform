@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import com.restaurant.user.domain.models.User;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -29,9 +31,16 @@ public class JwtTokenProvider {
     public String generateToken(UserDetails userDetails) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
+        
+        // Cast to User to get the ID
+        String userId = null;
+        if (userDetails instanceof User) {
+            userId = ((User) userDetails).getId();
+        }
 
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
+                .claim("userId", userId)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS512)
@@ -40,6 +49,10 @@ public class JwtTokenProvider {
 
     public String getUsernameFromToken(String token) {
         return getClaimFromToken(token, Claims::getSubject);
+    }
+    
+    public String getUserIdFromToken(String token) {
+        return getClaimFromToken(token, claims -> claims.get("userId", String.class));
     }
 
     public boolean validateToken(String token, UserDetails userDetails) {

@@ -6,7 +6,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,41 +47,41 @@ public class UserController {
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ResponseDTO<UserDTO>> getCurrentUser(Authentication authentication) {
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        UserDTO userDTO = userService.getUserByUsername(userDetails.getUsername());
+        String userId = (String) authentication.getPrincipal();
+        UserDTO userDTO = userService.getUserById(userId);
         return ResponseEntity.ok(ResponseDTO.success(userDTO));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or authentication.principal == #id")
     public ResponseEntity<ResponseDTO<UserDTO>> getUserById(@PathVariable String id) {
         UserDTO userDTO = userService.getUserById(id);
         return ResponseEntity.ok(ResponseDTO.success(userDTO));
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseDTO<List<UserDTO>>> getAllUsers() {
         List<UserDTO> users = userService.getAllUsers();
         return ResponseEntity.ok(ResponseDTO.success(users));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseDTO<Void>> deleteUser(@PathVariable String id) {
         userService.deleteUser(id);
         return ResponseEntity.ok(ResponseDTO.success(null, "User deleted successfully"));
     }
 
     @GetMapping("/{id}/profile")
-    @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or authentication.principal == #id")
     public ResponseEntity<ResponseDTO<ProfileDTO>> getUserProfile(@PathVariable String id) {
         ProfileDTO profileDTO = profileService.getProfileByUserId(id);
         return ResponseEntity.ok(ResponseDTO.success(profileDTO));
     }
 
     @PutMapping("/{id}/profile")
-    @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or authentication.principal == #id")
     public ResponseEntity<ResponseDTO<ProfileDTO>> updateUserProfile(
             @PathVariable String id,
             @Valid @RequestBody ProfileDTO profileDTO) {

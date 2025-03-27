@@ -1,5 +1,7 @@
 package com.restaurant.user.service;
 
+import org.springframework.stereotype.Service;
+
 import com.restaurant.common.dto.user.ProfileDTO;
 import com.restaurant.common.events.user.ProfileUpdatedEvent;
 import com.restaurant.common.exceptions.EntityNotFoundException;
@@ -9,8 +11,8 @@ import com.restaurant.user.domain.repositories.ProfileRepository;
 import com.restaurant.user.domain.repositories.UserRepository;
 import com.restaurant.user.dto.UserRegistrationRequest;
 import com.restaurant.user.kafka.producers.UserEventProducer;
+
 import jakarta.transaction.Transactional;
-import org.springframework.stereotype.Service;
 
 @Service
 public class ProfileService {

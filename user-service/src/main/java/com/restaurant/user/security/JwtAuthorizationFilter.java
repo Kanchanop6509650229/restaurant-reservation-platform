@@ -1,9 +1,11 @@
 package com.restaurant.user.security;
 
 import java.io.IOException;
+import java.util.Collection;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -46,12 +48,20 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
             if (jwt != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 String username = tokenProvider.getUsernameFromToken(jwt);
+                
+                // Also extract the user ID from token
+                String userId = tokenProvider.getUserIdFromToken(jwt);
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 
                 if (tokenProvider.validateToken(jwt, userDetails)) {
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
+                    Collection<? extends GrantedAuthority> authorities = userDetails.getAuthorities();
+                    
+                    // Create custom authentication token with the userId as principal
+                    // This will make it accessible in @PreAuthorize expressions
+                    UsernamePasswordAuthenticationToken authentication = 
+                            new UsernamePasswordAuthenticationToken(userId, null, authorities);
+                    
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     
                     SecurityContextHolder.getContext().setAuthentication(authentication);
