@@ -34,7 +34,7 @@
 									],
 									"path": [
 										"api",
-										"auth",
+										"users",
 										"register"
 									]
 								},
@@ -311,6 +311,7 @@
 										"{{baseUrlRestaurant}}"
 									],
 									"path": [
+										"api",
 										"health"
 									]
 								},
@@ -345,7 +346,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"name\": \"ร้านอาหารตัวอย่าง {{$randomInt}}\",\n    \"description\": \"คำอธิบายร้านอาหาร\",\n    \"cuisineType\": \"อาหารไทย\",\n    \"address\": \"123 ถนน ตัวอย่าง แขวง ตัวอย่าง เขต ตัวอย่าง กรุงเทพฯ 10110\",\n    \"latitude\": 13.7563,\n    \"longitude\": 100.5018,\n    \"phoneNumber\": \"021234567\",\n    \"website\": \"http://example-restaurant.com\",\n    \"ownerId\": {{loggedInUserId}} \n}"
+									"raw": "{\n    \"name\": \"ร้านอาหารตัวอย่าง {{$randomInt}}\",\n    \"description\": \"คำอธิบายร้านอาหาร\",\n    \"cuisineType\": \"อาหารไทย\",\n    \"address\": \"123 ถนน ตัวอย่าง แขวง ตัวอย่าง เขต ตัวอย่าง กรุงเทพฯ 10110\",\n    \"latitude\": 13.7563,\n    \"longitude\": 100.5018,\n    \"phoneNumber\": \"021234567\",\n    \"website\": \"http://example-restaurant.com\",\n    \"ownerId\": \"{{loggedInUserId}}\" \n}"
 								},
 								"url": {
 									"raw": "{{baseUrlRestaurant}}/api/restaurants",
@@ -373,7 +374,8 @@
 									],
 									"path": [
 										"api",
-										"restaurants"
+										"restaurants",
+										"public"
 									],
 									"query": [
 										{
@@ -480,13 +482,14 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}",
+									"raw": "{{baseUrlRestaurant}}/api/restaurants/public/{{restaurantId}}",
 									"host": [
 										"{{baseUrlRestaurant}}"
 									],
 									"path": [
 										"api",
 										"restaurants",
+										"public",
 										"{{restaurantId}}"
 									]
 								},
@@ -875,6 +878,7 @@
 										"{{baseUrlReservation}}"
 									],
 									"path": [
+										"api",
 										"health"
 									]
 								},

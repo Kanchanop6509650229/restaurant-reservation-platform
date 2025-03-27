@@ -36,6 +36,9 @@ public class Restaurant {
     @Column(nullable = false)
     private String address;
 
+    @Column(nullable = false)
+    private String ownerId;
+
     private String city;
     private String state;
     private String zipCode;
@@ -338,5 +341,13 @@ public class Restaurant {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
+    }
+    
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
     }
 }

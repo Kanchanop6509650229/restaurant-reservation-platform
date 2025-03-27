@@ -36,6 +36,9 @@ public class RestaurantCreateRequest {
     @NotBlank(message = "Cuisine type is required")
     private String cuisineType;
 
+    @NotBlank(message = "Owner ID is required")
+    private String ownerId;
+
     private int totalCapacity;
 
     // Getters and setters
@@ -149,5 +152,13 @@ public class RestaurantCreateRequest {
 
     public void setTotalCapacity(int totalCapacity) {
         this.totalCapacity = totalCapacity;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
+    }
+    
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
     }
 }

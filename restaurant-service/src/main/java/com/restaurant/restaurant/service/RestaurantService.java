@@ -95,6 +95,7 @@ public class RestaurantService {
         restaurant.setCuisineType(createRequest.getCuisineType());
         restaurant.setTotalCapacity(createRequest.getTotalCapacity());
         restaurant.setActive(true);
+        restaurant.setOwnerId(createRequest.getOwnerId());
         
         // Set coordinates if provided
         if (createRequest.getLatitude() != 0 && createRequest.getLongitude() != 0) {
@@ -246,6 +247,10 @@ public class RestaurantService {
         if (request.getCuisineType() == null || request.getCuisineType().trim().isEmpty()) {
             throw new ValidationException("cuisineType", "Restaurant cuisine type is required");
         }
+
+        if (request.getOwnerId() == null || request.getOwnerId().trim().isEmpty()) {
+            throw new ValidationException("ownerId", "Restaurant owner ID is required");
+        }
     }
 
     public RestaurantDTO convertToDTO(Restaurant restaurant) {
@@ -263,6 +268,7 @@ public class RestaurantService {
         dto.setCapacity(restaurant.getTotalCapacity());
         dto.setAverageRating(restaurant.getAverageRating());
         dto.setActive(restaurant.isActive());
+        dto.setOwnerId(restaurant.getOwnerId());
         
         // We'll set operating hours in a separate service call if needed
         

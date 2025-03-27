@@ -50,6 +50,8 @@ public class DataInitializer {
     
     private List<Restaurant> createSampleRestaurants() {
         List<Restaurant> restaurants = new ArrayList<>();
+
+        String defaultOwnerId = "admin";
         
         // Restaurant 1
         Restaurant restaurant1 = new Restaurant();
@@ -68,6 +70,7 @@ public class DataInitializer {
         restaurant1.setLatitude(40.7128);
         restaurant1.setLongitude(-74.0060);
         restaurant1.setActive(true);
+        restaurant1.setOwnerId(defaultOwnerId);
         
         // Restaurant 2
         Restaurant restaurant2 = new Restaurant();
@@ -86,6 +89,7 @@ public class DataInitializer {
         restaurant2.setLatitude(37.7749);
         restaurant2.setLongitude(-122.4194);
         restaurant2.setActive(true);
+        restaurant2.setOwnerId(defaultOwnerId);
         
         // Restaurant 3
         Restaurant restaurant3 = new Restaurant();
@@ -104,6 +108,7 @@ public class DataInitializer {
         restaurant3.setLatitude(41.8781);
         restaurant3.setLongitude(-87.6298);
         restaurant3.setActive(true);
+        restaurant3.setOwnerId(defaultOwnerId);
         
         restaurants.add(restaurant1);
         restaurants.add(restaurant2);

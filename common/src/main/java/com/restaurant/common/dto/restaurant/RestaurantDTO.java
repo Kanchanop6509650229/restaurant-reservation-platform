@@ -18,6 +18,7 @@ public class RestaurantDTO {
     private BigDecimal averageRating;
     private boolean active;
     private List<OperatingHoursDTO> operatingHours;
+    private String ownerId;
     
     // Constructors
     public RestaurantDTO() {
@@ -134,5 +135,13 @@ public class RestaurantDTO {
 
     public void setOperatingHours(List<OperatingHoursDTO> operatingHours) {
         this.operatingHours = operatingHours;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
+    }
+    
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
     }
 }
