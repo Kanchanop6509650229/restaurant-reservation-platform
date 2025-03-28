@@ -1,30 +1,28 @@
 # Restaurant Reservation Platform
 
-This project demonstrates a microservices architecture using Spring Boot and Kafka. The application consists of multiple services that communicate via Kafka messaging to provide a complete restaurant reservation system.
+A comprehensive microservices-based platform for restaurant reservations built with Spring Boot and Kafka. The application consists of multiple services that communicate via Kafka messaging to provide a complete restaurant management and reservation system.
 
 ## Project Overview
 
-The Restaurant Reservation Platform is designed to help restaurants manage their tables, reservations, and customers effectively. The platform uses event-driven architecture with Kafka to ensure real-time updates across services.
+The Restaurant Reservation Platform enables:
+- Restaurant management with detailed information and operating hours
+- Table management with real-time status updates
+- User authentication and profile management
+- Advanced reservation system with confirmation workflows
+- Queue management for walk-in customers
+- Event-driven architecture for real-time updates across services
 
-### Key Features
+## Architecture
 
-- Restaurant management (add, update, delete restaurants)
-- Table management with statuses and availability
-- User registration and authentication with JWT
-- Profile management for users
-- Restaurant search by location, cuisine type, and keywords
-- Operating hours management
-- Staff management by restaurant
-- Branch management with location-based search
-- Restaurant statistics for business intelligence
+![architecture-diagram](architecture-diagram.png)
 
-## Project Structure
+The platform follows a microservices architecture with:
 
-- **common**: Shared library with common code, DTOs, utilities, and constants
-- **restaurant-service**: Service for managing restaurant information and operations
-- **user-service**: Service for managing user accounts and authentication
-- **reservation-service**: Service for managing table reservations, waitlists, and scheduling
-- **kafka-infrastructure**: Docker Compose configuration for setting up the Kafka infrastructure
+- **User Service**: Authentication, user registration, and profile management
+- **Restaurant Service**: Restaurant information, tables, and operating hours
+- **Reservation Service**: Reservations, queues, and scheduling
+- **Kafka**: Event bus for inter-service communication
+- **MySQL Databases**: Separate database for each service
 
 ## Prerequisites
 
@@ -32,7 +30,7 @@ The Restaurant Reservation Platform is designed to help restaurants manage their
 - Docker and Docker Compose
 - Maven
 
-## Getting Started
+## Quick Start
 
 ### 1. Build the Project
 
@@ -40,384 +38,460 @@ The Restaurant Reservation Platform is designed to help restaurants manage their
 mvn clean package
 ```
 
-### 2. Initialize Kafka Scripts
-
-```bash
-chmod +x kafka-infrastructure/scripts/init-kafka.sh
-```
-
-### 3. Start All Services with Docker Compose
+### 2. Start Infrastructure with Docker Compose
 
 ```bash
 cd kafka-infrastructure
 docker-compose up -d
 ```
 
-This will start:
+This starts:
 - Zookeeper
 - Kafka broker
-- MySQL databases with initialized schemas
-- Kafka initialization scripts
-- User Service (running on port 8081)
-- Restaurant Service (running on port 8082)
-- Kafdrop UI for Kafka monitoring (accessible at http://localhost:9000)
+- MySQL databases
+- Kafdrop (Kafka UI)
 
-You can check the status of all services using:
+### 3. Access Services
 
-```bash
-docker-compose ps
-```
+- **User Service**: http://localhost:8081
+- **Restaurant Service**: http://localhost:8082
+- **Reservation Service**: http://localhost:8083
+- **Kafdrop UI**: http://localhost:9000
 
-To view the logs of a specific service:
+## API Reference
 
-```bash
-docker-compose logs -f [service-name]
-```
-
-For example:
-```bash
-docker-compose logs -f restaurant-service
-```
-
-### 4. Using Postman for API Testing
-
-We provide a Postman collection to easily test all available APIs:
-
-#### Importing the Collection
-1. Open Postman
-2. Click on "Import" > "Upload Files"
-3. Select the provided JSON collection file
-
-#### Setting up Environment (Recommended)
-1. Click on the gear icon in the top-right corner > "Manage Environments"
-2. Click "Add" to create a new environment
-3. Define the following variables:
-   - `baseUrlUser`: http://localhost:8081
-   - `baseUrlRestaurant`: http://localhost:8082
-   - `baseUrlReservation`: http://localhost:8083
-   - `restaurantId`: (ID of an existing restaurant - may need to create one first)
-   - `tableId`: (ID of an existing table)
-   - `reservationId`: (ID of an existing reservation)
-   - `queueId`: (ID of an existing queue entry)
-   - `currentDate`: Current date in YYYY-MM-DD format
-   - `currentTime`: Current time in HH:MM format
-   - `updatedTime`: Alternative time for testing updates
-
-#### Using the Collection
-1. Start with "Register New User" or "Login User" requests to obtain `{{authToken}}` and `{{loggedInUserId}}`
-2. Once authenticated, you can run any of the other requests
-3. For requests requiring IDs (e.g., Get Restaurant by ID, Update Table), make sure to set the correct values for variables like `{{restaurantId}}`, `{{tableId}}`, etc.
-4. You may need to run creation requests first to obtain valid IDs for subsequent operations
-
-## Available APIs
-
-### User Service APIs (Port 8081)
+### User Service (Port 8081)
 
 #### Authentication
 
-- **POST /api/auth/login**: Authenticate a user and receive a JWT token
-  ```json
-  {
-    "username": "string",
-    "password": "string"
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/auth/login` | POST | Authenticate user and get JWT token | No |
+
+**Login Request Example:**
+```json
+{
+  "username": "user",
+  "password": "password123"
+}
+```
+
+**Login Response Example:**
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzUxMiJ9...",
+    "userId": "1a2b3c4d-5e6f-7g8h-9i0j",
+    "message": "Authentication successful"
   }
-  ```
+}
+```
 
 #### User Management
 
-- **POST /api/users/register**: Register a new user
-  ```json
-  {
-    "username": "string",
-    "email": "string",
-    "password": "string",
-    "firstName": "string",
-    "lastName": "string",
-    "phoneNumber": "string"
-  }
-  ```
-- **GET /api/users/{id}**: Get user by ID (requires authentication)
-- **GET /api/users**: Get all users (admin only)
-- **DELETE /api/users/{id}**: Delete a user (admin only)
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/users/register` | POST | Register a new user | No |
+| `/api/users/me` | GET | Get current user info | Yes |
+| `/api/users/{id}` | GET | Get user by ID | Yes (Admin or Self) |
+| `/api/users` | GET | Get all users | Yes (Admin) |
+| `/api/users/{id}` | DELETE | Delete a user | Yes (Admin) |
 
 #### Profile Management
 
-- **GET /api/users/{id}/profile**: Get user profile (requires authentication)
-- **PUT /api/users/{id}/profile**: Update user profile (requires authentication)
-  ```json
-  {
-    "firstName": "string",
-    "lastName": "string",
-    "phoneNumber": "string",
-    "address": "string",
-    "city": "string",
-    "state": "string",
-    "zipCode": "string",
-    "country": "string",
-    "preferences": "string"
-  }
-  ```
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/users/{id}/profile` | GET | Get user profile | Yes (Admin or Self) |
+| `/api/users/{id}/profile` | PUT | Update user profile | Yes (Admin or Self) |
 
-### Restaurant Service APIs (Port 8082)
+### Restaurant Service (Port 8082)
 
-#### Restaurant Management
+#### Restaurants
 
-- **GET /api/restaurants/public/all**: Get all active restaurants
-- **GET /api/restaurants/public**: Get paginated list of active restaurants
-- **GET /api/restaurants/public/{id}**: Get restaurant by ID
-- **GET /api/restaurants/public/search**: Search restaurants by criteria
-  ```
-  ?keyword=italian&page=0&size=10
-  ```
-- **GET /api/restaurants/public/nearby**: Find nearby restaurants
-  ```
-  ?latitude=40.7128&longitude=-74.0060&distance=5.0
-  ```
-- **POST /api/restaurants**: Create a new restaurant
-  ```json
-  {
-    "name": "string",
-    "description": "string",
-    "address": "string",
-    "city": "string",
-    "state": "string",
-    "zipCode": "string",
-    "country": "string",
-    "phoneNumber": "string",
-    "email": "string",
-    "website": "string",
-    "cuisineType": "string",
-    "totalCapacity": 0,
-    "latitude": 0,
-    "longitude": 0
-  }
-  ```
-- **PUT /api/restaurants/{id}**: Update a restaurant
-- **PATCH /api/restaurants/{id}/active**: Activate or deactivate a restaurant
-  ```
-  ?active=true
-  ```
-- **DELETE /api/restaurants/{id}**: Delete a restaurant
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/restaurants/public/all` | GET | Get all active restaurants | No |
+| `/api/restaurants/public/{id}` | GET | Get restaurant by ID | No |
+| `/api/restaurants/public/search` | GET | Search restaurants by criteria | No |
+| `/api/restaurants/public/nearby` | GET | Find nearby restaurants | No |
+| `/api/restaurants` | POST | Create a new restaurant | Yes |
+| `/api/restaurants/{id}` | PUT | Update a restaurant | Yes (Owner) |
+| `/api/restaurants/{id}/active` | PATCH | Toggle restaurant active status | Yes (Owner) |
 
-#### Table Management
+#### Tables
 
-- **GET /api/restaurants/{restaurantId}/tables**: Get all tables for a restaurant
-- **GET /api/restaurants/{restaurantId}/tables/available**: Get available tables
-- **GET /api/restaurants/{restaurantId}/tables/{tableId}**: Get table by ID
-- **POST /api/restaurants/{restaurantId}/tables**: Create a new table
-  ```json
-  {
-    "tableNumber": "string",
-    "capacity": 0,
-    "status": "string",
-    "location": "string",
-    "accessible": true,
-    "shape": "string",
-    "minCapacity": 0,
-    "combinable": true,
-    "specialFeatures": "string"
-  }
-  ```
-- **PUT /api/restaurants/{restaurantId}/tables/{tableId}**: Update a table
-- **PATCH /api/restaurants/{restaurantId}/tables/{tableId}/status**: Update table status
-  ```
-  ?status=AVAILABLE&reservationId=string
-  ```
-- **DELETE /api/restaurants/{restaurantId}/tables/{tableId}**: Delete a table
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/restaurants/{restaurantId}/tables/public` | GET | Get all tables for a restaurant | No |
+| `/api/restaurants/{restaurantId}/tables/public/available` | GET | Get available tables | No |
+| `/api/restaurants/{restaurantId}/tables` | POST | Add a table to restaurant | Yes (Owner) |
+| `/api/restaurants/{restaurantId}/tables/{tableId}` | PUT | Update a table | Yes (Owner) |
+| `/api/restaurants/{restaurantId}/tables/{tableId}/status` | PATCH | Update table status | Yes (Owner) |
 
-#### Operating Hours Management
+#### Operating Hours
 
-- **GET /api/restaurants/{restaurantId}/operating-hours**: Get operating hours
-- **PUT /api/restaurants/{restaurantId}/operating-hours/{day}**: Update operating hours
-  ```json
-  {
-    "openTime": "09:00",
-    "closeTime": "22:00",
-    "closed": false
-  }
-  ```
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/restaurants/{restaurantId}/operating-hours/public` | GET | Get operating hours | No |
+| `/api/restaurants/{restaurantId}/operating-hours` | PUT | Update operating hours | Yes (Owner) |
 
-#### Branch Management
+### Reservation Service (Port 8083)
 
-- **GET /api/restaurants/{restaurantId}/branches**: Get restaurant branches
-- **GET /api/restaurants/{restaurantId}/branches/nearby**: Find nearby branches
-  ```
-  ?latitude=40.7128&longitude=-74.0060&distance=5.0
-  ```
+#### Reservations
 
-#### Staff Management
-
-- **GET /api/restaurants/{restaurantId}/staff**: Get restaurant staff
-- **GET /api/restaurants/{restaurantId}/staff/position/{position}**: Get staff by position
-
-#### Statistics
-
-- **GET /api/restaurants/{restaurantId}/statistics**: Get restaurant statistics
-
-### Reservation Service APIs (Port 8083)
-
-#### Reservation Management
-
-- **GET /api/reservations/{id}**: Get reservation by ID
-- **GET /api/users/{userId}/reservations**: Get user's reservations
-- **GET /api/restaurants/{restaurantId}/reservations**: Get restaurant's reservations
-- **POST /api/reservations**: Create a new reservation
-  ```json
-  {
-    "restaurantId": "string",
-    "reservationTime": "2025-03-26T19:00:00",
-    "partySize": 4,
-    "customerName": "string",
-    "customerPhone": "string",
-    "customerEmail": "string",
-    "specialRequests": "string",
-    "remindersEnabled": true
-  }
-  ```
-- **PUT /api/reservations/{id}**: Update a reservation
-  ```json
-  {
-    "reservationTime": "2025-03-26T19:00:00",
-    "partySize": 4,
-    "customerName": "string",
-    "customerPhone": "string",
-    "customerEmail": "string",
-    "specialRequests": "string",
-    "durationMinutes": 120
-  }
-  ```
-- **POST /api/reservations/{id}/confirm**: Confirm a reservation
-- **POST /api/reservations/{id}/cancel**: Cancel a reservation
-  ```json
-  {
-    "reason": "string"
-  }
-  ```
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/reservations/availability` | GET | Check table availability | No |
+| `/api/reservations` | POST | Create a reservation | Yes |
+| `/api/reservations/user` | GET | Get user's reservations | Yes |
+| `/api/reservations/restaurant/{restaurantId}` | GET | Get restaurant's reservations | Yes (Owner) |
+| `/api/reservations/{id}` | GET | Get reservation by ID | Yes |
+| `/api/reservations/{id}` | PUT | Update a reservation | Yes |
+| `/api/reservations/{id}/confirm` | POST | Confirm a reservation | Yes |
+| `/api/reservations/{id}/cancel` | POST | Cancel a reservation | Yes |
 
 #### Queue Management
 
-- **GET /api/restaurants/{restaurantId}/queue**: Get restaurant's waiting queue
-- **POST /api/restaurants/{restaurantId}/queue**: Add to waiting queue
-  ```json
-  {
-    "customerName": "string",
-    "partySize": 4,
-    "notes": "string"
-  }
-  ```
-- **POST /api/queue/{id}/notify**: Notify customer their table is ready
-- **POST /api/queue/{id}/seat**: Mark party as seated
-- **POST /api/queue/{id}/cancel**: Remove from queue
-  ```json
-  {
-    "reason": "string"
-  }
-  ```
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/queues` | POST | Add user to queue | Yes |
+| `/api/queues/restaurant/{restaurantId}` | GET | Get restaurant's waiting queue | Yes (Owner) |
+| `/api/queues/{id}` | GET | Get queue entry by ID | Yes |
+| `/api/queues/{id}/notify` | POST | Notify customer their table is ready | Yes (Owner) |
+| `/api/queues/{id}/seat` | POST | Mark party as seated | Yes (Owner) |
+| `/api/queues/{id}/cancel` | POST | Remove from queue | Yes |
 
 #### Schedule Management
 
-- **GET /api/restaurants/{restaurantId}/schedule**: Get restaurant's schedule
-- **PUT /api/restaurants/{restaurantId}/schedule/{dayOfWeek}**: Update schedule for a day
-  ```json
-  {
-    "openTime": "10:00",
-    "closeTime": "22:00",
-    "closed": false
-  }
-  ```
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/schedules/restaurant/{restaurantId}` | GET | Get restaurant's schedule | No |
+| `/api/schedules/restaurant/{restaurantId}/date/{date}` | PUT | Update schedule for a day | Yes (Owner) |
 
-Service Features:
-- Automatic table assignment based on party size and availability
-- Reservation quota management to prevent overbooking
-- Configurable session lengths (default 120 minutes)
-- Confirmation deadline enforcement (default 15 minutes)
-- Automatic processing of expired reservations
-- Walk-in queue management with estimated wait times
-- Real-time updates via Kafka events
+## Kafka Topics
 
-## Service Communication
-
-The services communicate with each other through Kafka events. Here are the main topics and their purposes:
+The following Kafka topics are used for inter-service communication:
 
 ### User Service Topics
-
-- **user-events**: General user-related events
-- **user-registration**: User registration events
-- **user-login**: User login events
-- **user-profile**: User profile update events
+- `user-events`: General user-related events
+- `user-registration`: User registration events
+- `user-login`: User login events
+- `user-profile`: User profile update events
 
 ### Restaurant Service Topics
+- `restaurant-events`: General restaurant-related events
+- `restaurant-update`: Restaurant information update events
+- `table-status`: Table status change events
+- `capacity-change`: Restaurant capacity change events
 
-- **restaurant-events**: General restaurant-related events
-- **restaurant-update**: Restaurant information update events
-- **table-status**: Table status change events
-- **capacity-change**: Restaurant capacity change events
+### Reservation Service Topics
+- `reservation-events`: General reservation events
+- `reservation-create`: Reservation creation events
+- `reservation-update`: Reservation update events
+- `reservation-cancel`: Reservation cancellation events
 
-### Future Implementation Topics
+## Postman Collection
 
-#### Reservation Service Topics
-- **reservation-events**: General reservation events
-- **reservation-create**: Reservation creation events
-- **reservation-update**: Reservation update events
-- **reservation-cancel**: Reservation cancellation events
+A Postman collection file (`PostmanTesting.json`) is included for testing all available APIs. To use it:
 
-#### Notification Service Topics
-- **notification-events**: General notification events
+1. Import the collection into Postman
+2. Set up the environment variables:
+   - `baseUrlUser`: http://localhost:8081
+   - `baseUrlRestaurant`: http://localhost:8082
+   - `baseUrlReservation`: http://localhost:8083
 
-## Database Configuration
+## Development
 
-### User Service Database
-- Host: localhost
-- Port: 3306
-- Database: user_service
-- Username: user_service
-- Password: user_password
+### Adding Custom Code
 
-### Restaurant Service Database
-- Host: localhost
-- Port: 3307
-- Database: restaurant_service
-- Username: restaurant_service
-- Password: restaurant_password
+Each service is designed to be independent and can be extended separately:
 
-## Security
+- **User Service**: Add custom user features in the `user-service` directory
+- **Restaurant Service**: Add restaurant features in the `restaurant-service` directory
+- **Reservation Service**: Add reservation features in the `reservation-service` directory
 
-- JWT-based authentication for user service
-- Role-based access control (ADMIN, USER)
-- Secure password hashing
-- Input validation and sanitization
+### Building Individual Services
 
-## Monitoring and Management
+You can build and run individual services:
 
-- Kafdrop UI available at http://localhost:9000 for Kafka monitoring
-- Health check endpoints available for each service
-- Docker container logs for service monitoring
+```bash
+cd user-service
+mvn spring-boot:run
+```
+
+### Database Access
+
+- **User Service DB**: localhost:3306
+- **Restaurant Service DB**: localhost:3307
+- **Reservation Service DB**: localhost:3308
 
 ## Future Enhancements
 
-1. Reservation Service Implementation
-   - Table reservation management
-   - Reservation confirmation
-   - Cancellation handling
-   - Waitlist management
-
-2. Notification Service Implementation
+1. Notification Service
    - Email notifications
    - SMS notifications
    - Push notifications
-   - Reservation reminders
 
-3. Payment Service Integration
+2. Payment Service
    - Payment processing
    - Refund handling
    - Payment history
 
-4. Review and Rating System
-   - Restaurant reviews
-   - User ratings
-   - Review moderation
-
-5. Analytics Dashboard
+3. Analytics Dashboard
    - Business intelligence
    - Customer insights
    - Performance metrics
+
+# JWT Authentication Flow Implementation Guide
+
+This guide explains how authentication works in the Restaurant Reservation Platform and how to properly implement JWT authentication in client applications.
+
+## Overview
+
+The platform uses JSON Web Tokens (JWT) for authentication. The authentication flow is:
+
+1. User logs in with username/password to the User Service
+2. User Service validates credentials and returns a JWT token
+3. Client includes this token in the `Authorization` header for subsequent requests
+4. Services validate the token and extract user information for authorization
+
+## Authentication Flow Diagram
+
+```
+┌─────────┐                ┌─────────────┐                  ┌──────────────────┐
+│  Client │                │ User Service │                  │ Protected Service │
+└────┬────┘                └──────┬──────┘                  └─────────┬────────┘
+     │                            │                                   │
+     │ POST /api/auth/login       │                                   │
+     │ {username, password}       │                                   │
+     │ ─────────────────────────► │                                   │
+     │                            │                                   │
+     │ 200 OK                     │                                   │
+     │ {token, userId}            │                                   │
+     │ ◄───────────────────────── │                                   │
+     │                            │                                   │
+     │ GET /api/some-endpoint     │                                   │
+     │ Authorization: Bearer token│                                   │
+     │ ─────────────────────────────────────────────────────────────► │
+     │                            │                                   │
+     │                            │                                   │ Validate token
+     │                            │                                   │ Extract user info
+     │                            │                                   │ Check permissions
+     │                            │                                   │
+     │ 200 OK                     │                                   │
+     │ {requested data}           │                                   │
+     │ ◄───────────────────────────────────────────────────────────── │
+     │                            │                                   │
+```
+
+## Implementation Details
+
+### 1. Authentication Request
+
+**Endpoint:** `POST /api/auth/login`
+
+**Request Body:**
+```json
+{
+  "username": "user123",
+  "password": "password123"
+}
+```
+
+**Response (Success):**
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ1c2VyMTIzIiwidXNlcklkIjoiMWEyYjNjNGQiLCJpYXQiOjE2MTYxNTkwMjIsImV4cCI6MTYxNjI0NTQyMn0.signature",
+    "userId": "1a2b3c4d-5e6f-7g8h-9i0j",
+    "message": "Authentication successful"
+  }
+}
+```
+
+**Response (Failure):**
+```json
+{
+  "success": false,
+  "message": "Invalid username or password",
+  "errorCode": "AUTHENTICATION_ERROR"
+}
+```
+
+### 2. Using the JWT Token
+
+After obtaining the token, include it in the `Authorization` header for subsequent requests:
+
+```
+Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ1c2VyMTIzIiwidXNlcklkIjoiMWEyYjNjNGQiLCJpYXQiOjE2MTYxNTkwMjIsImV4cCI6MTYxNjI0NTQyMn0.signature
+```
+
+### 3. JWT Token Structure
+
+The JWT token consists of three parts:
+- **Header:** Contains token type and algorithm
+- **Payload:** Contains claims (data) about the user
+- **Signature:** Verifies the token hasn't been tampered with
+
+The platform JWT payload includes:
+- `sub`: Username
+- `userId`: User's unique ID
+- `iat`: Issued at timestamp
+- `exp`: Expiration timestamp
+
+### 4. Token Expiration
+
+Tokens are valid for 24 hours (configurable in `application.properties` with `jwt.expiration`). After expiration, the client must acquire a new token by logging in again.
+
+### 5. Implementation in Different Client Types
+
+#### Web Application (JavaScript)
+```javascript
+// Login function
+async function login(username, password) {
+  const response = await fetch('http://localhost:8081/api/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ username, password })
+  });
+  
+  const data = await response.json();
+  if (data.success) {
+    // Store token in localStorage or sessionStorage
+    localStorage.setItem('token', data.data.token);
+    localStorage.setItem('userId', data.data.userId);
+    return true;
+  }
+  return false;
+}
+
+// Making authenticated requests
+async function fetchRestaurants() {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch('http://localhost:8082/api/restaurants', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  return await response.json();
+}
+```
+
+#### Mobile Application
+```swift
+// Swift example (iOS)
+func login(username: String, password: String, completion: @escaping (Bool, String?) -> Void) {
+    let url = URL(string: "http://localhost:8081/api/auth/login")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    let body: [String: Any] = ["username": username, "password": password]
+    request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        guard let data = data, error == nil else {
+            completion(false, nil)
+            return
+        }
+        
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let success = json["success"] as? Bool,
+           success,
+           let data = json["data"] as? [String: Any],
+           let token = data["token"] as? String {
+            
+            // Store token securely
+            KeychainManager.save(token, forKey: "authToken")
+            completion(true, token)
+        } else {
+            completion(false, nil)
+        }
+    }.resume()
+}
+```
+
+#### Postman
+1. Make a POST request to `/api/auth/login` with credentials
+2. Extract the token from the response
+3. Set up an environment variable `authToken`
+4. Use the token in subsequent requests with the Authorization header:
+   - Type: Bearer Token
+   - Token: `{{authToken}}`
+
+### 6. Security Best Practices
+
+1. **Store tokens securely:**
+   - Web: Use HttpOnly cookies or secure storage
+   - Mobile: Use Keychain (iOS) or Encrypted SharedPreferences (Android)
+
+2. **Implement token refresh:**
+   - Optionally implement a refresh token mechanism for seamless user experience
+
+3. **Handle expiration:**
+   - Detect 401 Unauthorized responses
+   - Redirect to login when token expires
+
+4. **Logout:**
+   - Clear stored tokens on client side
+   - Optionally implement server-side token invalidation
+
+5. **HTTPS Only:**
+   - Always use HTTPS in production to protect tokens in transit
+
+## User Roles and Permissions
+
+The platform has a role-based access control system:
+
+1. **USER Role**:
+   - `user:read`: Can read own user data
+   - `profile:read`: Can read own profile data
+   - `profile:write`: Can update own profile data
+   - `restaurant:read`: Can read restaurant data
+
+2. **ADMIN Role**:
+   - All USER permissions
+   - `user:write`: Can create/update user data
+   - `user:delete`: Can delete user data
+
+3. **RESTAURANT_OWNER Role** (assigned in restaurant context):
+   - Based on restaurant `ownerId` matching the current user's ID
+   - Can manage their own restaurants, tables, etc.
+
+## Testing Authentication
+
+You can use the included Postman collection to test authentication:
+
+1. Use the "Login User" request to authenticate
+2. The collection is set up to automatically extract the JWT token and store it in the `authToken` variable
+3. All subsequent authenticated requests will use this token
+
+## Troubleshooting
+
+Common authentication issues:
+
+1. **401 Unauthorized**:
+   - Token is missing, expired, or invalid
+   - Solution: Re-authenticate and get a new token
+
+2. **403 Forbidden**:
+   - Token is valid but user lacks permissions
+   - Check if the user has the required role or permissions
+
+3. **Token Not Being Sent Correctly**:
+   - Ensure the Authorization header format is correct: `Bearer <token>`
+   - Check for whitespace or formatting issues
+
+4. **Cross-Origin Issues**:
+   - If using a web client, ensure CORS is properly configured
+   - Check for preflight OPTIONS requests
+
+## License
+
+This project is licensed under the MIT License.
