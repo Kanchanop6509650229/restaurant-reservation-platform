@@ -1,6 +1,29 @@
 # Restaurant Reservation Platform
 
+![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Java](https://img.shields.io/badge/Java-17-orange.svg)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.3-brightgreen.svg)
+
 A comprehensive microservices-based platform for restaurant reservations built with Spring Boot and Kafka. The application consists of multiple services that communicate via Kafka messaging to provide a complete restaurant management and reservation system.
+
+## Table of Contents
+- [Project Overview](#project-overview)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [API Reference](#api-reference)
+  - [User Service](#user-service-port-8081)
+  - [Restaurant Service](#restaurant-service-port-8082)
+  - [Reservation Service](#reservation-service-port-8083)
+- [Kafka Topics](#kafka-topics)
+- [Postman Collection](#postman-collection)
+- [Development](#development)
+- [Testing](#testing)
+- [Future Enhancements](#future-enhancements)
+- [JWT Authentication Guide](#jwt-authentication-flow-implementation-guide)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Project Overview
 
