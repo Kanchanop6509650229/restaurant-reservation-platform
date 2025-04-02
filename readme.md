@@ -1,3 +1,7 @@
+[English](./README.md) | [**ภาษาไทย**](./README.th.md)
+
+---
+
 # Restaurant Reservation Platform
 
 ![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
