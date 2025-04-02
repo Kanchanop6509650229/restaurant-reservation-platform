@@ -10,6 +10,7 @@ A comprehensive microservices-based platform for restaurant reservations built w
 ## Table of Contents
 - [Project Overview](#project-overview)
 - [Architecture](#architecture)
+- [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [API Reference](#api-reference)
@@ -34,6 +35,18 @@ The Restaurant Reservation Platform enables:
 - Advanced reservation system with confirmation workflows
 - Queue management for walk-in customers
 - Event-driven architecture for real-time updates across services
+
+## Architecture
+
+![architecture-diagram](architecture-diagram.png)
+
+The platform follows a microservices architecture with:
+
+- **User Service**: Authentication, user registration, and profile management
+- **Restaurant Service**: Restaurant information, tables, and operating hours
+- **Reservation Service**: Reservations, queues, and scheduling
+- **Kafka**: Event bus for inter-service communication
+- **MySQL Databases**: Separate database for each service
 
 ## Project Structure
 
@@ -81,18 +94,6 @@ This project utilizes a standard package structure for Spring Boot applications 
     * **Purpose**: Contains utility classes that might be shared across different parts of the application (e.g., `DateTimeUtils`, `SpatialUtils`).
 
 (Note: Not all subpackages might exist in every service, depending on the specific complexity and needs of that service.)
-
-## Architecture
-
-![architecture-diagram](architecture-diagram.png)
-
-The platform follows a microservices architecture with:
-
-- **User Service**: Authentication, user registration, and profile management
-- **Restaurant Service**: Restaurant information, tables, and operating hours
-- **Reservation Service**: Reservations, queues, and scheduling
-- **Kafka**: Event bus for inter-service communication
-- **MySQL Databases**: Separate database for each service
 
 ## Prerequisites
 
