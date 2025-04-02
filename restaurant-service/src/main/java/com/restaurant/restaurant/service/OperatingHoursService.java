@@ -40,14 +40,21 @@ public class OperatingHoursService {
     private String defaultCloseTime;
 
     public OperatingHoursService(OperatingHoursRepository operatingHoursRepository,
-                                RestaurantRepository restaurantRepository,
-                                RestaurantEventProducer restaurantEventProducer) {
+            RestaurantRepository restaurantRepository,
+            RestaurantEventProducer restaurantEventProducer) {
         this.operatingHoursRepository = operatingHoursRepository;
         this.restaurantRepository = restaurantRepository;
         this.restaurantEventProducer = restaurantEventProducer;
     }
 
     public List<OperatingHoursDTO> getOperatingHoursByRestaurantId(String restaurantId) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
+
+        if (!restaurant.isActive()) {
+            throw new ValidationException("ไม่สามารถอัปเดตร้านอาหารที่ถูกลบไปแล้ว");
+        }
+
         return operatingHoursRepository.findByRestaurantId(restaurantId).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -59,38 +66,42 @@ public class OperatingHoursService {
         LocalTime closeTime = LocalTime.parse(defaultCloseTime);
 
         List<OperatingHours> hoursToSave = new ArrayList<>();
-        
+
         for (DayOfWeek day : DayOfWeek.values()) {
             // Check if hours already exist for this day
             Optional<OperatingHours> existingHours = operatingHoursRepository
                     .findByRestaurantIdAndDayOfWeek(restaurant.getId(), day);
-            
+
             if (existingHours.isPresent()) {
                 continue;
             }
-            
+
             OperatingHours hours = new OperatingHours();
             hours.setRestaurant(restaurant);
             hours.setDayOfWeek(day);
             hours.setOpenTime(openTime);
             hours.setCloseTime(closeTime);
             hours.setClosed(day == DayOfWeek.SUNDAY); // Example: Closed on Sundays by default
-            
+
             hoursToSave.add(hours);
         }
-        
+
         if (!hoursToSave.isEmpty()) {
             operatingHoursRepository.saveAll(hoursToSave);
         }
     }
 
     @Transactional
-    public OperatingHoursDTO updateOperatingHours(String restaurantId, DayOfWeek day, 
-                                               OperatingHoursUpdateRequest updateRequest) {
-        
+    public OperatingHoursDTO updateOperatingHours(String restaurantId, DayOfWeek day,
+            OperatingHoursUpdateRequest updateRequest) {
+
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
-        
+
+        if (!restaurant.isActive()) {
+            throw new ValidationException("ไม่สามารถอัปเดตร้านอาหารที่ถูกลบไปแล้ว");
+        }
+
         OperatingHours hours = operatingHoursRepository.findByRestaurantIdAndDayOfWeek(restaurantId, day)
                 .orElseGet(() -> {
                     OperatingHours newHours = new OperatingHours();
@@ -98,43 +109,43 @@ public class OperatingHoursService {
                     newHours.setDayOfWeek(day);
                     return newHours;
                 });
-        
+
         // Validation
         if (updateRequest.getOpenTime() != null && updateRequest.getCloseTime() != null) {
             if (updateRequest.getOpenTime().isAfter(updateRequest.getCloseTime())) {
-                throw new ValidationException("openTime", 
+                throw new ValidationException("openTime",
                         "Open time must be before close time");
             }
         }
-        
+
         LocalTime oldOpenTime = hours.getOpenTime();
         LocalTime oldCloseTime = hours.getCloseTime();
         boolean oldClosed = hours.isClosed();
-        
+
         if (updateRequest.getOpenTime() != null) {
             hours.setOpenTime(updateRequest.getOpenTime());
         }
-        
+
         if (updateRequest.getCloseTime() != null) {
             hours.setCloseTime(updateRequest.getCloseTime());
         }
-        
+
         hours.setClosed(updateRequest.isClosed());
-        
+
         if (updateRequest.getBreakStartTime() != null) {
             hours.setBreakStartTime(updateRequest.getBreakStartTime());
         }
-        
+
         if (updateRequest.getBreakEndTime() != null) {
             hours.setBreakEndTime(updateRequest.getBreakEndTime());
         }
-        
+
         if (updateRequest.getSpecialHoursDescription() != null) {
             hours.setSpecialHoursDescription(updateRequest.getSpecialHoursDescription());
         }
-        
+
         OperatingHours updatedHours = operatingHoursRepository.save(hours);
-        
+
         // Publish operating hours changed event
         if (!oldClosed && updatedHours.isClosed()) {
             // If changing from open to closed
@@ -145,8 +156,7 @@ public class OperatingHoursService {
                             oldOpenTime,
                             oldCloseTime,
                             null, // When closed, no open/close times
-                            null
-                    ));
+                            null));
         } else if (oldClosed && !updatedHours.isClosed()) {
             // If changing from closed to open
             restaurantEventProducer.publishOperatingHoursChangedEvent(
@@ -156,11 +166,10 @@ public class OperatingHoursService {
                             null, // When was closed, no previous times
                             null,
                             updatedHours.getOpenTime(),
-                            updatedHours.getCloseTime()
-                    ));
-        } else if (!oldClosed && !updatedHours.isClosed() && 
-                  (oldOpenTime != updatedHours.getOpenTime() || 
-                   oldCloseTime != updatedHours.getCloseTime())) {
+                            updatedHours.getCloseTime()));
+        } else if (!oldClosed && !updatedHours.isClosed() &&
+                (oldOpenTime != updatedHours.getOpenTime() ||
+                        oldCloseTime != updatedHours.getCloseTime())) {
             // If changing times when open
             restaurantEventProducer.publishOperatingHoursChangedEvent(
                     new OperatingHoursChangedEvent(
@@ -169,46 +178,54 @@ public class OperatingHoursService {
                             oldOpenTime,
                             oldCloseTime,
                             updatedHours.getOpenTime(),
-                            updatedHours.getCloseTime()
-                    ));
+                            updatedHours.getCloseTime()));
         }
-        
+
         return convertToDTO(updatedHours);
     }
 
     @Transactional
-    public List<OperatingHoursDTO> updateAllOperatingHours(String restaurantId, OperatingHoursBatchUpdateRequest updateRequest) {
+    public List<OperatingHoursDTO> updateAllOperatingHours(String restaurantId,
+            OperatingHoursBatchUpdateRequest updateRequest) {
+
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
+
+        if (!restaurant.isActive()) {
+            throw new ValidationException("ไม่สามารถอัปเดตเวลาทำการของร้านอาหารที่ถูกลบไปแล้ว");
+        }
+
         // Create a set of days that are included in the update
         Set<DayOfWeek> includedDays = updateRequest.getOperatingHours().stream()
                 .map(OperatingHourEntry::getDayOfWeek)
                 .collect(Collectors.toSet());
-        
+
         // Update each day in the request
         for (OperatingHourEntry dayEntry : updateRequest.getOperatingHours()) {
             if (dayEntry.getDayOfWeek() == null) {
                 throw new ValidationException("dayOfWeek", "Day of week is required");
             }
-            
+
             // Create an OperatingHoursUpdateRequest from the OperatingHourEntry
             OperatingHoursUpdateRequest updateRequestForDay = new OperatingHoursUpdateRequest();
             updateRequestForDay.setOpenTime(dayEntry.getOpenTime());
             updateRequestForDay.setCloseTime(dayEntry.getCloseTime());
-            updateRequestForDay.setClosed(false);  // If a day is included, it's not closed
-            
+            updateRequestForDay.setClosed(false); // If a day is included, it's not closed
+
             // Use the existing method to update this day's hours
             updateOperatingHours(restaurantId, dayEntry.getDayOfWeek(), updateRequestForDay);
         }
-        
+
         // For days not in the request, mark them as closed
         for (DayOfWeek day : DayOfWeek.values()) {
             if (!includedDays.contains(day)) {
                 OperatingHoursUpdateRequest closeRequest = new OperatingHoursUpdateRequest();
                 closeRequest.setClosed(true);
-                
+
                 updateOperatingHours(restaurantId, day, closeRequest);
             }
         }
-        
+
         // Return all operating hours for the restaurant
         return getOperatingHoursByRestaurantId(restaurantId);
     }
@@ -216,11 +233,15 @@ public class OperatingHoursService {
     public OperatingHoursDTO getOperatingHoursByDay(String restaurantId, DayOfWeek day) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
-                
+
+        if (!restaurant.isActive()) {
+            throw new ValidationException("ไม่สามารถดูข้อมูลเวลาทำการเนื่องจากร้านอาหารนี้ไม่ได้ให้บริการแล้ว");
+        }
+
         OperatingHours hours = operatingHoursRepository.findByRestaurantIdAndDayOfWeek(restaurantId, day)
-                .orElseThrow(() -> new EntityNotFoundException("Operating Hours", 
+                .orElseThrow(() -> new EntityNotFoundException("Operating Hours",
                         "Restaurant: " + restaurantId + ", Day: " + day));
-                        
+
         return convertToDTO(hours);
     }
 

@@ -1,5 +1,10 @@
 package com.restaurant.restaurant.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
 import com.restaurant.common.constants.StatusCodes;
 import com.restaurant.common.events.restaurant.TableStatusChangedEvent;
 import com.restaurant.common.exceptions.EntityNotFoundException;
@@ -12,11 +17,8 @@ import com.restaurant.restaurant.dto.TableCreateRequest;
 import com.restaurant.restaurant.dto.TableDTO;
 import com.restaurant.restaurant.dto.TableUpdateRequest;
 import com.restaurant.restaurant.kafka.producers.RestaurantEventProducer;
-import jakarta.transaction.Transactional;
-import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import jakarta.transaction.Transactional;
 
 @Service
 public class TableService {
@@ -25,21 +27,36 @@ public class TableService {
     private final RestaurantRepository restaurantRepository;
     private final RestaurantEventProducer restaurantEventProducer;
 
-    public TableService(RestaurantTableRepository tableRepository, 
-                        RestaurantRepository restaurantRepository,
-                        RestaurantEventProducer restaurantEventProducer) {
+    public TableService(RestaurantTableRepository tableRepository,
+            RestaurantRepository restaurantRepository,
+            RestaurantEventProducer restaurantEventProducer) {
         this.tableRepository = tableRepository;
         this.restaurantRepository = restaurantRepository;
         this.restaurantEventProducer = restaurantEventProducer;
     }
 
     public List<TableDTO> getAllTablesByRestaurantId(String restaurantId) {
+
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
+
+        if (!restaurant.isActive()) {
+            throw new ValidationException("ไม่สามารถดูข้อมูลโต๊ะของร้านอาหารที่ถูกลบไปแล้ว");
+        }
+
         return tableRepository.findByRestaurantId(restaurantId).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
     public List<TableDTO> getAvailableTablesByRestaurantId(String restaurantId) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
+
+        if (!restaurant.isActive()) {
+            throw new ValidationException("ไม่สามารถดูข้อมูลโต๊ะว่างของร้านอาหารที่ถูกลบไปแล้ว");
+        }
+
         return tableRepository.findByRestaurantIdAndStatus(restaurantId, StatusCodes.TABLE_AVAILABLE).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -48,6 +65,11 @@ public class TableService {
     public TableDTO getTableById(String id) {
         RestaurantTable table = tableRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Table", id));
+
+        if (!table.getRestaurant().isActive()) {
+            throw new ValidationException("ไม่สามารถดูข้อมูลโต๊ะของร้านอาหารที่ถูกลบไปแล้ว");
+        }
+
         return convertToDTO(table);
     }
 
@@ -55,6 +77,10 @@ public class TableService {
     public TableDTO createTable(String restaurantId, TableCreateRequest createRequest) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
+
+        if (!restaurant.isActive()) {
+            throw new ValidationException("ไม่สามารถเพิ่มโต๊ะให้ร้านอาหารที่ถูกลบไปแล้ว");
+        }
 
         validateTableRequest(createRequest);
 
@@ -71,10 +97,10 @@ public class TableService {
         table.setSpecialFeatures(createRequest.getSpecialFeatures());
 
         RestaurantTable savedTable = tableRepository.save(table);
-        
+
         // Update restaurant total capacity
         updateRestaurantCapacity(restaurant);
-        
+
         return convertToDTO(savedTable);
     }
 
@@ -82,6 +108,10 @@ public class TableService {
     public TableDTO updateTable(String id, TableUpdateRequest updateRequest) {
         RestaurantTable table = tableRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Table", id));
+
+        if (!table.getRestaurant().isActive()) {
+            throw new ValidationException("ไม่สามารถแก้ไขโต๊ะของร้านอาหารที่ถูกลบไปแล้ว");
+        }
 
         if (updateRequest.getTableNumber() != null) {
             table.setTableNumber(updateRequest.getTableNumber());
@@ -96,26 +126,26 @@ public class TableService {
         }
 
         table.setAccessible(updateRequest.isAccessible());
-        
+
         if (updateRequest.getShape() != null) {
             table.setShape(updateRequest.getShape());
         }
-        
+
         if (updateRequest.getMinCapacity() > 0) {
             table.setMinCapacity(updateRequest.getMinCapacity());
         }
-        
+
         table.setCombinable(updateRequest.isCombinable());
-        
+
         if (updateRequest.getSpecialFeatures() != null) {
             table.setSpecialFeatures(updateRequest.getSpecialFeatures());
         }
 
         RestaurantTable updatedTable = tableRepository.save(table);
-        
+
         // Update restaurant total capacity if capacity changed
         updateRestaurantCapacity(updatedTable.getRestaurant());
-        
+
         return convertToDTO(updatedTable);
     }
 
@@ -123,22 +153,26 @@ public class TableService {
     public TableDTO updateTableStatus(String id, String status, String reservationId) {
         RestaurantTable table = tableRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Table", id));
-        
+
+        if (!table.getRestaurant().isActive()) {
+            throw new ValidationException("ไม่สามารถอัปเดตสถานะโต๊ะของร้านอาหารที่ถูกลบไปแล้ว");
+        }
+
         if (!isValidTableStatus(status)) {
             throw new ValidationException("status", "Invalid table status: " + status);
         }
-        
+
         String oldStatus = table.getStatus();
-        
+
         // Don't update if status is the same
         if (oldStatus.equals(status)) {
             return convertToDTO(table);
         }
-        
+
         table.setStatus(status);
-        
+
         RestaurantTable updatedTable = tableRepository.save(table);
-        
+
         // Publish table status changed event
         restaurantEventProducer.publishTableStatusChangedEvent(
                 new TableStatusChangedEvent(
@@ -146,9 +180,8 @@ public class TableService {
                         updatedTable.getId(),
                         oldStatus,
                         status,
-                        reservationId
-                ));
-        
+                        reservationId));
+
         return convertToDTO(updatedTable);
     }
 
@@ -156,12 +189,16 @@ public class TableService {
     public void deleteTable(String id) {
         RestaurantTable table = tableRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Table", id));
-        
+
+        if (!table.getRestaurant().isActive()) {
+            throw new ValidationException("ไม่สามารถลบโต๊ะของร้านอาหารที่ถูกลบไปแล้ว");
+        }
+
         Restaurant restaurant = table.getRestaurant();
-        
+
         // Actually delete the table (not just marking inactive)
         tableRepository.delete(table);
-        
+
         // Update restaurant total capacity
         updateRestaurantCapacity(restaurant);
     }
@@ -170,7 +207,7 @@ public class TableService {
         if (request.getTableNumber() == null || request.getTableNumber().trim().isEmpty()) {
             throw new ValidationException("tableNumber", "Table number is required");
         }
-        
+
         if (request.getCapacity() <= 0) {
             throw new ValidationException("capacity", "Table capacity must be greater than 0");
         }
@@ -178,25 +215,29 @@ public class TableService {
 
     private boolean isValidTableStatus(String status) {
         return status.equals(StatusCodes.TABLE_AVAILABLE) ||
-               status.equals(StatusCodes.TABLE_OCCUPIED) ||
-               status.equals(StatusCodes.TABLE_RESERVED) ||
-               status.equals(StatusCodes.TABLE_MAINTENANCE);
+                status.equals(StatusCodes.TABLE_OCCUPIED) ||
+                status.equals(StatusCodes.TABLE_RESERVED) ||
+                status.equals(StatusCodes.TABLE_MAINTENANCE);
     }
 
     private void updateRestaurantCapacity(Restaurant restaurant) {
+        if (!restaurant.isActive()) {
+            throw new ValidationException("ไม่สามารถคำนวณความจุใหม่สำหรับร้านอาหารที่ถูกลบไปแล้ว");
+        }
+
         List<RestaurantTable> activeTables = tableRepository.findByRestaurantIdAndStatus(
                 restaurant.getId(), StatusCodes.TABLE_AVAILABLE);
-        
+
         int totalCapacity = activeTables.stream()
                 .mapToInt(RestaurantTable::getCapacity)
                 .sum();
-        
+
         int oldCapacity = restaurant.getTotalCapacity();
-        
+
         if (oldCapacity != totalCapacity) {
             restaurant.setTotalCapacity(totalCapacity);
             restaurantRepository.save(restaurant);
-            
+
             // Publish capacity changed event
             restaurantEventProducer.publishCapacityChangedEvent(
                     restaurant.getId(), oldCapacity, totalCapacity, "Table Update");

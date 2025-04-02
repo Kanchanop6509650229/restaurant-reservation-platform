@@ -33,9 +33,9 @@ public class RestaurantService {
     private final RestaurantEventProducer restaurantEventProducer;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
-    public RestaurantService(RestaurantRepository restaurantRepository, 
-                             OperatingHoursService operatingHoursService,
-                             RestaurantEventProducer restaurantEventProducer) {
+    public RestaurantService(RestaurantRepository restaurantRepository,
+            OperatingHoursService operatingHoursService,
+            RestaurantEventProducer restaurantEventProducer) {
         this.restaurantRepository = restaurantRepository;
         this.operatingHoursService = operatingHoursService;
         this.restaurantEventProducer = restaurantEventProducer;
@@ -55,6 +55,11 @@ public class RestaurantService {
     public RestaurantDTO getRestaurantById(String id) {
         Restaurant restaurant = restaurantRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", id));
+
+        if (!restaurant.isActive()) {
+            throw new ValidationException("ไม่สามารถดึงข้อมูลร้านอาหารที่ถูกลบไปแล้ว");
+        }
+        
         return convertToDTO(restaurant);
     }
 
@@ -71,7 +76,7 @@ public class RestaurantService {
     public List<RestaurantDTO> findNearbyRestaurants(double latitude, double longitude, double distanceInKm) {
         // Convert km to meters
         double distanceInMeters = distanceInKm * 1000;
-        
+
         return restaurantRepository.findNearbyRestaurants(latitude, longitude, distanceInMeters).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -96,20 +101,20 @@ public class RestaurantService {
         restaurant.setTotalCapacity(createRequest.getTotalCapacity());
         restaurant.setActive(true);
         restaurant.setOwnerId(createRequest.getOwnerId());
-        
+
         // Set coordinates if provided
         if (createRequest.getLatitude() != 0 && createRequest.getLongitude() != 0) {
             restaurant.setLatitude(createRequest.getLatitude());
             restaurant.setLongitude(createRequest.getLongitude());
-            
+
             // Create Point geometry for spatial queries
             // Point point = geometryFactory.createPoint(
-            //         new Coordinate(createRequest.getLongitude(), createRequest.getLatitude()));
+            // new Coordinate(createRequest.getLongitude(), createRequest.getLatitude()));
             // restaurant.setLocation(point);
         }
 
         Restaurant savedRestaurant = restaurantRepository.save(restaurant);
-        
+
         // Create default operating hours
         operatingHoursService.createDefaultOperatingHours(savedRestaurant);
 
@@ -121,75 +126,79 @@ public class RestaurantService {
         Restaurant restaurant = restaurantRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", id));
 
+        if (!restaurant.isActive()) {
+            throw new ValidationException("ไม่สามารถอัปเดตร้านอาหารที่ถูกลบไปแล้ว");
+        }
+
         try {
             // Track changes for event publishing
             if (updateRequest.getName() != null && !updateRequest.getName().equals(restaurant.getName())) {
                 String oldValue = restaurant.getName();
                 restaurant.setName(updateRequest.getName());
-                
+
                 // Publish restaurant updated event
                 restaurantEventProducer.publishRestaurantUpdatedEvent(
                         new RestaurantUpdatedEvent(id, "name", oldValue, updateRequest.getName()));
             }
-    
+
             if (updateRequest.getDescription() != null) {
                 restaurant.setDescription(updateRequest.getDescription());
             }
-    
+
             if (updateRequest.getAddress() != null) {
                 restaurant.setAddress(updateRequest.getAddress());
             }
-    
+
             if (updateRequest.getCity() != null) {
                 restaurant.setCity(updateRequest.getCity());
             }
-    
+
             if (updateRequest.getState() != null) {
                 restaurant.setState(updateRequest.getState());
             }
-    
+
             if (updateRequest.getZipCode() != null) {
                 restaurant.setZipCode(updateRequest.getZipCode());
             }
-    
+
             if (updateRequest.getCountry() != null) {
                 restaurant.setCountry(updateRequest.getCountry());
             }
-    
+
             if (updateRequest.getPhoneNumber() != null) {
                 restaurant.setPhoneNumber(updateRequest.getPhoneNumber());
             }
-    
+
             if (updateRequest.getEmail() != null) {
                 restaurant.setEmail(updateRequest.getEmail());
             }
-    
+
             if (updateRequest.getWebsite() != null) {
                 restaurant.setWebsite(updateRequest.getWebsite());
             }
-    
+
             if (updateRequest.getCuisineType() != null) {
                 restaurant.setCuisineType(updateRequest.getCuisineType());
             }
-    
-            if (updateRequest.getTotalCapacity() != 0 && 
-                updateRequest.getTotalCapacity() != restaurant.getTotalCapacity()) {
+
+            if (updateRequest.getTotalCapacity() != 0 &&
+                    updateRequest.getTotalCapacity() != restaurant.getTotalCapacity()) {
                 int oldCapacity = restaurant.getTotalCapacity();
                 restaurant.setTotalCapacity(updateRequest.getTotalCapacity());
-                
+
                 // Publish capacity changed event
                 restaurantEventProducer.publishCapacityChangedEvent(
                         id, oldCapacity, updateRequest.getTotalCapacity(), "Manual Update");
             }
-    
+
             // Update geolocation if provided
             if (updateRequest.getLatitude() != 0 && updateRequest.getLongitude() != 0) {
                 restaurant.setLatitude(updateRequest.getLatitude());
                 restaurant.setLongitude(updateRequest.getLongitude());
-                
+
                 // Update Point geometry
                 // Point point = geometryFactory.createPoint(
-                //         new Coordinate(updateRequest.getLongitude(), updateRequest.getLatitude()));
+                // new Coordinate(updateRequest.getLongitude(), updateRequest.getLatitude()));
                 // restaurant.setLocation(point);
             }
         } catch (Exception e) {
@@ -205,15 +214,19 @@ public class RestaurantService {
     public void toggleRestaurantActive(String id, boolean active) {
         Restaurant restaurant = restaurantRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", id));
-        
+
+        if (!restaurant.isActive()) {
+            throw new ValidationException("ไม่สามารถอัปเดตร้านอาหารที่ถูกลบไปแล้ว");
+        }
+
         if (restaurant.isActive() != active) {
             restaurant.setActive(active);
             restaurantRepository.save(restaurant);
-            
+
             // Publish restaurant updated event
             restaurantEventProducer.publishRestaurantUpdatedEvent(
-                    new RestaurantUpdatedEvent(id, "active", 
-                    String.valueOf(!active), String.valueOf(active)));
+                    new RestaurantUpdatedEvent(id, "active",
+                            String.valueOf(!active), String.valueOf(active)));
         }
     }
 
@@ -221,11 +234,11 @@ public class RestaurantService {
     public void deleteRestaurant(String id) {
         Restaurant restaurant = restaurantRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", id));
-        
+
         // Instead of deleting, mark as inactive
         restaurant.setActive(false);
         restaurantRepository.save(restaurant);
-        
+
         // Publish restaurant updated event
         restaurantEventProducer.publishRestaurantUpdatedEvent(
                 new RestaurantUpdatedEvent(id, "active", "true", "false"));
@@ -235,15 +248,15 @@ public class RestaurantService {
         if (request.getName() == null || request.getName().trim().isEmpty()) {
             throw new ValidationException("name", "Restaurant name is required");
         }
-        
+
         if (request.getAddress() == null || request.getAddress().trim().isEmpty()) {
             throw new ValidationException("address", "Restaurant address is required");
         }
-        
+
         if (request.getPhoneNumber() == null || request.getPhoneNumber().trim().isEmpty()) {
             throw new ValidationException("phoneNumber", "Restaurant phone number is required");
         }
-        
+
         if (request.getCuisineType() == null || request.getCuisineType().trim().isEmpty()) {
             throw new ValidationException("cuisineType", "Restaurant cuisine type is required");
         }
@@ -269,9 +282,9 @@ public class RestaurantService {
         dto.setAverageRating(restaurant.getAverageRating());
         dto.setActive(restaurant.isActive());
         dto.setOwnerId(restaurant.getOwnerId());
-        
+
         // We'll set operating hours in a separate service call if needed
-        
+
         return dto;
     }
 }
