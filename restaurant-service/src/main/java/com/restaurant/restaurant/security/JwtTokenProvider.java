@@ -3,7 +3,9 @@ package com.restaurant.restaurant.security;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -36,13 +38,18 @@ public class JwtTokenProvider {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-        
+
         String userId = claims.getSubject();
-        
-        // Create an empty authorities list - we don't need specific roles for our owner check
-        // since we're using the user ID directly
+
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-        
+
+        String roles = claims.get("roles", String.class);
+        if (roles != null && !roles.isEmpty()) {
+            authorities = Arrays.stream(roles.split(","))
+                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role.trim()))
+                    .collect(Collectors.toList());
+        }
+
         return new UsernamePasswordAuthenticationToken(userId, "", authorities);
     }
 

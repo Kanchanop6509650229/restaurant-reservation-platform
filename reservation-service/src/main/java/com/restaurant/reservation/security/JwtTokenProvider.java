@@ -2,6 +2,7 @@ package com.restaurant.reservation.security;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -56,15 +57,18 @@ public class JwtTokenProvider {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-        
+
         String userId = claims.getSubject();
-        
-        // Extract roles/authorities from token if present
-        List<SimpleGrantedAuthority> authorities = Arrays.stream(
-                claims.get("roles", String.class).split(","))
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.trim()))
-                .collect(Collectors.toList());
-        
+
+        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+
+        String roles = claims.get("roles", String.class);
+        if (roles != null && !roles.isEmpty()) {
+            authorities = Arrays.stream(roles.split(","))
+                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role.trim()))
+                    .collect(Collectors.toList());
+        }
+
         return new UsernamePasswordAuthenticationToken(userId, "", authorities);
     }
 }

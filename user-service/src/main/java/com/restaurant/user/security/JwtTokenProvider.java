@@ -3,6 +3,7 @@ package com.restaurant.user.security;
 import java.security.Key;
 import java.util.Date;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -31,16 +32,22 @@ public class JwtTokenProvider {
     public String generateToken(UserDetails userDetails) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
-        
+
         // Cast to User to get the ID
         String userId = null;
+        String roles = "";
         if (userDetails instanceof User) {
             userId = ((User) userDetails).getId();
+            
+            roles = ((User) userDetails).getRoles().stream()
+                    .map(role -> role.getName())
+                    .collect(Collectors.joining(","));
         }
 
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
                 .claim("userId", userId)
+                .claim("roles", roles) // เพิ่ม roles ลงใน token
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS512)
@@ -50,7 +57,7 @@ public class JwtTokenProvider {
     public String getUsernameFromToken(String token) {
         return getClaimFromToken(token, Claims::getSubject);
     }
-    
+
     public String getUserIdFromToken(String token) {
         return getClaimFromToken(token, claims -> claims.get("userId", String.class));
     }
