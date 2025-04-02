@@ -7,23 +7,29 @@ SET GLOBAL time_zone = '+00:00';
 -- Reservations Table
 CREATE TABLE IF NOT EXISTS reservations (
     id VARCHAR(36) PRIMARY KEY,
-    restaurant_id VARCHAR(36) NOT NULL,
     user_id VARCHAR(36) NOT NULL,
+    restaurant_id VARCHAR(36) NOT NULL,
     table_id VARCHAR(36),
-    reservation_date DATE NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
+    reservation_time DATETIME NOT NULL,
     party_size INT NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    duration_minutes INT NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    customer_name VARCHAR(255) NOT NULL,
+    customer_phone VARCHAR(20),
+    customer_email VARCHAR(255),
     special_requests TEXT,
-    confirmation_code VARCHAR(10) UNIQUE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_reservation_date (reservation_date),
+    reminders_enabled BOOLEAN DEFAULT true,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    confirmation_deadline DATETIME,
+    confirmed_at DATETIME,
+    cancelled_at DATETIME,
+    completed_at DATETIME,
+    cancellation_reason VARCHAR(255),
     INDEX idx_restaurant_id (restaurant_id),
     INDEX idx_user_id (user_id),
     INDEX idx_status (status),
-    INDEX idx_confirmation_code (confirmation_code)
+    INDEX idx_reservation_time (reservation_time)
 );
 
 -- Wait List Table
