@@ -35,6 +35,53 @@ The Restaurant Reservation Platform enables:
 - Queue management for walk-in customers
 - Event-driven architecture for real-time updates across services
 
+## Project Structure
+
+This project utilizes a standard package structure for Spring Boot applications to organize code based on responsibilities. The main packages used within each service (e.g., user-service, restaurant-service, reservation-service) are as follows:
+
+* **`api`**:
+    * **Purpose**: Handles incoming HTTP requests and returns HTTP responses. Acts as the entry point for external clients (e.g., web browsers, mobile apps, or other services).
+    * **Common Subpackages**:
+        * `controllers`: Contains Spring MVC Controller classes (e.g., `UserController`, `RestaurantController`, `ReservationController`) that map URL endpoints to methods, handle request parameters/bodies, invoke the `service` layer for business operations, and return data (often as DTOs) to the client.
+
+* **`config`**:
+    * **Purpose**: Contains various Configuration classes for setting up and customizing the application's behavior.
+    * **Examples**: Spring Security setup (`SecurityConfig`), Kafka connection settings (`KafkaProducerConfig`, `KafkaConsumerConfig`), data initialization (`DataInitializer`), Web MVC settings (`WebConfig`, e.g., adding `CurrentUserArgumentResolver`), scheduling (`SchedulingConfig`). These classes define *how* different parts of the application are configured and wired together.
+
+* **`domain`**:
+    * **Purpose**: Represents the core of the application, containing the business logic and data model.
+    * **Common Subpackages**:
+        * `models`: Contains Entity or Domain Model classes (typically JPA Entities mapping to database tables) that represent the core data structures the application works with (e.g., `User`, `Profile`, `Restaurant`, `RestaurantTable`, `Reservation`, `Queue`).
+        * `repositories`: Contains interfaces (usually extending Spring Data JPA repositories like `JpaRepository`) defining methods for interacting with the database (e.g., saving, finding, updating, deleting data) for the Domain Models (e.g., `UserRepository`, `RestaurantRepository`, `ReservationRepository`).
+
+* **`dto` (Data Transfer Object)**:
+    * **Purpose**: Contains Plain Old Java Objects (POJOs) designed specifically for "transferring data" between different layers of the application, especially between the `service` and `api` layers (controllers), or even between microservices.
+    * **Benefits**:
+        * **Decoupling**: Helps separate the internal Domain Models from the data structure exposed to or received from the outside (API Contract). This means changes to the Domain Model don't directly impact the API (and vice versa).
+        * **Data Shaping**: Allows tailoring the data structure for specific use cases or API endpoints (e.g., sending partial User data in `UserDTO` but receiving necessary registration data in `UserRegistrationRequest`).
+        * **Validation**: Often used with Validation Annotations (e.g., `@NotBlank`, `@Email`, `@Min`) to validate incoming data from clients at the Controller layer.
+    * **Examples**: `UserDTO`, `ProfileDTO`, `LoginRequest`, `RestaurantDTO`, `TableDTO`, `ReservationCreateRequest`, `QueueDTO`.
+
+* **`service`**:
+    * **Purpose**: Contains the main business logic of the application. Classes in the service layer orchestrate calls to repositories to manage data and are invoked by controllers to fulfill user requests (e.g., `UserService`, `RestaurantService`, `ReservationService`).
+
+* **`kafka`**:
+    * **Purpose**: Manages interactions with Apache Kafka for event-driven communication.
+    * **Common Subpackages**:
+        * `producers`: Classes responsible for sending messages (events) to Kafka topics (e.g., `UserEventProducer`).
+        * `consumers`: Classes responsible for receiving and processing messages (events) from Kafka topics (e.g., `RestaurantEventConsumer`).
+
+* **`security`**:
+    * **Purpose**: Holds classes related to application security, such as JWT handling, user authentication, and authorization logic (e.g., `JwtTokenProvider`, `JwtAuthorizationFilter`, `CustomUserDetailsService`).
+
+* **`exception`**:
+    * **Purpose**: Contains classes for centralized exception handling (e.g., `GlobalExceptionHandler`) and custom application-specific exceptions (e.g., `EntityNotFoundException`).
+
+* **`utils`**:
+    * **Purpose**: Contains utility classes that might be shared across different parts of the application (e.g., `DateTimeUtils`, `SpatialUtils`).
+
+(Note: Not all subpackages might exist in every service, depending on the specific complexity and needs of that service.)
+
 ## Architecture
 
 ![architecture-diagram](architecture-diagram.png)
