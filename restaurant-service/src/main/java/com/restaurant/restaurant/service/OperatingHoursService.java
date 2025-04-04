@@ -2,12 +2,18 @@ package com.restaurant.restaurant.service;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +34,8 @@ import jakarta.transaction.Transactional;
 
 @Service
 public class OperatingHoursService {
+
+    private static final Logger logger = LoggerFactory.getLogger(OperatingHoursService.class);
 
     private final OperatingHoursRepository operatingHoursRepository;
     private final RestaurantRepository restaurantRepository;
@@ -99,7 +107,8 @@ public class OperatingHoursService {
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
 
         if (!restaurant.isActive()) {
-            throw new ValidationException("ไม่สามารถอัปเดตร้านอาหารที่ถูกลบไปแล้ว");
+            throw new ValidationException("restaurant",
+                    "Cannot update operating hours for an inactive restaurant. Please activate the restaurant first.");
         }
 
         OperatingHours hours = operatingHoursRepository.findByRestaurantIdAndDayOfWeek(restaurantId, day)
@@ -111,12 +120,7 @@ public class OperatingHoursService {
                 });
 
         // Validation
-        if (updateRequest.getOpenTime() != null && updateRequest.getCloseTime() != null) {
-            if (updateRequest.getOpenTime().isAfter(updateRequest.getCloseTime())) {
-                throw new ValidationException("openTime",
-                        "Open time must be before close time");
-            }
-        }
+        validateOperatingHoursUpdate(updateRequest, day);
 
         LocalTime oldOpenTime = hours.getOpenTime();
         LocalTime oldCloseTime = hours.getCloseTime();
@@ -132,11 +136,23 @@ public class OperatingHoursService {
 
         hours.setClosed(updateRequest.isClosed());
 
-        if (updateRequest.getBreakStartTime() != null) {
-            hours.setBreakStartTime(updateRequest.getBreakStartTime());
-        }
+        if (updateRequest.getBreakStartTime() != null && updateRequest.getBreakEndTime() != null) {
+            // Validate break times
+            if (updateRequest.getBreakStartTime().isAfter(updateRequest.getBreakEndTime())) {
+                throw new ValidationException("breakTime",
+                        "Break start time must be before break end time");
+            }
 
-        if (updateRequest.getBreakEndTime() != null) {
+            // Validate that break is within opening hours
+            if (hours.getOpenTime() != null && hours.getCloseTime() != null) {
+                if (updateRequest.getBreakStartTime().isBefore(hours.getOpenTime()) ||
+                        updateRequest.getBreakEndTime().isAfter(hours.getCloseTime())) {
+                    throw new ValidationException("breakTime",
+                            "Break time must be within the restaurant's operating hours");
+                }
+            }
+
+            hours.setBreakStartTime(updateRequest.getBreakStartTime());
             hours.setBreakEndTime(updateRequest.getBreakEndTime());
         }
 
@@ -147,41 +163,90 @@ public class OperatingHoursService {
         OperatingHours updatedHours = operatingHoursRepository.save(hours);
 
         // Publish operating hours changed event
-        if (!oldClosed && updatedHours.isClosed()) {
-            // If changing from open to closed
-            restaurantEventProducer.publishOperatingHoursChangedEvent(
-                    new OperatingHoursChangedEvent(
-                            restaurantId,
-                            day,
-                            oldOpenTime,
-                            oldCloseTime,
-                            null, // When closed, no open/close times
-                            null));
-        } else if (oldClosed && !updatedHours.isClosed()) {
-            // If changing from closed to open
-            restaurantEventProducer.publishOperatingHoursChangedEvent(
-                    new OperatingHoursChangedEvent(
-                            restaurantId,
-                            day,
-                            null, // When was closed, no previous times
-                            null,
-                            updatedHours.getOpenTime(),
-                            updatedHours.getCloseTime()));
-        } else if (!oldClosed && !updatedHours.isClosed() &&
-                (oldOpenTime != updatedHours.getOpenTime() ||
-                        oldCloseTime != updatedHours.getCloseTime())) {
-            // If changing times when open
-            restaurantEventProducer.publishOperatingHoursChangedEvent(
-                    new OperatingHoursChangedEvent(
-                            restaurantId,
-                            day,
-                            oldOpenTime,
-                            oldCloseTime,
-                            updatedHours.getOpenTime(),
-                            updatedHours.getCloseTime()));
+        try {
+            if (!oldClosed && updatedHours.isClosed()) {
+                // If changing from open to closed
+                restaurantEventProducer.publishOperatingHoursChangedEvent(
+                        new OperatingHoursChangedEvent(
+                                restaurantId,
+                                day,
+                                oldOpenTime,
+                                oldCloseTime,
+                                null, // When closed, no open/close times
+                                null));
+            } else if (oldClosed && !updatedHours.isClosed()) {
+                // If changing from closed to open
+                restaurantEventProducer.publishOperatingHoursChangedEvent(
+                        new OperatingHoursChangedEvent(
+                                restaurantId,
+                                day,
+                                null, // When was closed, no previous times
+                                null,
+                                updatedHours.getOpenTime(),
+                                updatedHours.getCloseTime()));
+            } else if (!oldClosed && !updatedHours.isClosed() &&
+                    (oldOpenTime != updatedHours.getOpenTime() ||
+                            oldCloseTime != updatedHours.getCloseTime())) {
+                // If changing times when open
+                restaurantEventProducer.publishOperatingHoursChangedEvent(
+                        new OperatingHoursChangedEvent(
+                                restaurantId,
+                                day,
+                                oldOpenTime,
+                                oldCloseTime,
+                                updatedHours.getOpenTime(),
+                                updatedHours.getCloseTime()));
+            }
+        } catch (Exception e) {
+            logger.error("Failed to publish operating hours changed event: {}", e.getMessage(), e);
+            // Continue with the update even if event publishing fails
         }
 
         return convertToDTO(updatedHours);
+    }
+
+    private void validateOperatingHoursUpdate(OperatingHoursUpdateRequest updateRequest, DayOfWeek day) {
+        Map<String, String> errors = new HashMap<>();
+
+        if (updateRequest.getOpenTime() != null && updateRequest.getCloseTime() != null) {
+            if (updateRequest.getOpenTime().isAfter(updateRequest.getCloseTime())) {
+                errors.put("operatingHours",
+                        "Opening time must be before closing time for " + day.toString());
+            }
+
+            if (updateRequest.getOpenTime().equals(updateRequest.getCloseTime())) {
+                errors.put("operatingHours",
+                        "Opening and closing times cannot be the same for " + day.toString());
+            }
+
+            if (ChronoUnit.MINUTES.between(updateRequest.getOpenTime(), updateRequest.getCloseTime()) < 30) {
+                errors.put("operatingHours",
+                        "Operating period must be at least 30 minutes long for " + day.toString());
+            }
+        }
+
+        // Break time validation
+        if (updateRequest.getBreakStartTime() != null && updateRequest.getBreakEndTime() == null) {
+            errors.put("breakEndTime", "Break end time must be provided when break start time is set");
+        }
+
+        if (updateRequest.getBreakEndTime() != null && updateRequest.getBreakStartTime() == null) {
+            errors.put("breakStartTime", "Break start time must be provided when break end time is set");
+        }
+
+        if (updateRequest.getBreakStartTime() != null && updateRequest.getBreakEndTime() != null) {
+            if (updateRequest.getBreakStartTime().isAfter(updateRequest.getBreakEndTime())) {
+                errors.put("breakTime", "Break start time must be before break end time");
+            }
+
+            if (ChronoUnit.MINUTES.between(updateRequest.getBreakStartTime(), updateRequest.getBreakEndTime()) < 15) {
+                errors.put("breakTime", "Break period must be at least 15 minutes long");
+            }
+        }
+
+        if (!errors.isEmpty()) {
+            throw new ValidationException("Operating hours validation failed", errors);
+        }
     }
 
     @Transactional
@@ -192,8 +257,12 @@ public class OperatingHoursService {
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
 
         if (!restaurant.isActive()) {
-            throw new ValidationException("ไม่สามารถอัปเดตเวลาทำการของร้านอาหารที่ถูกลบไปแล้ว");
+            throw new ValidationException("restaurant",
+                    "Cannot update operating hours for an inactive restaurant. Please activate the restaurant first.");
         }
+
+        // Validate the batch update request
+        validateBatchUpdateRequest(updateRequest);
 
         // Create a set of days that are included in the update
         Set<DayOfWeek> includedDays = updateRequest.getOperatingHours().stream()
@@ -202,10 +271,6 @@ public class OperatingHoursService {
 
         // Update each day in the request
         for (OperatingHourEntry dayEntry : updateRequest.getOperatingHours()) {
-            if (dayEntry.getDayOfWeek() == null) {
-                throw new ValidationException("dayOfWeek", "Day of week is required");
-            }
-
             // Create an OperatingHoursUpdateRequest from the OperatingHourEntry
             OperatingHoursUpdateRequest updateRequestForDay = new OperatingHoursUpdateRequest();
             updateRequestForDay.setOpenTime(dayEntry.getOpenTime());
@@ -228,6 +293,41 @@ public class OperatingHoursService {
 
         // Return all operating hours for the restaurant
         return getOperatingHoursByRestaurantId(restaurantId);
+    }
+
+    private void validateBatchUpdateRequest(OperatingHoursBatchUpdateRequest updateRequest) {
+        if (updateRequest.getOperatingHours() == null || updateRequest.getOperatingHours().isEmpty()) {
+            throw new ValidationException("operatingHours",
+                    "At least one day's operating hours must be provided");
+        }
+
+        // Check for duplicate days
+        Set<DayOfWeek> days = new HashSet<>();
+        for (OperatingHourEntry entry : updateRequest.getOperatingHours()) {
+            if (entry.getDayOfWeek() == null) {
+                throw new ValidationException("dayOfWeek", "Day of week is required for each entry");
+            }
+
+            if (!days.add(entry.getDayOfWeek())) {
+                throw new ValidationException("operatingHours",
+                        "Duplicate day of week: " + entry.getDayOfWeek() + ". Each day can only appear once");
+            }
+
+            if (entry.getOpenTime() == null) {
+                throw new ValidationException("openTime",
+                        "Opening time is required for " + entry.getDayOfWeek());
+            }
+
+            if (entry.getCloseTime() == null) {
+                throw new ValidationException("closeTime",
+                        "Closing time is required for " + entry.getDayOfWeek());
+            }
+
+            if (entry.getOpenTime().isAfter(entry.getCloseTime())) {
+                throw new ValidationException("operatingHours",
+                        "Opening time must be before closing time for " + entry.getDayOfWeek());
+            }
+        }
     }
 
     public OperatingHoursDTO getOperatingHoursByDay(String restaurantId, DayOfWeek day) {
