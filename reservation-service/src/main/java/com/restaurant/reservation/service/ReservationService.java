@@ -122,31 +122,40 @@ public class ReservationService {
                 LocalDateTime.now().plusMinutes(confirmationExpirationMinutes));
 
         // Save reservation
-        Reservation savedReservation = reservationRepository.save(reservation);
+        reservation = reservationRepository.save(reservation);
+
+        // Try to find and assign a table
+        tableAvailabilityService.findAndAssignTable(reservation);
+        
+        // Reload the reservation to get the latest state
+        reservation = reservationRepository.findById(reservation.getId()).orElse(reservation);
+        
+        // If no table was assigned, throw an exception
+        if (reservation.getTableId() == null) {
+            throw RestaurantCapacityException.noSuitableTables(createRequest.getPartySize());
+        }
 
         // Create history record
         ReservationHistory history = new ReservationHistory(
-                savedReservation, "CREATED", "Reservation created", userId);
-        savedReservation.addHistoryRecord(history);
+                reservation, "CREATED", "Reservation created", userId);
+        reservation.addHistoryRecord(history);
 
-        reservationRepository.save(savedReservation);
+        // Save final state
+        reservation = reservationRepository.save(reservation);
 
         // Update reservation quota
-        updateReservationQuota(savedReservation, true);
-
-        // ค้นหาและกำหนดโต๊ะให้กับการจอง (แบบ async)
-        tableAvailabilityService.findAndAssignTable(savedReservation);
+        updateReservationQuota(reservation, true);
 
         // Publish event
         eventProducer.publishReservationCreatedEvent(new ReservationCreatedEvent(
-                savedReservation.getId(),
-                savedReservation.getRestaurantId(),
-                savedReservation.getUserId(),
-                savedReservation.getReservationTime().toString(),
-                savedReservation.getPartySize(),
-                savedReservation.getTableId()));
+                reservation.getId(),
+                reservation.getRestaurantId(),
+                reservation.getUserId(),
+                reservation.getReservationTime().toString(),
+                reservation.getPartySize(),
+                reservation.getTableId()));
 
-        return convertToDTO(savedReservation);
+        return convertToDTO(reservation);
     }
 
     @Transactional
