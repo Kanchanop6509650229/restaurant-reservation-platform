@@ -1,11 +1,19 @@
 package com.restaurant.common.dto;
 
+import java.time.LocalDateTime;
 
 public class ResponseDTO<T> {
     private boolean success;
     private T data;
     private String message;
     private String errorCode;
+    private LocalDateTime timestamp;
+    private String requestId;
+    private Object details;
+    
+    public ResponseDTO() {
+        this.timestamp = LocalDateTime.now();
+    }
     
     // Static factory methods
     public static <T> ResponseDTO<T> success(T data) {
@@ -31,6 +39,12 @@ public class ResponseDTO<T> {
     public static <T> ResponseDTO<T> error(String message, String errorCode) {
         ResponseDTO<T> response = error(message);
         response.errorCode = errorCode;
+        return response;
+    }
+    
+    public static <T> ResponseDTO<T> error(String message, String errorCode, Object details) {
+        ResponseDTO<T> response = error(message, errorCode);
+        response.details = details;
         return response;
     }
     
@@ -65,5 +79,29 @@ public class ResponseDTO<T> {
 
     public void setErrorCode(String errorCode) {
         this.errorCode = errorCode;
+    }
+    
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+    
+    public void setTimestamp(LocalDateTime timestamp) {
+        this.timestamp = timestamp;
+    }
+    
+    public String getRequestId() {
+        return requestId;
+    }
+    
+    public void setRequestId(String requestId) {
+        this.requestId = requestId;
+    }
+    
+    public Object getDetails() {
+        return details;
+    }
+    
+    public void setDetails(Object details) {
+        this.details = details;
     }
 }
