@@ -40,6 +40,8 @@ import jakarta.transaction.Transactional;
 @Service
 public class ReservationService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ReservationService.class);
+
     private final ReservationRepository reservationRepository;
     private final ReservationQuotaRepository quotaRepository;
     private final TableAvailabilityService tableAvailabilityService;
@@ -59,8 +61,6 @@ public class ReservationService {
 
     @Value("${reservation.max-future-days:90}")
     private int maxFutureDays;
-
-    private static final Logger logger = LoggerFactory.getLogger(ReservationService.class);
 
     public ReservationService(ReservationRepository reservationRepository,
             ReservationQuotaRepository quotaRepository,
@@ -134,7 +134,7 @@ public class ReservationService {
         // Update reservation quota
         updateReservationQuota(savedReservation, true);
 
-        // Find available table for this reservation
+        // ค้นหาและกำหนดโต๊ะให้กับการจอง (แบบ async)
         tableAvailabilityService.findAndAssignTable(savedReservation);
 
         // Publish event
@@ -176,6 +176,14 @@ public class ReservationService {
         reservation.addHistoryRecord(history);
 
         Reservation updatedReservation = reservationRepository.save(reservation);
+
+        // หากยังไม่มีการกำหนดโต๊ะให้กับการจอง ให้ค้นหาและกำหนดโต๊ะใหม่
+        if (updatedReservation.getTableId() == null) {
+            tableAvailabilityService.findAndAssignTable(updatedReservation);
+            
+            // โหลดการจองอีกครั้งเพื่อให้แน่ใจว่ามีข้อมูลล่าสุด
+            updatedReservation = reservationRepository.findById(id).orElse(updatedReservation);
+        }
 
         // Publish event
         eventProducer.publishReservationConfirmedEvent(new ReservationConfirmedEvent(

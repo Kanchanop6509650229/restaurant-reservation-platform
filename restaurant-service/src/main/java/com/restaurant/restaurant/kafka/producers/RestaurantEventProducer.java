@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 
 import com.restaurant.common.constants.KafkaTopics;
 import com.restaurant.common.events.BaseEvent;
+import com.restaurant.common.events.reservation.FindAvailableTableResponseEvent;
 import com.restaurant.common.events.restaurant.CapacityChangedEvent;
 import com.restaurant.common.events.restaurant.OperatingHoursChangedEvent;
 import com.restaurant.common.events.restaurant.RestaurantUpdatedEvent;
@@ -34,5 +35,9 @@ public class RestaurantEventProducer {
 
     public void publishOperatingHoursChangedEvent(OperatingHoursChangedEvent event) {
         kafkaTemplate.send(KafkaTopics.RESTAURANT_EVENTS, event.getRestaurantId(), event);
+    }
+    
+    public void publishFindAvailableTableResponse(FindAvailableTableResponseEvent event) {
+        kafkaTemplate.send(KafkaTopics.FIND_AVAILABLE_TABLE_RESPONSE, event.getCorrelationId(), event);
     }
 }

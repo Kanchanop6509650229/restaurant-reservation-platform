@@ -34,7 +34,8 @@ public class KafkaProducerConfig {
                 "ReservationModifiedEvent:com.restaurant.common.events.reservation.ReservationModifiedEvent," +
                 "TableAssignedEvent:com.restaurant.common.events.reservation.TableAssignedEvent," +
                 "TableStatusChangedEvent:com.restaurant.common.events.restaurant.TableStatusChangedEvent," +
-                "TableStatusEvent:com.restaurant.common.events.reservation.TableStatusEvent");
+                "TableStatusEvent:com.restaurant.common.events.reservation.TableStatusEvent," +
+                "FindAvailableTableRequestEvent:com.restaurant.common.events.reservation.FindAvailableTableRequestEvent");
         return new DefaultKafkaProducerFactory<>(configProps);
     }
 

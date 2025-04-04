@@ -1,7 +1,8 @@
 package com.restaurant.reservation.config;
 
-import com.restaurant.common.events.restaurant.RestaurantEvent;
-import com.restaurant.common.events.user.UserEvent;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,8 +13,9 @@ import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.restaurant.common.events.reservation.FindAvailableTableResponseEvent;
+import com.restaurant.common.events.restaurant.RestaurantEvent;
+import com.restaurant.common.events.user.UserEvent;
 
 @Configuration
 public class KafkaConsumerConfig {
@@ -69,6 +71,30 @@ public class KafkaConsumerConfig {
         ConcurrentKafkaListenerContainerFactory<String, UserEvent> factory = 
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(userEventConsumerFactory());
+        return factory;
+    }
+    
+    @Bean
+    public ConsumerFactory<String, FindAvailableTableResponseEvent> tableAvailabilityConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId + "-table-availability");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        
+        JsonDeserializer<FindAvailableTableResponseEvent> deserializer = new JsonDeserializer<>(FindAvailableTableResponseEvent.class);
+        deserializer.addTrustedPackages("com.restaurant.common.events");
+        deserializer.setUseTypeMapperForKey(true);
+        
+        return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    }
+    
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, FindAvailableTableResponseEvent> tableAvailabilityKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, FindAvailableTableResponseEvent> factory = 
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(tableAvailabilityConsumerFactory());
         return factory;
     }
 }

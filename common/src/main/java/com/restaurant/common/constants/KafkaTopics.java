@@ -19,6 +19,10 @@ public class KafkaTopics {
     public static final String RESERVATION_UPDATE = "reservation-update";
     public static final String RESERVATION_CANCEL = "reservation-cancel";
     
+    // Table Availability Topics
+    public static final String FIND_AVAILABLE_TABLE_REQUEST = "find-available-table-request";
+    public static final String FIND_AVAILABLE_TABLE_RESPONSE = "find-available-table-response";
+    
     // Notification Service Topics
     public static final String NOTIFICATION_EVENTS = "notification-events";
     

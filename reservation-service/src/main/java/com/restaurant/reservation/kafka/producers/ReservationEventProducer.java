@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 
 import com.restaurant.common.constants.KafkaTopics;
 import com.restaurant.common.events.BaseEvent;
+import com.restaurant.common.events.reservation.FindAvailableTableRequestEvent;
 import com.restaurant.common.events.reservation.ReservationCancelledEvent;
 import com.restaurant.common.events.reservation.ReservationConfirmedEvent;
 import com.restaurant.common.events.reservation.ReservationCreatedEvent;
@@ -48,5 +49,9 @@ public class ReservationEventProducer {
     
     public void publishTableStatusEvent(TableStatusEvent event) {
         kafkaTemplate.send(KafkaTopics.TABLE_STATUS, event.getTableId(), event);
+    }
+    
+    public void publishFindAvailableTableRequest(FindAvailableTableRequestEvent event) {
+        kafkaTemplate.send(KafkaTopics.FIND_AVAILABLE_TABLE_REQUEST, event.getCorrelationId(), event);
     }
 }

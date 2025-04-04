@@ -4,13 +4,31 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public abstract class BaseEvent {
-    private final String eventId;
-    private final LocalDateTime eventTime;
-    private final String eventType;
+    private String eventId;
+    private LocalDateTime eventTime;
+    private String eventType;
+
+    protected BaseEvent() {
+        this.eventId = null;
+        this.eventTime = null;
+        this.eventType = null;
+    }
     
     protected BaseEvent(String eventType) {
         this.eventId = UUID.randomUUID().toString();
         this.eventTime = LocalDateTime.now();
+        this.eventType = eventType;
+    }
+
+    public void setEventId(String eventId) {
+        this.eventId = eventId;
+    }
+
+    public void setEventTime(LocalDateTime eventTime) {
+        this.eventTime = eventTime;
+    }
+    
+    public void setEventType(String eventType) {
         this.eventType = eventType;
     }
     
