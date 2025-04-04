@@ -1,10 +1,17 @@
 package com.restaurant.reservation.kafka.producers;
 
-import com.restaurant.common.constants.KafkaTopics;
-import com.restaurant.common.events.BaseEvent;
-import com.restaurant.common.events.reservation.*;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+
+import com.restaurant.common.constants.KafkaTopics;
+import com.restaurant.common.events.BaseEvent;
+import com.restaurant.common.events.reservation.ReservationCancelledEvent;
+import com.restaurant.common.events.reservation.ReservationConfirmedEvent;
+import com.restaurant.common.events.reservation.ReservationCreatedEvent;
+import com.restaurant.common.events.reservation.ReservationModifiedEvent;
+import com.restaurant.common.events.reservation.TableAssignedEvent;
+import com.restaurant.common.events.reservation.TableStatusEvent;
+import com.restaurant.common.events.restaurant.TableStatusChangedEvent;
 
 @Component
 public class ReservationEventProducer {
@@ -33,5 +40,13 @@ public class ReservationEventProducer {
 
     public void publishTableAssignedEvent(TableAssignedEvent event) {
         kafkaTemplate.send(KafkaTopics.TABLE_STATUS, event.getReservationId(), event);
+    }
+    
+    public void publishTableStatusChangedEvent(TableStatusChangedEvent event) {
+        kafkaTemplate.send(KafkaTopics.TABLE_STATUS, event.getTableId(), event);
+    }
+    
+    public void publishTableStatusEvent(TableStatusEvent event) {
+        kafkaTemplate.send(KafkaTopics.TABLE_STATUS, event.getTableId(), event);
     }
 }

@@ -1,7 +1,8 @@
 package com.restaurant.reservation.config;
 
-import com.restaurant.common.events.BaseEvent;
-import com.restaurant.common.events.reservation.ReservationEvent;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,8 +13,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.restaurant.common.events.BaseEvent;
 
 @Configuration
 public class KafkaProducerConfig {
@@ -32,7 +32,9 @@ public class KafkaProducerConfig {
                 "ReservationConfirmedEvent:com.restaurant.common.events.reservation.ReservationConfirmedEvent," +
                 "ReservationCancelledEvent:com.restaurant.common.events.reservation.ReservationCancelledEvent," +
                 "ReservationModifiedEvent:com.restaurant.common.events.reservation.ReservationModifiedEvent," +
-                "TableAssignedEvent:com.restaurant.common.events.reservation.TableAssignedEvent");
+                "TableAssignedEvent:com.restaurant.common.events.reservation.TableAssignedEvent," +
+                "TableStatusChangedEvent:com.restaurant.common.events.restaurant.TableStatusChangedEvent," +
+                "TableStatusEvent:com.restaurant.common.events.reservation.TableStatusEvent");
         return new DefaultKafkaProducerFactory<>(configProps);
     }
 

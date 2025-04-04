@@ -1,7 +1,7 @@
 package com.restaurant.reservation.service;
 
 import com.restaurant.common.constants.StatusCodes;
-import com.restaurant.common.events.reservation.TableAssignedEvent;
+import com.restaurant.common.events.restaurant.TableStatusChangedEvent;
 import com.restaurant.common.exceptions.ValidationException;
 import com.restaurant.reservation.domain.models.Reservation;
 import com.restaurant.reservation.domain.repositories.ReservationRepository;
@@ -23,16 +23,19 @@ public class TableAvailabilityService {
     private final ReservationRepository reservationRepository;
     private final ReservationEventProducer eventProducer;
     private final RestTemplate restTemplate;
+    private final TableStatusCacheService tableStatusCacheService;
     
     @Value("${restaurant-service.url:http://localhost:8082}")
     private String restaurantServiceUrl;
 
     public TableAvailabilityService(ReservationRepository reservationRepository,
                                    ReservationEventProducer eventProducer,
-                                   RestTemplate restTemplate) {
+                                   RestTemplate restTemplate,
+                                   TableStatusCacheService tableStatusCacheService) {
         this.reservationRepository = reservationRepository;
         this.eventProducer = eventProducer;
         this.restTemplate = restTemplate;
+        this.tableStatusCacheService = tableStatusCacheService;
     }
 
     @Transactional
@@ -64,16 +67,14 @@ public class TableAvailabilityService {
         reservation.setTableId(tableId);
         reservationRepository.save(reservation);
         
-        // Update table status in restaurant service
-        updateTableStatus(tableId, StatusCodes.TABLE_RESERVED, reservation.getId());
-        
-        // Publish event
-        eventProducer.publishTableAssignedEvent(new TableAssignedEvent(
-                reservation.getId(),
-                reservation.getRestaurantId(),
-                tableId,
-                reservation.getReservationTime().toString()
-        ));
+        // Publish table status changed event via Kafka instead of REST call
+        publishTableStatusEvent(
+            tableId, 
+            reservation.getRestaurantId(),
+            getTableStatus(tableId), 
+            StatusCodes.TABLE_RESERVED, 
+            reservation.getId()
+        );
     }
 
     @Transactional
@@ -83,8 +84,17 @@ public class TableAvailabilityService {
             return;
         }
         
-        // Update table status in restaurant service
-        updateTableStatus(reservation.getTableId(), StatusCodes.TABLE_AVAILABLE, null);
+        String tableId = reservation.getTableId();
+        String restaurantId = reservation.getRestaurantId();
+        
+        // Publish table status changed event via Kafka
+        publishTableStatusEvent(
+            tableId,
+            restaurantId,
+            getTableStatus(tableId),
+            StatusCodes.TABLE_AVAILABLE,
+            null
+        );
         
         // Clear table assignment
         reservation.setTableId(null);
@@ -94,7 +104,8 @@ public class TableAvailabilityService {
     private String findSuitableTable(String restaurantId, LocalDateTime startTime, 
                                     LocalDateTime endTime, int partySize) {
         try {
-            // Call restaurant service to get available tables
+            // Still use REST API to get available tables initially
+            // This could be improved in the future with a caching mechanism or pub/sub model
             ResponseEntity<Map> response = restTemplate.exchange(
                     restaurantServiceUrl + "/api/restaurants/" + restaurantId + "/tables/available",
                     HttpMethod.GET,
@@ -123,6 +134,12 @@ public class TableAvailabilityService {
                     continue;
                 }
                 
+                // Check if the table is available from the cache first
+                String cachedStatus = tableStatusCacheService.getTableStatus(tableId);
+                if (cachedStatus != null && !cachedStatus.equals(StatusCodes.TABLE_AVAILABLE)) {
+                    continue;
+                }
+                
                 // Check if this table has conflicting reservations
                 List<Reservation> conflicts = reservationRepository.findConflictingReservations(
                         restaurantId, tableId, startTime, endTime);
@@ -138,13 +155,34 @@ public class TableAvailabilityService {
         return null;
     }
 
-    private void updateTableStatus(String tableId, String status, String reservationId) {
+    private String getTableStatus(String tableId) {
+        // First check the cache
+        String cachedStatus = tableStatusCacheService.getTableStatus(tableId);
+        if (cachedStatus != null) {
+            return cachedStatus;
+        }
+        
+        // If not in cache, default to available
+        // In a more comprehensive solution, we might want to query the restaurant service
+        return StatusCodes.TABLE_AVAILABLE;
+    }
+    
+    private void publishTableStatusEvent(String tableId, String restaurantId, String oldStatus, String newStatus, String reservationId) {
         try {
-            // Make REST call to update table status
-            restTemplate.put(
-                    restaurantServiceUrl + "/api/tables/" + tableId + "/status?status=" + status +
-                    (reservationId != null ? "&reservationId=" + reservationId : ""),
-                    null);
+            // Create and publish the event
+            TableStatusChangedEvent event = new TableStatusChangedEvent(
+                restaurantId,
+                tableId,
+                oldStatus,
+                newStatus,
+                reservationId
+            );
+            
+            // Update local cache immediately
+            tableStatusCacheService.updateTableStatus(tableId, newStatus);
+            
+            // Publish via Kafka
+            eventProducer.publishTableStatusChangedEvent(event);
         } catch (Exception e) {
             throw new ValidationException("tableId", 
                     "Failed to update table status: " + e.getMessage());

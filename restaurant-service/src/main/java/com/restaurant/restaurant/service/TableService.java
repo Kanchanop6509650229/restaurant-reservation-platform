@@ -43,12 +43,12 @@ public class TableService {
     }
 
     public List<TableDTO> getAllTablesByRestaurantId(String restaurantId) {
-
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
 
         if (!restaurant.isActive()) {
-            throw new ValidationException("ไม่สามารถดูข้อมูลโต๊ะของร้านอาหารที่ถูกลบไปแล้ว");
+            throw new ValidationException("restaurant",
+                    "Cannot get tables for an inactive restaurant");
         }
 
         return tableRepository.findByRestaurantId(restaurantId).stream()
@@ -61,7 +61,8 @@ public class TableService {
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
 
         if (!restaurant.isActive()) {
-            throw new ValidationException("ไม่สามารถดูข้อมูลโต๊ะว่างของร้านอาหารที่ถูกลบไปแล้ว");
+            throw new ValidationException("restaurant",
+                    "Cannot get available tables for an inactive restaurant");
         }
 
         return tableRepository.findByRestaurantIdAndStatus(restaurantId, StatusCodes.TABLE_AVAILABLE).stream()
@@ -74,7 +75,8 @@ public class TableService {
                 .orElseThrow(() -> new EntityNotFoundException("Table", id));
 
         if (!table.getRestaurant().isActive()) {
-            throw new ValidationException("ไม่สามารถดูข้อมูลโต๊ะของร้านอาหารที่ถูกลบไปแล้ว");
+            throw new ValidationException("restaurant",
+                    "Cannot get table for an inactive restaurant");
         }
 
         return convertToDTO(table);
@@ -86,7 +88,8 @@ public class TableService {
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
 
         if (!restaurant.isActive()) {
-            throw new ValidationException("ไม่สามารถเพิ่มโต๊ะให้ร้านอาหารที่ถูกลบไปแล้ว");
+            throw new ValidationException("restaurant",
+                    "Cannot create table for an inactive restaurant");
         }
 
         validateTableRequest(createRequest, restaurantId);
@@ -117,7 +120,8 @@ public class TableService {
                 .orElseThrow(() -> new EntityNotFoundException("Table", id));
 
         if (!table.getRestaurant().isActive()) {
-            throw new ValidationException("ไม่สามารถแก้ไขโต๊ะของร้านอาหารที่ถูกลบไปแล้ว");
+            throw new ValidationException("restaurant",
+                    "Cannot update table for an inactive restaurant");
         }
 
         if (updateRequest.getTableNumber() != null) {
@@ -156,14 +160,39 @@ public class TableService {
         return convertToDTO(updatedTable);
     }
 
+    /**
+     * Update table status based on a REST API call or Kafka event.
+     * 
+     * @param id             The table ID
+     * @param status         The new status
+     * @param reservationId  The reservation ID (optional)
+     * @return The updated table DTO
+     */
     @Transactional
     public TableDTO updateTableStatus(String id, String status, String reservationId) {
+        return updateTableStatusInternal(id, status, reservationId, true);
+    }
+    
+    /**
+     * Update table status without publishing an event (used by Kafka consumer).
+     * 
+     * @param id             The table ID
+     * @param status         The new status
+     * @param reservationId  The reservation ID (optional)
+     * @return The updated table DTO
+     */
+    @Transactional
+    public TableDTO updateTableStatusWithoutEvent(String id, String status, String reservationId) {
+        return updateTableStatusInternal(id, status, reservationId, false);
+    }
+
+    private TableDTO updateTableStatusInternal(String id, String status, String reservationId, boolean publishEvent) {
         RestaurantTable table = tableRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Table", id));
 
         if (!table.getRestaurant().isActive()) {
             throw new ValidationException("restaurant",
-                    "Cannot update the status of a table in an inactive restaurant. The restaurant must be active");
+                    "Cannot update the status of a table in an inactive restaurant");
         }
 
         isValidTableStatus(status);
@@ -182,17 +211,19 @@ public class TableService {
         RestaurantTable updatedTable = tableRepository.save(table);
 
         // Publish table status changed event
-        try {
-            restaurantEventProducer.publishTableStatusChangedEvent(
-                    new TableStatusChangedEvent(
-                            updatedTable.getRestaurant().getId(),
-                            updatedTable.getId(),
-                            oldStatus,
-                            status,
-                            reservationId));
-        } catch (Exception e) {
-            logger.error("Failed to publish table status change event: {}", e.getMessage(), e);
-            // Continue with the update even if event publishing fails
+        if (publishEvent) {
+            try {
+                restaurantEventProducer.publishTableStatusChangedEvent(
+                        new TableStatusChangedEvent(
+                                updatedTable.getRestaurant().getId(),
+                                updatedTable.getId(),
+                                oldStatus,
+                                status,
+                                reservationId));
+            } catch (Exception e) {
+                logger.error("Failed to publish table status change event: {}", e.getMessage(), e);
+                // Continue with the update even if event publishing fails
+            }
         }
 
         return convertToDTO(updatedTable);
@@ -223,7 +254,8 @@ public class TableService {
                 .orElseThrow(() -> new EntityNotFoundException("Table", id));
 
         if (!table.getRestaurant().isActive()) {
-            throw new ValidationException("ไม่สามารถลบโต๊ะของร้านอาหารที่ถูกลบไปแล้ว");
+            throw new ValidationException("restaurant",
+                    "Cannot delete table from an inactive restaurant");
         }
 
         Restaurant restaurant = table.getRestaurant();
@@ -283,7 +315,8 @@ public class TableService {
 
     private void updateRestaurantCapacity(Restaurant restaurant) {
         if (!restaurant.isActive()) {
-            throw new ValidationException("ไม่สามารถคำนวณความจุใหม่สำหรับร้านอาหารที่ถูกลบไปแล้ว");
+            throw new ValidationException("restaurant",
+                    "Cannot update capacity for an inactive restaurant");
         }
 
         List<RestaurantTable> activeTables = tableRepository.findByRestaurantIdAndStatus(
