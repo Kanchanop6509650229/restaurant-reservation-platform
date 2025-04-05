@@ -6,6 +6,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 import com.restaurant.common.constants.KafkaTopics;
+import com.restaurant.common.events.reservation.TableStatusEvent;
 import com.restaurant.common.events.restaurant.OperatingHoursChangedEvent;
 import com.restaurant.common.events.restaurant.RestaurantEvent;
 import com.restaurant.common.events.restaurant.RestaurantUpdatedEvent;
@@ -22,11 +23,7 @@ public class RestaurantEventConsumer {
         this.tableStatusCacheService = tableStatusCacheService;
     }
 
-    @KafkaListener(
-            topics = KafkaTopics.RESTAURANT_EVENTS,
-            groupId = "${spring.kafka.consumer.group-id}",
-            containerFactory = "restaurantKafkaListenerContainerFactory"
-    )
+    @KafkaListener(topics = KafkaTopics.RESTAURANT_EVENTS, groupId = "${spring.kafka.consumer.group-id}", containerFactory = "restaurantKafkaListenerContainerFactory")
     public void consumeRestaurantEvents(RestaurantEvent event) {
         logger.info("Received restaurant event: {}", event.getClass().getSimpleName());
 
@@ -38,42 +35,47 @@ public class RestaurantEventConsumer {
             handleRestaurantUpdatedEvent((RestaurantUpdatedEvent) event);
         }
     }
-    
-    @KafkaListener(
-            topics = KafkaTopics.TABLE_STATUS,
-            groupId = "${spring.kafka.consumer.group-id}",
-            containerFactory = "restaurantKafkaListenerContainerFactory"
-    )
-    public void consumeTableStatusEvents(RestaurantEvent event) {
-        if (event instanceof TableStatusChangedEvent) {
-            handleTableStatusChangedEvent((TableStatusChangedEvent) event);
+
+    @KafkaListener(topics = KafkaTopics.TABLE_STATUS, groupId = "${spring.kafka.consumer.group-id}", containerFactory = "restaurantKafkaListenerContainerFactory")
+    public void consumeTableStatusEvents(Object event) {
+        logger.info("Received table status event: {}", event.getClass().getSimpleName());
+
+        try {
+            if (event instanceof TableStatusChangedEvent) {
+                handleTableStatusChangedEvent((TableStatusChangedEvent) event);
+            } else if (event instanceof TableStatusEvent) {
+                // Handle TableStatusEvent if needed
+                // This might require implementing a new method
+            }
+        } catch (Exception e) {
+            logger.error("Error processing table status event: {}", e.getMessage(), e);
         }
     }
 
     private void handleTableStatusChangedEvent(TableStatusChangedEvent event) {
-        logger.info("Table status changed for restaurant {}, table {}: {} -> {}", 
-                event.getRestaurantId(), 
+        logger.info("Table status changed for restaurant {}, table {}: {} -> {}",
+                event.getRestaurantId(),
                 event.getTableId(),
                 event.getOldStatus(),
                 event.getNewStatus());
-        
+
         // Update table status in the cache
         tableStatusCacheService.updateTableStatus(event.getTableId(), event.getNewStatus());
     }
 
     private void handleOperatingHoursChangedEvent(OperatingHoursChangedEvent event) {
-        logger.info("Operating hours changed for restaurant {}, day {}", 
-                event.getRestaurantId(), 
+        logger.info("Operating hours changed for restaurant {}, day {}",
+                event.getRestaurantId(),
                 event.getDayOfWeek());
-        
+
         // Potential future implementation: Cache restaurant operating hours
     }
 
     private void handleRestaurantUpdatedEvent(RestaurantUpdatedEvent event) {
-        logger.info("Restaurant updated: {}, field: {}", 
-                event.getRestaurantId(), 
+        logger.info("Restaurant updated: {}, field: {}",
+                event.getRestaurantId(),
                 event.getFieldUpdated());
-        
+
         // Potential future implementation: Update cached restaurant details
     }
 }
