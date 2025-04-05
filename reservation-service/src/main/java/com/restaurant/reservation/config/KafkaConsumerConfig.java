@@ -15,7 +15,8 @@ import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 
 import com.restaurant.common.events.reservation.FindAvailableTableResponseEvent;
-import com.restaurant.common.events.restaurant.RestaurantEvent;
+import com.restaurant.common.events.restaurant.ReservationTimeValidationResponseEvent;
+import com.restaurant.common.events.restaurant.RestaurantValidationResponseEvent;
 import com.restaurant.common.events.user.UserEvent;
 
 @Configuration
@@ -98,6 +99,55 @@ public class KafkaConsumerConfig {
     public ConcurrentKafkaListenerContainerFactory<String, FindAvailableTableResponseEvent> tableAvailabilityKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, FindAvailableTableResponseEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(tableAvailabilityConsumerFactory());
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, RestaurantValidationResponseEvent> restaurantValidationConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId + "-restaurant-validation");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+
+        JsonDeserializer<RestaurantValidationResponseEvent> deserializer = new JsonDeserializer<>(
+                RestaurantValidationResponseEvent.class);
+        deserializer.addTrustedPackages("com.restaurant.common.events");
+        deserializer.setUseTypeMapperForKey(true);
+        deserializer.setRemoveTypeHeaders(false);
+
+        return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, RestaurantValidationResponseEvent> restaurantValidationKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, RestaurantValidationResponseEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(restaurantValidationConsumerFactory());
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, ReservationTimeValidationResponseEvent> reservationTimeValidationConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId + "-time-validation");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+
+        JsonDeserializer<ReservationTimeValidationResponseEvent> deserializer = new JsonDeserializer<>(
+                ReservationTimeValidationResponseEvent.class);
+        deserializer.addTrustedPackages("com.restaurant.common.events");
+        deserializer.setUseTypeMapperForKey(true);
+
+        return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, ReservationTimeValidationResponseEvent> reservationTimeValidationKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, ReservationTimeValidationResponseEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(reservationTimeValidationConsumerFactory());
         return factory;
     }
 }

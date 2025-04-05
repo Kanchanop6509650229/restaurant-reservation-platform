@@ -46,6 +46,7 @@ public class ReservationService {
     private final ReservationQuotaRepository quotaRepository;
     private final TableAvailabilityService tableAvailabilityService;
     private final ReservationEventProducer eventProducer;
+    private final RestaurantValidationService restaurantValidationService;
 
     @Value("${reservation.confirmation-expiration-minutes:15}")
     private int confirmationExpirationMinutes;
@@ -65,11 +66,13 @@ public class ReservationService {
     public ReservationService(ReservationRepository reservationRepository,
             ReservationQuotaRepository quotaRepository,
             TableAvailabilityService tableAvailabilityService,
-            ReservationEventProducer eventProducer) {
+            ReservationEventProducer eventProducer,
+            RestaurantValidationService restaurantValidationService) {
         this.reservationRepository = reservationRepository;
         this.quotaRepository = quotaRepository;
         this.tableAvailabilityService = tableAvailabilityService;
         this.eventProducer = eventProducer;
+        this.restaurantValidationService = restaurantValidationService;
     }
 
     public Page<ReservationDTO> getReservationsByUserId(String userId, Pageable pageable) {
@@ -91,6 +94,11 @@ public class ReservationService {
     @Transactional
     public ReservationDTO createReservation(ReservationCreateRequest createRequest, String userId) {
         validateReservationRequest(createRequest);
+
+        restaurantValidationService.validateRestaurantExists(createRequest.getRestaurantId());
+
+        restaurantValidationService.validateOperatingHours(createRequest.getRestaurantId(),
+                createRequest.getReservationTime());
 
         // Check restaurant availability for the given time
         if (!isTimeSlotAvailable(createRequest.getRestaurantId(),
@@ -126,10 +134,10 @@ public class ReservationService {
 
         // Try to find and assign a table
         tableAvailabilityService.findAndAssignTable(reservation);
-        
+
         // Reload the reservation to get the latest state
         reservation = reservationRepository.findById(reservation.getId()).orElse(reservation);
-        
+
         // If no table was assigned, throw an exception
         if (reservation.getTableId() == null) {
             throw RestaurantCapacityException.noSuitableTables(createRequest.getPartySize());
@@ -189,7 +197,7 @@ public class ReservationService {
         // หากยังไม่มีการกำหนดโต๊ะให้กับการจอง ให้ค้นหาและกำหนดโต๊ะใหม่
         if (updatedReservation.getTableId() == null) {
             tableAvailabilityService.findAndAssignTable(updatedReservation);
-            
+
             // โหลดการจองอีกครั้งเพื่อให้แน่ใจว่ามีข้อมูลล่าสุด
             updatedReservation = reservationRepository.findById(id).orElse(updatedReservation);
         }
@@ -456,7 +464,8 @@ public class ReservationService {
                 .findByRestaurantIdAndDateAndTimeSlot(restaurantId, date, time)
                 .orElse(null);
 
-        // If no quota exists, assume available (will be created when reservation is made)
+        // If no quota exists, assume available (will be created when reservation is
+        // made)
         if (quota == null) {
             return true;
         }

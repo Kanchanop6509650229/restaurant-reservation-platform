@@ -25,6 +25,9 @@ public class ErrorCodes {
     public static final String RESERVATION_CONFLICT = "RESERVATION_CONFLICT";
     public static final String RESTAURANT_FULLY_BOOKED = "RESTAURANT_FULLY_BOOKED";
     public static final String RESERVATION_EXPIRED = "RESERVATION_EXPIRED";
+    public static final String INVALID_RESERVATION_TIME = "INVALID_RESERVATION_TIME";
+    public static final String RESTAURANT_NOT_ACTIVE = "RESTAURANT_NOT_ACTIVE";
+    public static final String OUTSIDE_OPERATING_HOURS = "OUTSIDE_OPERATING_HOURS";
     
     // Payment Service Error Codes
     public static final String PAYMENT_FAILED = "PAYMENT_FAILED";
