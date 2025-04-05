@@ -163,27 +163,58 @@ public class TableService {
     /**
      * Update table status based on a REST API call or Kafka event.
      * 
-     * @param id             The table ID
-     * @param status         The new status
-     * @param reservationId  The reservation ID (optional)
+     * @param id            The table ID
+     * @param status        The new status
+     * @param reservationId The reservation ID (optional)
      * @return The updated table DTO
      */
     @Transactional
     public TableDTO updateTableStatus(String id, String status, String reservationId) {
         return updateTableStatusInternal(id, status, reservationId, true);
     }
-    
+
     /**
      * Update table status without publishing an event (used by Kafka consumer).
      * 
-     * @param id             The table ID
-     * @param status         The new status
-     * @param reservationId  The reservation ID (optional)
+     * @param id            The table ID
+     * @param status        The new status
+     * @param reservationId The reservation ID (optional)
      * @return The updated table DTO
      */
     @Transactional
     public TableDTO updateTableStatusWithoutEvent(String id, String status, String reservationId) {
-        return updateTableStatusInternal(id, status, reservationId, false);
+        logger.info("Updating table status without event: tableId={}, newStatus={}, reservationId={}",
+                id, status, reservationId);
+
+        try {
+            RestaurantTable table = tableRepository.findById(id)
+                    .orElseThrow(() -> {
+                        logger.error("Table not found: {}", id);
+                        return new EntityNotFoundException("Table", id);
+                    });
+
+            String oldStatus = table.getStatus();
+            logger.info("Found table: {} with current status: {}", id, oldStatus);
+
+            // If status is the same, no need to update
+            if (oldStatus.equals(status)) {
+                logger.info("Table status unchanged, skipping update: {}", id);
+                return convertToDTO(table);
+            }
+
+            // Set the new status
+            table.setStatus(status);
+
+            // Save and flush to ensure the transaction is committed
+            RestaurantTable updatedTable = tableRepository.saveAndFlush(table);
+            logger.info("Successfully updated table status: {} from {} to {}",
+                    id, oldStatus, status);
+
+            return convertToDTO(updatedTable);
+        } catch (Exception e) {
+            logger.error("Failed to update table status: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     private TableDTO updateTableStatusInternal(String id, String status, String reservationId, boolean publishEvent) {

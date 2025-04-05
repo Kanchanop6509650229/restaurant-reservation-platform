@@ -17,7 +17,7 @@ import com.restaurant.common.events.BaseEvent;
 
 @Configuration
 public class KafkaProducerConfig {
-    
+
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
@@ -27,15 +27,17 @@ public class KafkaProducerConfig {
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-        configProps.put(JsonSerializer.TYPE_MAPPINGS, 
+        configProps.put(JsonSerializer.TYPE_MAPPINGS,
                 "ReservationCreatedEvent:com.restaurant.common.events.reservation.ReservationCreatedEvent," +
-                "ReservationConfirmedEvent:com.restaurant.common.events.reservation.ReservationConfirmedEvent," +
-                "ReservationCancelledEvent:com.restaurant.common.events.reservation.ReservationCancelledEvent," +
-                "ReservationModifiedEvent:com.restaurant.common.events.reservation.ReservationModifiedEvent," +
-                "TableAssignedEvent:com.restaurant.common.events.reservation.TableAssignedEvent," +
-                "TableStatusChangedEvent:com.restaurant.common.events.restaurant.TableStatusChangedEvent," +
-                "TableStatusEvent:com.restaurant.common.events.reservation.TableStatusEvent," +
-                "FindAvailableTableRequestEvent:com.restaurant.common.events.reservation.FindAvailableTableRequestEvent");
+                        "ReservationConfirmedEvent:com.restaurant.common.events.reservation.ReservationConfirmedEvent,"
+                        +
+                        "ReservationCancelledEvent:com.restaurant.common.events.reservation.ReservationCancelledEvent,"
+                        +
+                        "ReservationModifiedEvent:com.restaurant.common.events.reservation.ReservationModifiedEvent," +
+                        "TableAssignedEvent:com.restaurant.common.events.reservation.TableAssignedEvent," +
+                        "TableStatusChangedEvent:com.restaurant.common.events.restaurant.TableStatusChangedEvent," +
+                        "TableStatusEvent:com.restaurant.common.events.reservation.TableStatusEvent," +
+                        "FindAvailableTableRequestEvent:com.restaurant.common.events.reservation.FindAvailableTableRequestEvent");
         return new DefaultKafkaProducerFactory<>(configProps);
     }
 

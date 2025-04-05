@@ -5,9 +5,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.restaurant.common.constants.KafkaTopics;
-import com.restaurant.common.events.reservation.TableStatusEvent;
-import com.restaurant.common.events.restaurant.TableStatusChangedEvent;
 import com.restaurant.restaurant.service.TableService;
 
 @Component
@@ -15,43 +16,38 @@ public class TableStatusEventConsumer {
 
     private static final Logger logger = LoggerFactory.getLogger(TableStatusEventConsumer.class);
     private final TableService tableService;
+    private final ObjectMapper objectMapper;
 
     public TableStatusEventConsumer(TableService tableService) {
         this.tableService = tableService;
+        this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new JavaTimeModule()); // For handling date/time fields if present
     }
 
-    @KafkaListener(
-            topics = KafkaTopics.TABLE_STATUS,
-            groupId = "${spring.kafka.consumer.group-id}",
-            containerFactory = "tableStatusKafkaListenerContainerFactory"
-    )
-    public void consumeTableStatusChangedEvent(Object event) {
-        logger.info("Received table status event: {}", event.getClass().getSimpleName());
-        
+    @KafkaListener(topics = KafkaTopics.TABLE_STATUS, groupId = "${spring.kafka.consumer.group-id}", containerFactory = "tableStatusKafkaListenerContainerFactory")
+    public void consumeTableStatusChangedEvent(String messageJson) {
         try {
-            if (event instanceof TableStatusChangedEvent) {
-                handleTableStatusChangedEvent((TableStatusChangedEvent) event);
-            } else if (event instanceof TableStatusEvent) {
-                handleTableStatusEvent((TableStatusEvent) event);
+            logger.info("Received table status event JSON: {}", messageJson);
+
+            // Extract basic fields from JSON without full deserialization
+            JsonNode rootNode = objectMapper.readTree(messageJson);
+
+            String eventType = rootNode.has("@type") ? rootNode.get("@type").asText() : "unknown";
+            String tableId = rootNode.has("tableId") ? rootNode.get("tableId").asText() : null;
+            String newStatus = rootNode.has("newStatus") ? rootNode.get("newStatus").asText() : null;
+            String reservationId = rootNode.has("reservationId") ? rootNode.get("reservationId").asText() : null;
+
+            if (tableId != null && newStatus != null) {
+                logger.info("Processing table status change: Table {} status changed to {}, reservationId: {}",
+                        tableId, newStatus, reservationId);
+
+                tableService.updateTableStatusWithoutEvent(tableId, newStatus, reservationId);
+            } else {
+                logger.warn("Incomplete table status event data: {}", messageJson);
             }
+
         } catch (Exception e) {
             logger.error("Error processing table status event: {}", e.getMessage(), e);
         }
-    }
-    
-    private void handleTableStatusChangedEvent(TableStatusChangedEvent event) {
-        logger.info("Processing table status change: Table {} status changed from {} to {}", 
-                event.getTableId(), event.getOldStatus(), event.getNewStatus());
-        
-        // Update the table status in the database without publishing a duplicate event
-        tableService.updateTableStatusWithoutEvent(event.getTableId(), event.getNewStatus(), event.getReservationId());
-    }
-    
-    private void handleTableStatusEvent(TableStatusEvent event) {
-        logger.info("Processing table status event: Table {} status changed from {} to {}", 
-                event.getTableId(), event.getOldStatus(), event.getNewStatus());
-        
-        // Update the table status in the database without publishing a duplicate event
-        tableService.updateTableStatusWithoutEvent(event.getTableId(), event.getNewStatus(), event.getReservationId());
     }
 }
