@@ -17,7 +17,7 @@ import com.restaurant.common.events.BaseEvent;
 
 @Configuration
 public class KafkaProducerConfig {
-    
+
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
@@ -27,12 +27,15 @@ public class KafkaProducerConfig {
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-        configProps.put(JsonSerializer.TYPE_MAPPINGS, 
+        configProps.put(JsonSerializer.TYPE_MAPPINGS,
                 "RestaurantUpdatedEvent:com.restaurant.common.events.restaurant.RestaurantUpdatedEvent," +
-                "CapacityChangedEvent:com.restaurant.common.events.restaurant.CapacityChangedEvent," +
-                "TableStatusChangedEvent:com.restaurant.common.events.restaurant.TableStatusChangedEvent," +
-                "OperatingHoursChangedEvent:com.restaurant.common.events.restaurant.OperatingHoursChangedEvent," +
-                "FindAvailableTableResponseEvent:com.restaurant.common.events.reservation.FindAvailableTableResponseEvent");
+                        "CapacityChangedEvent:com.restaurant.common.events.restaurant.CapacityChangedEvent," +
+                        "TableStatusChangedEvent:com.restaurant.common.events.restaurant.TableStatusChangedEvent," +
+                        "OperatingHoursChangedEvent:com.restaurant.common.events.restaurant.OperatingHoursChangedEvent,"
+                        +
+                        "FindAvailableTableResponseEvent:com.restaurant.common.events.reservation.FindAvailableTableResponseEvent,"
+                        +
+                        "RestaurantValidationResponseEvent:com.restaurant.common.events.restaurant.RestaurantValidationResponseEvent");
         return new DefaultKafkaProducerFactory<>(configProps);
     }
 

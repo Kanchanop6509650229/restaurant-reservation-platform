@@ -15,6 +15,7 @@ import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 
 import com.restaurant.common.events.reservation.FindAvailableTableRequestEvent;
+import com.restaurant.common.events.restaurant.RestaurantValidationRequestEvent;
 import com.restaurant.common.events.user.UserEvent;
 
 @Configuration
@@ -93,6 +94,34 @@ public class KafkaConsumerConfig {
     public ConcurrentKafkaListenerContainerFactory<String, FindAvailableTableRequestEvent> tableAvailabilityKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, FindAvailableTableRequestEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(tableAvailabilityConsumerFactory());
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, RestaurantValidationRequestEvent> restaurantValidationConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId + "-restaurant-validation");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
+        props.put(ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, StringDeserializer.class);
+        props.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class);
+
+        JsonDeserializer<RestaurantValidationRequestEvent> deserializer = new JsonDeserializer<>(
+                RestaurantValidationRequestEvent.class);
+        deserializer.addTrustedPackages("com.restaurant.common.events");
+        deserializer.setUseTypeMapperForKey(true);
+
+        return new DefaultKafkaConsumerFactory<>(props,
+                new ErrorHandlingDeserializer<>(new StringDeserializer()),
+                new ErrorHandlingDeserializer<>(deserializer));
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, RestaurantValidationRequestEvent> restaurantKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, RestaurantValidationRequestEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(restaurantValidationConsumerFactory());
         return factory;
     }
 }
