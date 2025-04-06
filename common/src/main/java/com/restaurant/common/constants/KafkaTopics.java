@@ -23,10 +23,10 @@ public class KafkaTopics {
     public static final String FIND_AVAILABLE_TABLE_REQUEST = "find-available-table-request";
     public static final String FIND_AVAILABLE_TABLE_RESPONSE = "find-available-table-response";
 
-    public static final String RESTAURANT_VALIDATION_REQUEST = "restaurant.validation.request";
-    public static final String RESTAURANT_VALIDATION_RESPONSE = "restaurant.validation.response";
-    public static final String RESERVATION_TIME_VALIDATION_REQUEST = "reservation.time.validation.request";
-    public static final String RESERVATION_TIME_VALIDATION_RESPONSE = "reservation.time.validation.response";
+    public static final String RESTAURANT_VALIDATION_REQUEST = "restaurant-validation-request";
+    public static final String RESTAURANT_VALIDATION_RESPONSE = "restaurant-validation-response";
+    public static final String RESERVATION_TIME_VALIDATION_REQUEST = "reservation-time-validation-request";
+    public static final String RESERVATION_TIME_VALIDATION_RESPONSE = "reservation-time-validation-response";
     
     // Notification Service Topics
     public static final String NOTIFICATION_EVENTS = "notification-events";

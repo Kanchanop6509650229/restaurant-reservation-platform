@@ -8,6 +8,7 @@ import com.restaurant.common.events.BaseEvent;
 import com.restaurant.common.events.reservation.FindAvailableTableResponseEvent;
 import com.restaurant.common.events.restaurant.CapacityChangedEvent;
 import com.restaurant.common.events.restaurant.OperatingHoursChangedEvent;
+import com.restaurant.common.events.restaurant.ReservationTimeValidationResponseEvent;
 import com.restaurant.common.events.restaurant.RestaurantUpdatedEvent;
 import com.restaurant.common.events.restaurant.RestaurantValidationResponseEvent;
 import com.restaurant.common.events.restaurant.TableStatusChangedEvent;
@@ -37,12 +38,16 @@ public class RestaurantEventProducer {
     public void publishOperatingHoursChangedEvent(OperatingHoursChangedEvent event) {
         kafkaTemplate.send(KafkaTopics.RESTAURANT_EVENTS, event.getRestaurantId(), event);
     }
-    
+
     public void publishFindAvailableTableResponse(FindAvailableTableResponseEvent event) {
         kafkaTemplate.send(KafkaTopics.FIND_AVAILABLE_TABLE_RESPONSE, event.getCorrelationId(), event);
     }
-    
+
     public void publishRestaurantValidationResponse(RestaurantValidationResponseEvent event) {
         kafkaTemplate.send(KafkaTopics.RESTAURANT_VALIDATION_RESPONSE, event.getCorrelationId(), event);
+    }
+
+    public void publishReservationTimeValidationResponse(ReservationTimeValidationResponseEvent event) {
+        kafkaTemplate.send(KafkaTopics.RESERVATION_TIME_VALIDATION_RESPONSE, event.getCorrelationId(), event);
     }
 }

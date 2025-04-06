@@ -576,11 +576,11 @@ public class ReservationService {
         }
 
         // Check if reservation is during operating hours (simplified example)
-        LocalTime time = reservationTime.toLocalTime();
-        if (time.isBefore(LocalTime.of(10, 0)) || time.isAfter(LocalTime.of(22, 0))) {
-            throw new ValidationException("reservationTime",
-                    "Reservations are only accepted between 10:00 AM and 10:00 PM");
-        }
+        // LocalTime time = reservationTime.toLocalTime();
+        // if (time.isBefore(LocalTime.of(10, 0)) || time.isAfter(LocalTime.of(22, 0))) {
+        //     throw new ValidationException("reservationTime",
+        //             "Reservations are only accepted between 10:00 AM and 10:00 PM");
+        // }
     }
 
     private void validatePartySize(int partySize) {
