@@ -35,7 +35,11 @@ public class KafkaProducerConfig {
                         +
                         "FindAvailableTableResponseEvent:com.restaurant.common.events.reservation.FindAvailableTableResponseEvent,"
                         +
-                        "RestaurantValidationResponseEvent:com.restaurant.common.events.restaurant.RestaurantValidationResponseEvent");
+                        "RestaurantValidationResponseEvent:com.restaurant.common.events.restaurant.RestaurantValidationResponseEvent,"
+                        +
+                        "ReservationTimeValidationResponseEvent:com.restaurant.common.events.restaurant.ReservationTimeValidationResponseEvent,"
+                        +
+                        "ReservationTimeValidationRequestEvent:com.restaurant.common.events.restaurant.ReservationTimeValidationRequestEvent");
         return new DefaultKafkaProducerFactory<>(configProps);
     }
 
