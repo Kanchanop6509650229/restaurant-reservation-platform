@@ -57,8 +57,21 @@ public class RestaurantValidationConsumer {
                 event.getCorrelationId(), event.getRestaurantId(), event.isValid());
         
         try {
-            // Here we would process the time validation response
-            // This implementation will depend on how we want to handle time validation
+            // Convert to RestaurantValidationResponseEvent since that's what our response manager expects
+            RestaurantValidationResponseEvent responseEvent = new RestaurantValidationResponseEvent(
+                event.getRestaurantId(),
+                event.getCorrelationId(),
+                true,  // Always set exists to true as we're handling time validation only
+                true   // Set active to true by default
+            );
+            
+            // If time validation failed, set the error message
+            if (!event.isValid()) {
+                responseEvent.setErrorMessage(event.getErrorMessage());
+            }
+            
+            // Pass the converted response to the manager to complete the CompletableFuture
+            responseManager.completeResponse(responseEvent);
         } catch (Exception e) {
             logger.error("Error processing reservation time validation response: {}", e.getMessage(), e);
         }

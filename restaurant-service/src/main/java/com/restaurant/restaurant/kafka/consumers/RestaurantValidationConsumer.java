@@ -33,7 +33,7 @@ public class RestaurantValidationConsumer {
     @KafkaListener(
             topics = KafkaTopics.RESTAURANT_VALIDATION_REQUEST,
             groupId = "${spring.kafka.consumer.group-id}",
-            containerFactory = "restaurantKafkaListenerContainerFactory"
+            containerFactory = "restaurantValidationKafkaListenerContainerFactory"
     )
     public void consumeRestaurantValidationRequest(RestaurantValidationRequestEvent event) {
         logger.info("Received restaurant validation request: correlationId={}, restaurantId={}", 
