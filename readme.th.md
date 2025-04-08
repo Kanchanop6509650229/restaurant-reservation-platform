@@ -64,7 +64,7 @@
 * **`domain`**:
     * **วัตถุประสงค์**: แทนแกนหลักของแอปพลิเคชัน ประกอบด้วยโลจิกทางธุรกิจและโมเดลข้อมูล
     * **ซับแพ็คเกจทั่วไป**:
-        * `models`: มีคลาส Entity หรือ Domain Model (โดยทั่วไปเป็น JPA Entities ที่แมปกับตารางในฐานข้อมูล) ที่แทนโครงสร้างข้อมูลหลักที่แอปพลิเคชันทำงานด้วย (เช่น `User`, `Profile`, `Restaurant`, `RestaurantTable`, `Reservation`, `Queue`)
+        * `models`: มีคลาส Entity หรือ Domain Model (โดยทั่วไปเป็น JPA Entities ที่แมปกับตารางในฐานข้อมูล) ที่แทนโครงสร้างข้อมูลหลักที่แอปพลิเคชันทำงานด้วย (เช่น `User`, `Profile`, `Restaurant`, `RestaurantTable`, `Reservation`)
         * `repositories`: มีอินเทอร์เฟซ (มักขยายจาก Spring Data JPA repositories เช่น `JpaRepository`) ที่กำหนดเมธอดสำหรับการโต้ตอบกับฐานข้อมูล (เช่น การบันทึก, การค้นหา, การอัปเดต, การลบข้อมูล) สำหรับ Domain Models (เช่น `UserRepository`, `RestaurantRepository`, `ReservationRepository`)
 
 * **`dto` (Data Transfer Object)**:
@@ -73,7 +73,7 @@
         * **การแยกส่วน**: ช่วยแยก Domain Models ภายในออกจากโครงสร้างข้อมูลที่แสดงออกหรือรับมาจากภายนอก (API Contract) นี่หมายความว่าการเปลี่ยนแปลงใน Domain Model ไม่ส่งผลกระทบโดยตรงต่อ API (และในทางกลับกัน)
         * **การปรับรูปข้อมูล**: อนุญาตให้ปรับแต่งโครงสร้างข้อมูลสำหรับกรณีการใช้งานเฉพาะหรือ API endpoints (เช่น การส่งข้อมูลผู้ใช้บางส่วนใน `UserDTO` แต่รับข้อมูลการลงทะเบียนที่จำเป็นใน `UserRegistrationRequest`)
         * **การตรวจสอบความถูกต้อง**: มักใช้กับ Validation Annotations (เช่น `@NotBlank`, `@Email`, `@Min`) เพื่อตรวจสอบข้อมูลขาเข้าจากไคลเอนต์ที่เลเยอร์ Controller
-    * **ตัวอย่าง**: `UserDTO`, `ProfileDTO`, `LoginRequest`, `RestaurantDTO`, `TableDTO`, `ReservationCreateRequest`, `QueueDTO`
+    * **ตัวอย่าง**: `UserDTO`, `ProfileDTO`, `LoginRequest`, `RestaurantDTO`, `TableDTO`, `ReservationCreateRequest`
 
 * **`service`**:
     * **วัตถุประสงค์**: มีโลจิกทางธุรกิจหลักของแอปพลิเคชัน คลาสในเลเยอร์ service จัดการการเรียก repositories เพื่อจัดการข้อมูลและถูกเรียกโดย controllers เพื่อตอบสนองคำขอของผู้ใช้ (เช่น `UserService`, `RestaurantService`, `ReservationService`)
@@ -221,17 +221,6 @@ docker-compose up -d
 | `/api/reservations/{id}` | PUT | อัปเดตการจอง | ใช่ |
 | `/api/reservations/{id}/confirm` | POST | ยืนยันการจอง | ใช่ |
 | `/api/reservations/{id}/cancel` | POST | ยกเลิกการจอง | ใช่ |
-
-#### การจัดการคิว
-
-| Endpoint | วิธี | คำอธิบาย | ต้องการการยืนยันตัวตน |
-|----------|--------|-------------|---------------|
-| `/api/queues` | POST | เพิ่มผู้ใช้ไปยังคิว | ใช่ |
-| `/api/queues/restaurant/{restaurantId}` | GET | รับคิวรอของร้านอาหาร | ใช่ (เจ้าของ) |
-| `/api/queues/{id}` | GET | รับรายการคิวตาม ID | ใช่ |
-| `/api/queues/{id}/notify` | POST | แจ้งเตือนลูกค้าว่าโต๊ะพร้อมแล้ว | ใช่ (เจ้าของ) |
-| `/api/queues/{id}/seat` | POST | ทำเครื่องหมายว่าลูกค้านั่งแล้ว | ใช่ (เจ้าของ) |
-| `/api/queues/{id}/cancel` | POST | ลบออกจากคิว | ใช่ |
 
 #### การจัดการตารางเวลา
 
@@ -506,7 +495,7 @@ func login(username: String, password: String, completion: @escaping (Bool, Stri
    - มีตัวเลือกในการใช้กลไก refresh token สำหรับประสบการณ์ผู้ใช้ที่ราบรื่น
 
 3. **จัดการการหมดอายุ:**
-   - ตรวจจับการตอบสนอง 401 Unauthorized
+   - ตรวจสอบการตอบสนอง 401 Unauthorized
    - เปลี่ยนเส้นทางไปยังหน้าเข้าสู่ระบบเมื่อโทเค็นหมดอายุ
 
 4. **ออกจากระบบ:**

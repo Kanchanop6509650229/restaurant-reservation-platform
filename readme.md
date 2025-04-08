@@ -48,7 +48,7 @@ The platform follows a microservices architecture with:
 
 - **User Service**: Authentication, user registration, and profile management
 - **Restaurant Service**: Restaurant information, tables, and operating hours
-- **Reservation Service**: Reservations, queues, and scheduling
+- **Reservation Service**: Reservations and scheduling
 - **Kafka**: Event bus for inter-service communication
 - **MySQL Databases**: Separate database for each service
 
@@ -68,7 +68,7 @@ This project utilizes a standard package structure for Spring Boot applications 
 * **`domain`**:
     * **Purpose**: Represents the core of the application, containing the business logic and data model.
     * **Common Subpackages**:
-        * `models`: Contains Entity or Domain Model classes (typically JPA Entities mapping to database tables) that represent the core data structures the application works with (e.g., `User`, `Profile`, `Restaurant`, `RestaurantTable`, `Reservation`, `Queue`).
+        * `models`: Contains Entity or Domain Model classes (typically JPA Entities mapping to database tables) that represent the core data structures the application works with (e.g., `User`, `Profile`, `Restaurant`, `RestaurantTable`, `Reservation`).
         * `repositories`: Contains interfaces (usually extending Spring Data JPA repositories like `JpaRepository`) defining methods for interacting with the database (e.g., saving, finding, updating, deleting data) for the Domain Models (e.g., `UserRepository`, `RestaurantRepository`, `ReservationRepository`).
 
 * **`dto` (Data Transfer Object)**:
@@ -77,7 +77,7 @@ This project utilizes a standard package structure for Spring Boot applications 
         * **Decoupling**: Helps separate the internal Domain Models from the data structure exposed to or received from the outside (API Contract). This means changes to the Domain Model don't directly impact the API (and vice versa).
         * **Data Shaping**: Allows tailoring the data structure for specific use cases or API endpoints (e.g., sending partial User data in `UserDTO` but receiving necessary registration data in `UserRegistrationRequest`).
         * **Validation**: Often used with Validation Annotations (e.g., `@NotBlank`, `@Email`, `@Min`) to validate incoming data from clients at the Controller layer.
-    * **Examples**: `UserDTO`, `ProfileDTO`, `LoginRequest`, `RestaurantDTO`, `TableDTO`, `ReservationCreateRequest`, `QueueDTO`.
+    * **Examples**: `UserDTO`, `ProfileDTO`, `LoginRequest`, `RestaurantDTO`, `TableDTO`, `ReservationCreateRequest`.
 
 * **`service`**:
     * **Purpose**: Contains the main business logic of the application. Classes in the service layer orchestrate calls to repositories to manage data and are invoked by controllers to fulfill user requests (e.g., `UserService`, `RestaurantService`, `ReservationService`).
@@ -225,17 +225,6 @@ This starts:
 | `/api/reservations/{id}` | PUT | Update a reservation | Yes |
 | `/api/reservations/{id}/confirm` | POST | Confirm a reservation | Yes |
 | `/api/reservations/{id}/cancel` | POST | Cancel a reservation | Yes |
-
-#### Queue Management
-
-| Endpoint | Method | Description | Auth Required |
-|----------|--------|-------------|---------------|
-| `/api/queues` | POST | Add user to queue | Yes |
-| `/api/queues/restaurant/{restaurantId}` | GET | Get restaurant's waiting queue | Yes (Owner) |
-| `/api/queues/{id}` | GET | Get queue entry by ID | Yes |
-| `/api/queues/{id}/notify` | POST | Notify customer their table is ready | Yes (Owner) |
-| `/api/queues/{id}/seat` | POST | Mark party as seated | Yes (Owner) |
-| `/api/queues/{id}/cancel` | POST | Remove from queue | Yes |
 
 #### Schedule Management
 
