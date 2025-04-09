@@ -15,18 +15,41 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
 
 import com.restaurant.common.events.BaseEvent;
 
+/**
+ * Configuration class for Kafka Producer settings.
+ * Defines the producer factory and template for sending events to Kafka topics.
+ * Configures serialization and type mappings for various event types.
+ */
 @Configuration
 public class KafkaProducerConfig {
 
+    /**
+     * Kafka bootstrap servers address.
+     * Injected from application properties.
+     */
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
+    /**
+     * Creates and configures the Kafka Producer Factory.
+     * Sets up:
+     * - Bootstrap servers connection
+     * - Key serializer (String)
+     * - Value serializer (JSON)
+     * - Type mappings for event classes
+     *
+     * @return Configured ProducerFactory for BaseEvent messages
+     */
     @Bean
     public ProducerFactory<String, BaseEvent> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
+        // Set Kafka broker connection
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        // Configure key serializer for String keys
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        // Configure value serializer for JSON messages
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        // Define type mappings for event classes to enable proper deserialization
         configProps.put(JsonSerializer.TYPE_MAPPINGS,
                 "ReservationCreatedEvent:com.restaurant.common.events.reservation.ReservationCreatedEvent," +
                         "ReservationConfirmedEvent:com.restaurant.common.events.reservation.ReservationConfirmedEvent,"
@@ -47,6 +70,13 @@ public class KafkaProducerConfig {
         return new DefaultKafkaProducerFactory<>(configProps);
     }
 
+    /**
+     * Creates a KafkaTemplate for sending messages.
+     * Uses the configured producer factory to create a template
+     * that can be autowired into services for sending events.
+     *
+     * @return Configured KafkaTemplate for BaseEvent messages
+     */
     @Bean
     public KafkaTemplate<String, BaseEvent> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());

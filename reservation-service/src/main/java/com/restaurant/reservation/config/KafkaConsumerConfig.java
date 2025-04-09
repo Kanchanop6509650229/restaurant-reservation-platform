@@ -19,15 +19,40 @@ import com.restaurant.common.events.restaurant.ReservationTimeValidationResponse
 import com.restaurant.common.events.restaurant.RestaurantValidationResponseEvent;
 import com.restaurant.common.events.user.UserEvent;
 
+/**
+ * Configuration class for Kafka Consumer settings.
+ * Defines multiple consumer factories and listener container factories
+ * for different types of events in the system.
+ * Handles deserialization and error handling for Kafka messages.
+ */
 @Configuration
 public class KafkaConsumerConfig {
 
+    /**
+     * Kafka bootstrap servers address.
+     * Injected from application properties.
+     */
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
+    /**
+     * Kafka consumer group ID.
+     * Injected from application properties.
+     */
     @Value("${spring.kafka.consumer.group-id}")
     private String groupId;
 
+    /**
+     * Creates a consumer factory for general restaurant events.
+     * Configures:
+     * - Bootstrap servers
+     * - Consumer group ID
+     * - Auto offset reset policy
+     * - Error handling deserializers
+     * - Trusted packages for deserialization
+     *
+     * @return Configured ConsumerFactory for general restaurant events
+     */
     @Bean
     public ConsumerFactory<String, Object> restaurantEventConsumerFactory() {
         Map<String, Object> props = new HashMap<>();
@@ -48,6 +73,12 @@ public class KafkaConsumerConfig {
                 new ErrorHandlingDeserializer<>(deserializer));
     }
 
+    /**
+     * Creates a container factory for restaurant event listeners.
+     * Uses the restaurant event consumer factory for message consumption.
+     *
+     * @return Configured ConcurrentKafkaListenerContainerFactory for restaurant events
+     */
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, Object> restaurantKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
@@ -55,6 +86,12 @@ public class KafkaConsumerConfig {
         return factory;
     }
 
+    /**
+     * Creates a consumer factory for user events.
+     * Configures specific settings for handling user-related events.
+     *
+     * @return Configured ConsumerFactory for UserEvent messages
+     */
     @Bean
     public ConsumerFactory<String, UserEvent> userEventConsumerFactory() {
         Map<String, Object> props = new HashMap<>();
@@ -71,6 +108,12 @@ public class KafkaConsumerConfig {
         return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
     }
 
+    /**
+     * Creates a container factory for user event listeners.
+     * Uses the user event consumer factory for message consumption.
+     *
+     * @return Configured ConcurrentKafkaListenerContainerFactory for user events
+     */
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, UserEvent> userKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, UserEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
@@ -78,6 +121,12 @@ public class KafkaConsumerConfig {
         return factory;
     }
 
+    /**
+     * Creates a consumer factory for table availability events.
+     * Configures specific settings for handling table availability responses.
+     *
+     * @return Configured ConsumerFactory for FindAvailableTableResponseEvent messages
+     */
     @Bean
     public ConsumerFactory<String, FindAvailableTableResponseEvent> tableAvailabilityConsumerFactory() {
         Map<String, Object> props = new HashMap<>();
@@ -95,6 +144,12 @@ public class KafkaConsumerConfig {
         return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
     }
 
+    /**
+     * Creates a container factory for table availability event listeners.
+     * Uses the table availability consumer factory for message consumption.
+     *
+     * @return Configured ConcurrentKafkaListenerContainerFactory for table availability events
+     */
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, FindAvailableTableResponseEvent> tableAvailabilityKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, FindAvailableTableResponseEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
@@ -102,6 +157,12 @@ public class KafkaConsumerConfig {
         return factory;
     }
 
+    /**
+     * Creates a consumer factory for restaurant validation events.
+     * Configures specific settings for handling restaurant validation responses.
+     *
+     * @return Configured ConsumerFactory for RestaurantValidationResponseEvent messages
+     */
     @Bean
     public ConsumerFactory<String, RestaurantValidationResponseEvent> restaurantValidationConsumerFactory() {
         Map<String, Object> props = new HashMap<>();
@@ -120,6 +181,12 @@ public class KafkaConsumerConfig {
         return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
     }
 
+    /**
+     * Creates a container factory for restaurant validation event listeners.
+     * Uses the restaurant validation consumer factory for message consumption.
+     *
+     * @return Configured ConcurrentKafkaListenerContainerFactory for restaurant validation events
+     */
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, RestaurantValidationResponseEvent> restaurantValidationKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, RestaurantValidationResponseEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
@@ -127,6 +194,12 @@ public class KafkaConsumerConfig {
         return factory;
     }
 
+    /**
+     * Creates a consumer factory for reservation time validation events.
+     * Configures specific settings for handling time validation responses.
+     *
+     * @return Configured ConsumerFactory for ReservationTimeValidationResponseEvent messages
+     */
     @Bean
     public ConsumerFactory<String, ReservationTimeValidationResponseEvent> reservationTimeValidationConsumerFactory() {
         Map<String, Object> props = new HashMap<>();
@@ -144,6 +217,12 @@ public class KafkaConsumerConfig {
         return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
     }
 
+    /**
+     * Creates a container factory for reservation time validation event listeners.
+     * Uses the time validation consumer factory for message consumption.
+     *
+     * @return Configured ConcurrentKafkaListenerContainerFactory for time validation events
+     */
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, ReservationTimeValidationResponseEvent> reservationTimeValidationKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, ReservationTimeValidationResponseEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();

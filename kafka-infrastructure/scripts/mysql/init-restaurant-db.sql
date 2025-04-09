@@ -1,10 +1,17 @@
--- Restaurant Service Database Initialization
+-- Restaurant Service Database Initialization Script
+-- This script creates and initializes the database schema for the Restaurant Service
+-- Includes restaurant information, tables, operating hours, branches, and staff management
+-- Author: Restaurant Team
+-- Version: 1.0
 
--- Enable spatial features
+-- Set global time zone to UTC for consistent timestamp handling
 SET GLOBAL time_zone = '+00:00';
 
 -- Create tables for Restaurant Service
+
 -- Restaurants Table
+-- Stores core restaurant information including location, contact details, and ratings
+-- Includes spatial coordinates for location-based services
 CREATE TABLE IF NOT EXISTS restaurants (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -29,6 +36,8 @@ CREATE TABLE IF NOT EXISTS restaurants (
 );
 
 -- Tables Table
+-- Stores information about individual tables in each restaurant
+-- Includes capacity, status, location, and accessibility features
 CREATE TABLE IF NOT EXISTS restaurant_tables (
     id VARCHAR(36) PRIMARY KEY,
     restaurant_id VARCHAR(36) NOT NULL,
@@ -47,6 +56,8 @@ CREATE TABLE IF NOT EXISTS restaurant_tables (
 );
 
 -- Operating Hours Table
+-- Stores the operating schedule for each restaurant
+-- Includes regular hours, breaks, and special hours
 CREATE TABLE IF NOT EXISTS operating_hours (
     id VARCHAR(36) PRIMARY KEY,
     restaurant_id VARCHAR(36) NOT NULL,
@@ -62,6 +73,8 @@ CREATE TABLE IF NOT EXISTS operating_hours (
 );
 
 -- Branches Table
+-- Stores information about restaurant branches or locations
+-- Includes contact details and location information
 CREATE TABLE IF NOT EXISTS branches (
     id VARCHAR(36) PRIMARY KEY,
     restaurant_id VARCHAR(36) NOT NULL,
@@ -81,6 +94,8 @@ CREATE TABLE IF NOT EXISTS branches (
 );
 
 -- Staff Table
+-- Stores information about restaurant staff members
+-- Includes position, contact details, and user association
 CREATE TABLE IF NOT EXISTS staff (
     id VARCHAR(36) PRIMARY KEY,
     restaurant_id VARCHAR(36) NOT NULL,
@@ -95,6 +110,7 @@ CREATE TABLE IF NOT EXISTS staff (
 );
 
 -- Create indices for faster queries
+-- Improves performance of common lookup operations
 CREATE INDEX idx_restaurants_name ON restaurants(name);
 CREATE INDEX idx_restaurants_cuisine_type ON restaurants(cuisine_type);
 CREATE INDEX idx_restaurants_city ON restaurants(city);
@@ -106,7 +122,7 @@ CREATE INDEX idx_branches_restaurant_id ON branches(restaurant_id);
 CREATE INDEX idx_staff_restaurant_id ON staff(restaurant_id);
 CREATE INDEX idx_staff_position ON staff(position);
 
--- Sample Data: Create three sample restaurants
+-- Sample Data: Create three sample restaurants with complete information
 -- Italian Restaurant
 INSERT INTO restaurants (
     id, name, description, address, city, state, zip_code, country, 

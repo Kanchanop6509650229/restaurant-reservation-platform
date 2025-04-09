@@ -1,46 +1,84 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Project Object Model (POM) for the Common Module
+    This module contains shared classes, utilities, and configurations used across all microservices
+    in the restaurant reservation platform.
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	
+	<!--
+		Parent POM configuration
+		Inherits common configurations and dependencies from the root project
+	-->
 	<parent>
 		<groupId>com.restaurant</groupId>
 		<artifactId>restaurant-reservation-platform</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
 	
+	<!--
+		Module identification
+		Defines the artifact ID, name, and description for the common module
+	-->
 	<artifactId>common</artifactId>
 	<name>Common Module</name>
 	<description>Common classes and utilities shared across microservices</description>
 	
+	<!--
+		Dependencies section
+		Lists all required libraries and their configurations
+	-->
 	<dependencies>
-		<!-- Jackson for JSON serialization and deserialization -->
+		<!--
+			Jackson Databind
+			Provides JSON serialization and deserialization capabilities
+			Used for converting Java objects to/from JSON in REST APIs
+		-->
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
 		</dependency>
 		
-		<!-- Lombok -->
+		<!--
+			Lombok
+			Reduces boilerplate code by automatically generating getters, setters, constructors, etc.
+			Marked as optional since it's only needed at compile time
+		-->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
 		</dependency>
 		
-		<!-- Validation API -->
+		<!--
+			Jakarta Validation API
+			Provides standard validation annotations and interfaces
+			Used for input validation across the application
+		-->
 		<dependency>
 			<groupId>jakarta.validation</groupId>
 			<artifactId>jakarta.validation-api</artifactId>
 		</dependency>
 		
-		<!-- Testing -->
+		<!--
+			Spring Boot Test Starter
+			Provides testing utilities and frameworks
+			Includes JUnit, Mockito, and other testing tools
+			Scoped to test phase only
+		-->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 		
-		<!-- Jackson Java 8 Date/Time support -->
+		<!--
+			Jackson Java 8 Date/Time Support
+			Adds support for Java 8 date/time types in JSON serialization
+			Enables proper handling of LocalDateTime, LocalDate, etc.
+		-->
 		<dependency>
 			<groupId>com.fasterxml.jackson.datatype</groupId>
 			<artifactId>jackson-datatype-jsr310</artifactId>

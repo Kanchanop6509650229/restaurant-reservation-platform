@@ -13,16 +13,35 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * REST Controller for managing restaurant schedules.
+ * Provides endpoints for retrieving and updating restaurant operating schedules.
+ * Handles date-based operations for restaurant availability and operating hours.
+ */
 @RestController
 @RequestMapping("/api/schedules")
 public class ScheduleController {
 
     private final ScheduleService scheduleService;
 
+    /**
+     * Constructs a new ScheduleController with the specified ScheduleService.
+     *
+     * @param scheduleService The service responsible for schedule management
+     */
     public ScheduleController(ScheduleService scheduleService) {
         this.scheduleService = scheduleService;
     }
 
+    /**
+     * Retrieves the schedule for a specific restaurant within a date range.
+     * Returns all schedule entries including operating hours and special events.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param startDate The start date of the schedule period (inclusive)
+     * @param endDate The end date of the schedule period (inclusive)
+     * @return ResponseEntity containing a list of schedule entries
+     */
     @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<ResponseDTO<List<ScheduleDTO>>> getScheduleForRestaurant(
             @PathVariable String restaurantId,
@@ -32,6 +51,15 @@ public class ScheduleController {
         return ResponseEntity.ok(ResponseDTO.success(schedules));
     }
 
+    /**
+     * Updates the schedule for a specific restaurant on a given date.
+     * Requires ADMIN or RESTAURANT_OWNER role.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param date The date for which to update the schedule
+     * @param updateRequest The schedule update request containing new schedule details
+     * @return ResponseEntity containing the updated schedule
+     */
     @PutMapping("/restaurant/{restaurantId}/date/{date}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('RESTAURANT_OWNER')")
     public ResponseEntity<ResponseDTO<ScheduleDTO>> updateSchedule(

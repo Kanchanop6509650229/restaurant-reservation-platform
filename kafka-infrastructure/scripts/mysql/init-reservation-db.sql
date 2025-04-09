@@ -1,10 +1,16 @@
--- Reservation Service Database Initialization
+-- Reservation Service Database Initialization Script
+-- This script creates and initializes the database schema for the Reservation Service
+-- Author: Restaurant Team
+-- Version: 1.0
 
--- Enable proper time zone
+-- Set global time zone to UTC for consistent timestamp handling
 SET GLOBAL time_zone = '+00:00';
 
 -- Create tables for Reservation Service
+
 -- Reservations Table
+-- Stores all reservation records with their details and status
+-- Includes indexes for efficient querying by restaurant, user, status, and time
 CREATE TABLE IF NOT EXISTS reservations (
     id VARCHAR(36) PRIMARY KEY,
     user_id VARCHAR(36) NOT NULL,
@@ -33,6 +39,8 @@ CREATE TABLE IF NOT EXISTS reservations (
 );
 
 -- Wait List Table
+-- Manages customers waiting for available tables
+-- Tracks wait list entries with their status and notification state
 CREATE TABLE IF NOT EXISTS wait_list (
     id VARCHAR(36) PRIMARY KEY,
     restaurant_id VARCHAR(36) NOT NULL,
@@ -52,6 +60,8 @@ CREATE TABLE IF NOT EXISTS wait_list (
 );
 
 -- Reservation Settings Table
+-- Stores configuration settings for each restaurant's reservation system
+-- Controls reservation policies and business rules
 CREATE TABLE IF NOT EXISTS reservation_settings (
     id VARCHAR(36) PRIMARY KEY,
     restaurant_id VARCHAR(36) NOT NULL UNIQUE,
@@ -68,7 +78,9 @@ CREATE TABLE IF NOT EXISTS reservation_settings (
     INDEX idx_restaurant_id (restaurant_id)
 );
 
--- Reservation History Table (for auditing purposes)
+-- Reservation History Table
+-- Tracks all changes to reservations for auditing and reporting
+-- Records status changes, actions, and responsible parties
 CREATE TABLE IF NOT EXISTS reservation_history (
     id VARCHAR(36) PRIMARY KEY,
     reservation_id VARCHAR(36) NOT NULL,
@@ -83,8 +95,9 @@ CREATE TABLE IF NOT EXISTS reservation_history (
     INDEX idx_action (action)
 );
 
--- Sample Data: Add some reservation settings for existing restaurants
--- Use the same restaurant IDs as used in the restaurant-service database
+-- Sample Data: Initial Reservation Settings
+-- Adds default reservation settings for existing restaurants
+-- Uses restaurant IDs from the restaurant-service database
 INSERT INTO reservation_settings (
     id, restaurant_id, max_party_size, min_reservation_notice_minutes, 
     max_reservation_notice_days, default_reservation_duration_minutes,

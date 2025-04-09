@@ -1,11 +1,24 @@
+# Kafka Initialization Container
+# This Dockerfile creates a container for initializing Kafka topics
+# It uses the official Confluent Kafka image as the base
+# Author: Restaurant Team
+# Version: 1.0
+
+# Base image: Official Confluent Kafka image
+# Version 7.3.2 includes Kafka and necessary utilities
 FROM confluentinc/cp-kafka:7.3.2
 
+# Set working directory for the initialization scripts
 WORKDIR /scripts
 
-# Adding the initialization script and set permissions in one layer
+# Copy and set up the initialization script
+# The script is copied to the container and made executable
+# The USER root and chmod commands ensure proper permissions
 COPY init-kafka.sh /scripts/
 USER root
 RUN chmod +x /scripts/init-kafka.sh || true
 
-# Keep container running during development for debugging purposes
+# Development mode command
+# Keeps the container running for debugging purposes
+# In production, this should be replaced with the actual initialization command
 CMD ["tail", "-f", "/dev/null"]

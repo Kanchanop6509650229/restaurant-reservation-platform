@@ -1,10 +1,17 @@
--- User Service Database Initialization
+-- User Service Database Initialization Script
+-- This script creates and initializes the database schema for the User Service
+-- Includes user authentication, authorization, and profile management
+-- Author: Restaurant Team
+-- Version: 1.0
 
--- Enable spatial features
+-- Set global time zone to UTC for consistent timestamp handling
 SET GLOBAL time_zone = '+00:00';
 
 -- Create tables for User Service
+
 -- Users Table
+-- Stores user authentication and account information
+-- Includes security flags for account status and expiration
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(36) PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -19,6 +26,8 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Profiles Table
+-- Stores additional user information and preferences
+-- Linked to users table with a one-to-one relationship
 CREATE TABLE IF NOT EXISTS profiles (
     id VARCHAR(36) PRIMARY KEY,
     user_id VARCHAR(36) NOT NULL UNIQUE,
@@ -38,6 +47,8 @@ CREATE TABLE IF NOT EXISTS profiles (
 );
 
 -- Roles Table
+-- Defines user roles in the system
+-- Used for role-based access control (RBAC)
 CREATE TABLE IF NOT EXISTS roles (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
@@ -45,6 +56,8 @@ CREATE TABLE IF NOT EXISTS roles (
 );
 
 -- Permissions Table
+-- Defines granular permissions in the system
+-- Used for fine-grained access control
 CREATE TABLE IF NOT EXISTS permissions (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
@@ -52,6 +65,8 @@ CREATE TABLE IF NOT EXISTS permissions (
 );
 
 -- User-Roles Many-to-Many Relationship
+-- Links users to their assigned roles
+-- Enables role-based access control
 CREATE TABLE IF NOT EXISTS user_roles (
     user_id VARCHAR(36) NOT NULL,
     role_id VARCHAR(36) NOT NULL,
@@ -61,6 +76,8 @@ CREATE TABLE IF NOT EXISTS user_roles (
 );
 
 -- Role-Permissions Many-to-Many Relationship
+-- Links roles to their assigned permissions
+-- Defines what actions each role can perform
 CREATE TABLE IF NOT EXISTS role_permissions (
     role_id VARCHAR(36) NOT NULL,
     permission_id VARCHAR(36) NOT NULL,
@@ -70,11 +87,13 @@ CREATE TABLE IF NOT EXISTS role_permissions (
 );
 
 -- Insert Default Roles
+-- Creates standard system roles: USER and ADMIN
 INSERT IGNORE INTO roles (id, name, description) VALUES 
 (UUID(), 'USER', 'Standard user role'),
 (UUID(), 'ADMIN', 'Administrator role');
 
 -- Insert Default Permissions
+-- Creates standard system permissions for user and profile management
 INSERT IGNORE INTO permissions (id, name, description) VALUES 
 (UUID(), 'user:read', 'Permission to read user data'),
 (UUID(), 'user:write', 'Permission to create/update user data'),
@@ -84,7 +103,7 @@ INSERT IGNORE INTO permissions (id, name, description) VALUES
 (UUID(), 'restaurant:read', 'Permission to read restaurant data');
 
 -- Link Permissions to Roles
--- For USER role
+-- Assigns appropriate permissions to the USER role
 SET @user_role_id = (SELECT id FROM roles WHERE name = 'USER');
 SET @user_read_permission = (SELECT id FROM permissions WHERE name = 'user:read');
 SET @profile_read_permission = (SELECT id FROM permissions WHERE name = 'profile:read');
@@ -97,7 +116,7 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
 (@user_role_id, @profile_write_permission),
 (@user_role_id, @restaurant_read_permission);
 
--- For ADMIN role
+-- Assigns appropriate permissions to the ADMIN role
 SET @admin_role_id = (SELECT id FROM roles WHERE name = 'ADMIN');
 SET @user_write_permission = (SELECT id FROM permissions WHERE name = 'user:write');
 SET @user_delete_permission = (SELECT id FROM permissions WHERE name = 'user:delete');
@@ -119,6 +138,7 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
 -- (@admin_user_id, @admin_role_id);
 
 -- Create indices for faster queries
+-- Improves performance of common lookup operations
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_profiles_user_id ON profiles(user_id);

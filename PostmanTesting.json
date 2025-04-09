@@ -1,1521 +1,1233 @@
 {
 	"info": {
-		"_postman_id": "YOUR_COLLECTION_ID",
-		"name": "Restaurant Reservation Platform API Tests",
-		"description": "ชุดทดสอบ API สำหรับโปรเจกต์ Restaurant Reservation Platform ทั้งหมด ประกอบด้วย User Service, Restaurant Service และ Reservation Service",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	  "_postman_id": "a7e5f0a2-8b4c-4c98-8f2e-b21b7c9e6c23",
+	  "name": "Restaurant Reservation Platform (Automated)",
+	  "description": "Fully automated API tests for the Restaurant Reservation Platform microservices",
+	  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
-		{
-			"name": "User Service",
-			"description": "API ที่เกี่ยวข้องกับการจัดการผู้ใช้และการยืนยันตัวตน",
-			"item": [
-				{
-					"name": "Auth",
-					"item": [
-						{
-							"name": "Register New User",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"username\": \"testuser_{{$randomInt}}\",\n    \"password\": \"password123\",\n    \"email\": \"testuser_{{$randomInt}}@example.com\",\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"phoneNumber\": \"1234567890\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrlUser}}/api/users/register",
-									"host": [
-										"{{baseUrlUser}}"
-									],
-									"path": [
-										"api",
-										"users",
-										"register"
-									]
-								},
-								"description": "ลงทะเบียนผู้ใช้ใหม่"
-							},
-							"response": []
-						},
-						{
-							"name": "Login User",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-												"// 1. Parse JSON response body",
-												"const responseBody = pm.response.json();",
-												"",
-												"// 2. Test: Check for overall success in response",
-												"pm.test(\"API call successful (success: true)\", function () {",
-												"    pm.expect(responseBody.success).to.be.true;",
-												"});",
-												"",
-												"// 3. Test: Check if 'data' object exists",
-												"pm.test(\"Response data object exists\", function () {",
-												"    pm.expect(responseBody.data).to.exist.and.not.be.null;",
-												"});",
-												"",
-												"// 4. Test: Check if token exists within 'data' and is a non-empty string",
-												"pm.test(\"Token is received and is not empty\", function () {",
-												"    // Check if data object exists first (important!)",
-												"    pm.expect(responseBody.data).to.exist.and.not.be.null;",
-												"    // Now check the token inside data",
-												"    pm.expect(responseBody.data.token).to.be.a('string', \"Token should be a string\").and.not.be.empty;",
-												"});",
-												"",
-												"// 5. Set collection variable 'authToken' if token exists",
-												"if (responseBody.data && responseBody.data.token) {",
-												"    pm.environment.set(\"authToken\", responseBody.data.token);",
-												"    console.log(\"authToken successfully set in collection variables.\");",
-												"} else {",
-												"    console.error(\"Failed to find token in response body to set collection variable.\");",
-												"    // Optionally fail the test run if token is mandatory",
-												"    // pm.expect.fail(\"Token not found in response data\");",
-												"}",
-												"",
-												"// --- เพิ่มเติม: ดึง User ID (ถ้ามี) ---",
-												"// สมมติว่า API ส่ง userId กลับมาใน data ด้วย (ต้องปรับตาม API จริง)",
-												"if (responseBody.data && responseBody.data.userId) {",
-												"    pm.environment.set(\"loggedInUserId\", responseBody.data.userId);",
-												"    console.log(\"loggedInUserId set in collection variables.\");",
-												"}"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"username\": \"admin\", // หรือ username ที่ลงทะเบียนไว้\n    \"password\": \"admin123\" // หรือ password ที่ลงทะเบียนไว้\n}"
-								},
-								"url": {
-									"raw": "{{baseUrlUser}}/api/auth/login",
-									"host": [
-										"{{baseUrlUser}}"
-									],
-									"path": [
-										"api",
-										"auth",
-										"login"
-									]
-								},
-								"description": "เข้าสู่ระบบเพื่อรับ JWT Token"
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "User",
-					"item": [
-						{
-							"name": "Get Current User Info",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlUser}}/api/users/me",
-									"host": [
-										"{{baseUrlUser}}"
-									],
-									"path": [
-										"api",
-										"users",
-										"me"
-									]
-								},
-								"description": "ดึงข้อมูลผู้ใช้ที่กำลังล็อกอินอยู่ (ต้องใช้ Token)"
-							},
-							"response": []
-						},
-						{
-							"name": "Get User by ID",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlUser}}/api/users/{{loggedInUserId}}",
-									"host": [
-										"{{baseUrlUser}}"
-									],
-									"path": [
-										"api",
-										"users",
-										"{{loggedInUserId}}"
-									],
-									"variable": [
-										{
-											"key": "loggedInUserId",
-											"value": "{{loggedInUserId}}",
-											"description": "ID ของผู้ใช้ที่ต้องการดึงข้อมูล (ใช้ ID จาก Login หรือตัวแปรอื่น)"
-										}
-									]
-								},
-								"description": "ดึงข้อมูลผู้ใช้ตาม ID (ต้องใช้ Token, อาจต้องมีสิทธิ์ Admin สำหรับดูคนอื่น)"
-							},
-							"response": []
-						},
-						{
-							"name": "Update Current User Profile",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"firstName\": \"UpdatedFirstName\",\n    \"lastName\": \"UpdatedLastName\",\n    \"phoneNumber\": \"0987654321\",\n    \"preferences\": \"ชอบอาหารไทย ไม่เผ็ด\",\n    \"allergies\": \"แพ้กุ้ง\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrlUser}}/api/users/{{loggedInUserId}}/profile",
-									"host": [
-										"{{baseUrlUser}}"
-									],
-									"path": [
-										"api",
-										"users",
-										"{{loggedInUserId}}",
-										"profile"
-									]
-								},
-								"description": "อัปเดตข้อมูลโปรไฟล์ของผู้ใช้ที่กำลังล็อกอิน (ต้องใช้ Token)"
-							},
-							"response": []
-						},
-						{
-							"name": "Get All Users (Admin)",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlUser}}/api/users?page=0&size=10&sortBy=username&sortDir=ASC",
-									"host": [
-										"{{baseUrlUser}}"
-									],
-									"path": [
-										"api",
-										"users"
-									],
-									"query": [
-										{
-											"key": "page",
-											"value": "0"
-										},
-										{
-											"key": "size",
-											"value": "10"
-										},
-										{
-											"key": "sortBy",
-											"value": "username"
-										},
-										{
-											"key": "sortDir",
-											"value": "ASC"
-										}
-									]
-								},
-								"description": "ดึงรายชื่อผู้ใช้ทั้งหมด (อาจต้องใช้สิทธิ์ Admin และ Token)"
-							},
-							"response": []
-						}
-					]
+	  {
+		"name": "1. User Service",
+		"item": [
+		  {
+			"name": "1.1 Register User",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 201\", function () {",
+					"    pm.response.to.have.status(201);",
+					"});",
+					"",
+					"// Test that registration was successful",
+					"pm.test(\"Registration successful\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data.username).to.eql(\"testuser\");",
+					"});",
+					"",
+					"// Save user_id to environment",
+					"if (jsonData.data && jsonData.data.id) {",
+					"    pm.environment.set(\"user_id\", jsonData.data.id);",
+					"    console.log(\"User ID saved to environment: \" + jsonData.data.id);",
+					"}",
+					"",
+					"// Save username and password for login",
+					"pm.environment.set(\"username\", \"testuser\");",
+					"pm.environment.set(\"password\", \"password123\");"
+				  ],
+				  "type": "text/javascript"
 				}
+			  },
+			  {
+				"listen": "prerequest",
+				"script": {
+				  "exec": [
+					"// Generate random data for unique usernames",
+					"var timestamp = new Date().getTime();",
+					"var randomUsername = \"testuser\" + timestamp;",
+					"",
+					"// Store test data in environment",
+					"pm.environment.set(\"test_username\", randomUsername);",
+					"pm.environment.set(\"test_email\", randomUsername + \"@example.com\");",
+					"pm.environment.set(\"test_password\", \"password123\");"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
 			],
-			"variable": [
+			"request": {
+			  "method": "POST",
+			  "header": [
 				{
-					"key": "baseUrlUser",
-					"value": "http://localhost:8081",
-					"type": "string"
-				},
-				{
-					"key": "userId",
-					"value": "1",
-					"type": "string"
+				  "key": "Content-Type",
+				  "value": "application/json"
 				}
-			]
-		},
-		{
-			"name": "Restaurant Service",
-			"description": "API ที่เกี่ยวข้องกับการจัดการข้อมูลร้านอาหาร โต๊ะ เวลาทำการ และสาขา",
-			"item": [
-				{
-					"name": "Health Check",
-					"item": [
-						{
-							"name": "Check Service Health",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/health",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"health"
-									]
-								},
-								"description": "ตรวจสอบสถานะของ Service"
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Restaurants",
-					"item": [
-						{
-							"name": "Create Restaurant",
-							"event": [
-                                {
-                                    "listen": "test",
-                                    "script": {
-                                        "exec": [
-                                            "// Test 1: Check if the status code indicates success (e.g., 201 Created or 200 OK)",
-                                            "pm.test(\"Status code is 201 or 200\", function () {",
-                                            "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-                                            "});",
-                                            "",
-                                            "// Test 2: Check if the response body is valid JSON",
-                                            "pm.test(\"Response body is valid JSON\", function () {",
-                                            "    try {",
-                                            "        pm.response.to.have.jsonBody();",
-                                            "    } catch (e) {",
-                                            "        pm.expect.fail(\"Response body is not valid JSON\");",
-                                            "    }",
-                                            "});",
-                                            "",
-                                            "// Parse the JSON response body only if the previous test passes",
-                                            "if (pm.response.code === 200 || pm.response.code === 201) {",
-                                            "    const responseBody = pm.response.json();",
-                                            "",
-                                            "    // Test 3: Check if the restaurant ID exists and is not empty/null",
-                                            "    pm.test(\"Restaurant ID exists in response\", function () {",
-                                            "        // Adjust the path if the ID is nested, e.g., responseBody.data.id",
-                                            "        // Check common variations: .id or .data.id",
-                                            "        let restaurantId = null;",
-                                            "        if (responseBody && responseBody.id) {",
-                                            "            restaurantId = responseBody.id;",
-                                            "        } else if (responseBody && responseBody.data && responseBody.data.id) {",
-                                            "            restaurantId = responseBody.data.id;",
-                                            "        }",
-                                            "        pm.expect(restaurantId).to.exist.and.not.be.null;",
-                                            "        // Optional: Check if it's a specific type, e.g., a number or string",
-                                            "        // pm.expect(restaurantId).to.be.a('string'); // or 'number'",
-                                            "    });",
-                                            "",
-                                            "    // Save the restaurant ID to an environment variable if it exists",
-                                            "    let restaurantIdToSave = null;",
-                                            "    if (responseBody && responseBody.id) {",
-                                            "        restaurantIdToSave = responseBody.id;",
-                                            "    } else if (responseBody && responseBody.data && responseBody.data.id) {",
-                                            "        restaurantIdToSave = responseBody.data.id;",
-                                            "    }",
-                                            "",
-                                            "    if (restaurantIdToSave !== null) {",
-                                            "        pm.environment.set(\"restaurantId\", restaurantIdToSave);",
-                                            "        console.log(\"Successfully set environment variable 'restaurantId' to: \" + restaurantIdToSave);",
-                                            "    } else {",
-                                            "        console.error(\"Could not find 'id' or 'data.id' in the response body to set environment variable 'restaurantId'.\");",
-                                            "        // Optionally fail the test if the ID is mandatory",
-                                            "        // pm.expect.fail(\"Restaurant ID not found in response\");",
-                                            "    }",
-                                            "} else {",
-                                            "    console.error(\"Skipping response body processing due to non-success status code: \" + pm.response.code);",
-                                            "}"
-                                        ],
-                                        "type": "text/javascript"
-                                    }
-                                }
-                            ],
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"name\": \"ร้านอาหารตัวอย่าง {{$randomInt}}\",\n    \"description\": \"คำอธิบายร้านอาหาร\",\n    \"cuisineType\": \"อาหารไทย\",\n    \"address\": \"123 ถนน ตัวอย่าง แขวง ตัวอย่าง เขต ตัวอย่าง กรุงเทพฯ 10110\",\n    \"latitude\": 13.7563,\n    \"longitude\": 100.5018,\n    \"phoneNumber\": \"021234567\",\n    \"website\": \"http://example-restaurant.com\",\n    \"ownerId\": \"{{loggedInUserId}}\" \n}"
-								},
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"restaurants"
-									]
-								},
-								"description": "สร้างร้านอาหารใหม่ (อาจต้องใช้ Token และสิทธิ์)"
-							},
-							"response": []
-						},
-						{
-							"name": "Get All Restaurants",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/public/all?page=0&size=10&sortBy=name&sortDir=ASC",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"restaurants",
-										"public"
-									],
-									"query": [
-										{
-											"key": "name",
-											"value": null,
-											"disabled": true
-										},
-										{
-											"key": "cuisine",
-											"value": null,
-											"disabled": true
-										},
-										{
-											"key": "location",
-											"value": null,
-											"disabled": true
-										},
-										{
-											"key": "radius",
-											"value": null,
-											"disabled": true
-										},
-										{
-											"key": "page",
-											"value": "0"
-										},
-										{
-											"key": "size",
-											"value": "10"
-										},
-										{
-											"key": "sortBy",
-											"value": "name"
-										},
-										{
-											"key": "sortDir",
-											"value": "ASC"
-										}
-									]
-								},
-								"description": "ดึงรายชื่อร้านอาหารทั้งหมด พร้อมตัวเลือกการกรองและ phân trang"
-							},
-							"response": []
-						},
-						{
-							"name": "Search Restaurants",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"name\": \"ตัวอย่าง\",\n    \"cuisineType\": \"อาหารไทย\",\n    \"latitude\": 13.75,\n    \"longitude\": 100.50,\n    \"radiusKm\": 5 \n}"
-								},
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/public/search?page=0&size=10",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"restaurants",
-										"public",
-										"search"
-									],
-									"query": [
-										{
-											"key": "page",
-											"value": "0"
-										},
-										{
-											"key": "size",
-											"value": "10"
-										}
-									]
-								},
-								"description": "ค้นหาร้านอาหารตามเงื่อนไขที่ซับซ้อนขึ้น"
-							},
-							"response": []
-						},
-						{
-							"name": "Get Restaurant by ID",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 200\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											"",
-											"// สามารถตั้งค่าตัวแปร restaurantId จาก response ได้ที่นี่ หากต้องการใช้ใน request อื่น",
-											"// var jsonData = pm.response.json();",
-											"// pm.collectionVariables.set(\"restaurantId\", jsonData.id);"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/public/{{restaurantId}}",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"restaurants",
-										"public",
-										"{{restaurantId}}"
-									]
-								},
-								"description": "ดึงข้อมูลร้านอาหารตาม ID"
-							},
-							"response": []
-						},
-						{
-							"name": "Update Restaurant",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"name\": \"ร้านอาหารตัวอย่าง อัปเดต\",\n    \"description\": \"คำอธิบายร้านอาหาร (อัปเดต)\",\n    \"cuisineType\": \"อาหารอิตาเลียน\",\n    \"address\": \"456 ถนน อัปเดต แขวง อัปเดต เขต อัปเดต กรุงเทพฯ 10220\",\n    \"latitude\": 13.7600,\n    \"longitude\": 100.5100,\n    \"phoneNumber\": \"029876543\",\n    \"website\": \"http://updated-example-restaurant.com\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"restaurants",
-										"{{restaurantId}}"
-									]
-								},
-								"description": "อัปเดตข้อมูลร้านอาหาร (อาจต้องใช้ Token และสิทธิ์เจ้าของ)"
-							},
-							"response": []
-						},
-						{
-							"name": "Delete Restaurant",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "DELETE",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"restaurants",
-										"{{restaurantId}}"
-									]
-								},
-								"description": "ลบร้านอาหาร (อาจต้องใช้ Token และสิทธิ์เจ้าของ/Admin)"
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Tables",
-					"item": [
-						{
-							"name": "Add Table to Restaurant",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"// Test 1: Check if the status code indicates success (e.g., 201 Created or 200 OK)",
-											"pm.test(\"Status code is 201 or 200\", function () {",
-											"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-											"});",
-											"",
-											"// Test 2: Check if the response body is valid JSON",
-											"pm.test(\"Response body is valid JSON\", function () {",
-											"    try {",
-											"        pm.response.to.have.jsonBody();",
-											"    } catch (e) {",
-											"        pm.expect.fail(\"Response body is not valid JSON\");",
-											"    }",
-											"});",
-											"",
-											"// Process only if the request was successful and body is JSON",
-											"if ((pm.response.code === 200 || pm.response.code === 201)) {",
-											"    try {",
-											"        const responseBody = pm.response.json();",
-											"",
-											"        // Test 3: Check if the table ID exists and is not empty/null",
-											"        pm.test(\"Table ID exists in response\", function () {",
-											"            // Adjust the path if the ID is nested, e.g., responseBody.data.id",
-											"            let tableId = null;",
-											"            if (responseBody && responseBody.id) {",
-											"                tableId = responseBody.id;",
-											"            } else if (responseBody && responseBody.data && responseBody.data.id) {",
-											"                tableId = responseBody.data.id;",
-											"            }",
-											"            pm.expect(tableId).to.exist.and.not.be.null;",
-											"            // Optional: Check type",
-											"            // pm.expect(tableId).to.be.a('string'); // or 'number'",
-											"        });",
-											"",
-											"        // Save the table ID to an environment variable if it exists",
-											"        let tableIdToSave = null;",
-											"        if (responseBody && responseBody.id) {",
-											"            tableIdToSave = responseBody.id;",
-											"        } else if (responseBody && responseBody.data && responseBody.data.id) {",
-											"            tableIdToSave = responseBody.data.id;",
-											"        }",
-											"",
-											"        if (tableIdToSave !== null) {",
-											"            pm.environment.set(\"tableId\", tableIdToSave);",
-											"            console.log(\"Successfully set environment variable 'tableId' to: \" + tableIdToSave);",
-											"        } else {",
-											"            console.error(\"Could not find 'id' or 'data.id' in the response body to set environment variable 'tableId'.\");",
-											"            // Optionally fail the test if the ID is mandatory",
-											"            // pm.expect.fail(\"Table ID not found in response\");",
-											"        }",
-											"    } catch (e) {",
-											"        console.error(\"Error processing response JSON: \" + e);",
-											"        // Fail the test if JSON parsing fails but status was success",
-											"        pm.expect.fail(\"Failed to parse response JSON even though status code was success.\");",
-											"    }",
-											"} else {",
-											"    console.warn(\"Skipping response body processing due to non-success status code: \" + pm.response.code);",
-											"}"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"tableNumber\": \"A{{$randomInt}}\",\n    \"capacity\": 4,\n    \"status\": \"AVAILABLE\", // AVAILABLE, RESERVED, OCCUPIED, MAINTENANCE\n    \"locationDescription\": \"ใกล้หน้าต่าง\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/tables",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"restaurants",
-										"{{restaurantId}}",
-										"tables"
-									]
-								},
-								"description": "เพิ่มโต๊ะใหม่ให้กับร้านอาหาร (อาจต้องใช้ Token และสิทธิ์)"
-							},
-							"response": []
-						},
-						{
-							"name": "Get Tables for Restaurant",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/tables/public?page=0&size=20",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"restaurants",
-										"{{restaurantId}}",
-										"tables",
-										"public"
-									],
-									"query": [
-										{
-											"key": "page",
-											"value": "0"
-										},
-										{
-											"key": "size",
-											"value": "20"
-										}
-									]
-								},
-								"description": "ดึงรายชื่อโต๊ะทั้งหมดของร้านอาหาร"
-							},
-							"response": []
-						},
-						{
-							"name": "Get Table by ID",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/tables/public/{{tableId}}",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"restaurants",
-										"{{restaurantId}}",
-										"tables",
-										"public",
-										"{{tableId}}"
-									]
-								},
-								"description": "ดึงข้อมูลโต๊ะตาม ID ของโต๊ะและร้านอาหาร"
-							},
-							"response": []
-						},
-						{
-							"name": "Update Table",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"capacity\": 6,\n    \"status\": \"MAINTENANCE\",\n    \"locationDescription\": \"ชั้น 2\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/tables/{{tableId}}",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"restaurants",
-										"{{restaurantId}}",
-										"tables",
-										"{{tableId}}"
-									]
-								},
-								"description": "อัปเดตข้อมูลโต๊ะ (อาจต้องใช้ Token และสิทธิ์)"
-							},
-							"response": []
-						},
-						{
-							"name": "Delete Table",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "DELETE",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/tables/{{tableId}}",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"restaurants",
-										"{{restaurantId}}",
-										"tables",
-										"{{tableId}}"
-									]
-								},
-								"description": "ลบโต๊ะ (อาจต้องใช้ Token และสิทธิ์)"
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Operating Hours",
-					"item": [
-						{
-							"name": "Get Operating Hours",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/operating-hours/public",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"restaurants",
-										"{{restaurantId}}",
-										"operating-hours",
-										"public"
-									]
-								},
-								"description": "ดึงข้อมูลเวลาทำการของร้านอาหาร"
-							},
-							"response": []
-						},
-						{
-							"name": "Update Operating Hours",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"operatingHours\": [\n        {\n            \"dayOfWeek\": \"MONDAY\",\n            \"openTime\": \"10:00\",\n            \"closeTime\": \"22:00\"\n        },\n        {\n            \"dayOfWeek\": \"TUESDAY\",\n            \"openTime\": \"10:00\",\n            \"closeTime\": \"22:00\"\n        },\n         {\n            \"dayOfWeek\": \"WEDNESDAY\",\n            \"openTime\": \"10:00\",\n            \"closeTime\": \"22:00\"\n        },\n        {\n            \"dayOfWeek\": \"THURSDAY\",\n            \"openTime\": \"10:00\",\n            \"closeTime\": \"22:00\"\n        },\n        {\n            \"dayOfWeek\": \"FRIDAY\",\n            \"openTime\": \"10:00\",\n            \"closeTime\": \"23:00\"\n        },\n        {\n            \"dayOfWeek\": \"SATURDAY\",\n            \"openTime\": \"11:00\",\n            \"closeTime\": \"23:00\"\n        }\n        // SUNDAY is closed by default if not provided\n    ]\n}"
-								},
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/operating-hours",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"restaurants",
-										"{{restaurantId}}",
-										"operating-hours"
-									]
-								},
-								"description": "อัปเดตเวลาทำการของร้านอาหาร (อาจต้องใช้ Token และสิทธิ์)"
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Statistics",
-					"item": [
-						{
-							"name": "Get Restaurant Statistics",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlRestaurant}}/api/restaurants/{{restaurantId}}/statistics",
-									"host": [
-										"{{baseUrlRestaurant}}"
-									],
-									"path": [
-										"api",
-										"restaurants",
-										"{{restaurantId}}",
-										"statistics"
-									]
-								},
-								"description": "ดึงข้อมูลสถิติของร้านอาหาร (เช่น จำนวนการจอง, เรตติ้งเฉลี่ย) (อาจต้องใช้ Token และสิทธิ์)"
-							},
-							"response": []
-						}
-					]
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"username\": \"{{test_username}}\",\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\",\n  \"phoneNumber\": \"1234567890\"\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_user}}/api/users/register",
+				"host": [
+				  "{{base_url_user}}"
+				],
+				"path": [
+				  "api",
+				  "users",
+				  "register"
+				]
+			  },
+			  "description": "Register a new user with randomly generated username/email"
+			},
+			"response": []
+		  },
+		  {
+			"name": "1.2 Login",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that login was successful",
+					"pm.test(\"Login successful\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('token');",
+					"});",
+					"",
+					"// Save auth token to environment",
+					"if (jsonData.data && jsonData.data.token) {",
+					"    pm.environment.set(\"auth_token\", jsonData.data.token);",
+					"    console.log(\"Auth token saved to environment\");",
+					"}",
+					"",
+					"// Save user ID if available",
+					"if (jsonData.data && jsonData.data.userId) {",
+					"    pm.environment.set(\"user_id\", jsonData.data.userId);",
+					"    console.log(\"User ID saved to environment: \" + jsonData.data.userId);",
+					"}"
+				  ],
+				  "type": "text/javascript"
 				}
+			  }
 			],
-			"variable": [
+			"request": {
+			  "method": "POST",
+			  "header": [
 				{
-					"key": "baseUrlRestaurant",
-					"value": "http://localhost:8082",
-					"type": "string"
-				},
-				{
-					"key": "restaurantId",
-					"value": "1",
-					"type": "string"
-				},
-				{
-					"key": "tableId",
-					"value": "1",
-					"type": "string"
+				  "key": "Content-Type",
+				  "value": "application/json"
 				}
-			]
-		},
-		{
-			"name": "Reservation Service",
-			"description": "API ที่เกี่ยวข้องกับการจัดการการจอง, คิว, และตารางเวลา",
-			"item": [
-				{
-					"name": "Health Check",
-					"item": [
-						{
-							"name": "Check Service Health",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlReservation}}/api/health",
-									"host": [
-										"{{baseUrlReservation}}"
-									],
-									"path": [
-										"api",
-										"health"
-									]
-								},
-								"description": "ตรวจสอบสถานะของ Service"
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Reservations",
-					"item": [
-						{
-							"name": "Check Table Availability",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"type": "text/javascript",
-										"exec": [
-											"pm.test(\"Status code is 200\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											"",
-											"const jsonData = pm.response.json();",
-											"",
-											"pm.test(\"Response has success field\", function () {",
-											"    pm.expect(jsonData).to.have.property('success');",
-											"});",
-											"",
-											"pm.test(\"Response has data field\", function () {",
-											"    pm.expect(jsonData).to.have.property('data');",
-											"});",
-											"",
-											"if (jsonData.success && jsonData.data) {",
-											"    pm.test(\"Availability data has 'available' boolean field\", function () {",
-											"        pm.expect(jsonData.data).to.have.property('available').and.to.be.a('boolean');",
-											"    });",
-											"    ",
-											"    pm.test(\"Availability data has 'availableTableIds' array field\", function () {",
-											"        pm.expect(jsonData.data).to.have.property('availableTableIds').and.to.be.an('array');",
-											"    });",
-											"    ",
-											"     // Optionally test if tables are available",
-											"    // pm.test(\"Tables are available\", function () {",
-											"    //     pm.expect(jsonData.data.available).to.be.true;",
-											"    //     pm.expect(jsonData.data.availableTableIds).to.not.be.empty;",
-											"    // });",
-											"}"
-										]
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlReservation}}/api/reservations/availability?restaurantId={{restaurantId}}&date={{currentDate}}&time={{currentTime}}&partySize=4",
-									"host": [
-										"{{baseUrlReservation}}"
-									],
-									"path": [
-										"api",
-										"reservations",
-										"availability"
-									],
-									"query": [
-										{
-											"key": "restaurantId",
-											"value": "{{restaurantId}}"
-										},
-										{
-											"key": "date",
-											"value": "{{currentDate}}",
-											"description": "YYYY-MM-DD"
-										},
-										{
-											"key": "time",
-											"value": "{{currentTime}}",
-											"description": "HH:MM (e.g., 19:00)"
-										},
-										{
-											"key": "partySize",
-											"value": "4"
-										}
-									]
-								},
-								"description": "ตรวจสอบว่ามีโต๊ะว่างสำหรับวันที่ เวลา และจำนวนคนที่ระบุหรือไม่"
-							},
-							"response": []
-						},
-						{
-							"name": "Create Reservation",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"type": "text/javascript",
-										"exec": [
-											"// Test 1: Check if the status code indicates success (e.g., 201 Created)",
-											"pm.test(\"Status code is 201\", function () {",
-											"    pm.expect(pm.response.code).to.equal(201);",
-											"});",
-											"",
-											"// Test 2: Check if the response body is valid JSON",
-											"pm.test(\"Response body is valid JSON\", function () {",
-											"    try {",
-											"        pm.response.to.have.jsonBody();",
-											"    } catch (e) {",
-											"        pm.expect.fail(\"Response body is not valid JSON\");",
-											"    }",
-											"});",
-											"",
-											"// Process only if the request was successful and body is JSON",
-											"if (pm.response.code === 201) {",
-											"    try {",
-											"        const responseBody = pm.response.json();",
-											"",
-											"        // Test 3: Check if the reservation ID exists and is not empty/null",
-											"        pm.test(\"Reservation ID exists in response\", function () {",
-											"            let reservationId = null;",
-											"            if (responseBody && responseBody.success && responseBody.data && responseBody.data.id) { // Adjusted for ResponseDTO",
-											"                reservationId = responseBody.data.id;",
-											"            }",
-											"            pm.expect(reservationId).to.exist.and.not.be.null;",
-											"        });",
-											"",
-											"        // Save the reservation ID to an environment variable if it exists",
-											"        let reservationIdToSave = null;",
-											"        if (responseBody && responseBody.success && responseBody.data && responseBody.data.id) { // Adjusted for ResponseDTO",
-											"            reservationIdToSave = responseBody.data.id;",
-											"        }",
-											"",
-											"        if (reservationIdToSave !== null) {",
-											"            pm.environment.set(\"reservationId\", reservationIdToSave);",
-											"            console.log(\"Successfully set environment variable 'reservationId' to: \" + reservationIdToSave);",
-											"        } else {",
-											"            console.error(\"Could not find 'data.id' in the response body to set environment variable 'reservationId'.\");",
-											"            // pm.expect.fail(\"Reservation ID not found in response\");",
-											"        }",
-											"    } catch (e) {",
-											"        console.error(\"Error processing response JSON: \" + e);",
-											"        pm.expect.fail(\"Failed to parse response JSON even though status code was success.\");",
-											"    }",
-											"} else {",
-											"    console.warn(\"Skipping response body processing due to non-success status code: \" + pm.response.code);",
-											"}"
-										]
-									}
-								}
-							],
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"restaurantId\": \"{{restaurantId}}\", \n    \"reservationTime\": \"{{currentDate}}T{{currentTime}}:00\", \n    \"partySize\": 4,\n    \"customerName\": \"Test Customer {{$randomInt}}\",\n    \"customerPhone\": \"0812345678\",\n    \"specialRequests\": \"ขอโต๊ะริมหน้าต่าง ถ้าเป็นไปได้\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrlReservation}}/api/reservations",
-									"host": [
-										"{{baseUrlReservation}}"
-									],
-									"path": [
-										"api",
-										"reservations"
-									]
-								},
-								"description": "สร้างการจองใหม่ (ต้องใช้ Token)"
-							},
-							"response": []
-						},
-						{
-							"name": "Get User Reservations",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlReservation}}/api/reservations/user?page=0&size=10",
-									"host": [
-										"{{baseUrlReservation}}"
-									],
-									"path": [
-										"api",
-										"reservations",
-										"user"
-									],
-									"query": [
-										{
-											"key": "page",
-											"value": "0"
-										},
-										{
-											"key": "size",
-											"value": "10"
-										},
-										{
-											"key": "sortBy",
-											"value": "reservationTime",
-											"disabled": true
-										},
-										{
-											"key": "sortDir",
-											"value": "DESC",
-											"disabled": true
-										}
-									]
-								},
-								"description": "ดึงรายการจองของผู้ใช้ที่ล็อกอินอยู่"
-							},
-							"response": []
-						},
-						{
-							"name": "Get Reservation by ID",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlReservation}}/api/reservations/{{reservationId}}",
-									"host": [
-										"{{baseUrlReservation}}"
-									],
-									"path": [
-										"api",
-										"reservations",
-										"{{reservationId}}"
-									]
-								},
-								"description": "ดึงข้อมูลการจองตาม ID (ต้องใช้ Token และต้องเป็นการจองของผู้ใช้ หรือมีสิทธิ์ Admin/เจ้าของร้าน)"
-							},
-							"response": []
-						},
-						{
-							"name": "Update Reservation",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"reservationTime\": \"{{currentDate}}T{{updatedTime}}:00\", \n    \"partySize\": 5, \n    \"specialRequests\": \"ขอเก้าอี้เด็กเพิ่ม 1 ตัว\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrlReservation}}/api/reservations/{{reservationId}}",
-									"host": [
-										"{{baseUrlReservation}}"
-									],
-									"path": [
-										"api",
-										"reservations",
-										"{{reservationId}}"
-									]
-								},
-								"description": "อัปเดตข้อมูลการจอง (ต้องใช้ Token และต้องเป็นการจองของผู้ใช้ หรือมีสิทธิ์ Admin/เจ้าของร้าน)"
-							},
-							"response": []
-						},
-						{
-							"name": "Confirm Reservation",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlReservation}}/api/reservations/{{reservationId}}/confirm",
-									"host": [
-										"{{baseUrlReservation}}"
-									],
-									"path": [
-										"api",
-										"reservations",
-										"{{reservationId}}",
-										"confirm"
-									]
-								},
-								"description": "ยืนยันการจอง (ต้องใช้ Token และต้องเป็นการจองของผู้ใช้ หรือมีสิทธิ์ Admin/เจ้าของร้าน)"
-							},
-							"response": []
-						},
-						{
-							"name": "Cancel Reservation",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlReservation}}/api/reservations/{{reservationId}}/cancel?reason=Changed plans",
-									"host": [
-										"{{baseUrlReservation}}"
-									],
-									"path": [
-										"api",
-										"reservations",
-										"{{reservationId}}",
-										"cancel"
-									],
-									"query": [
-										{
-											"key": "reason",
-											"value": "Changed plans"
-										}
-									]
-								},
-								"description": "ยกเลิกการจอง (ต้องใช้ Token และต้องเป็นการจองของผู้ใช้ หรือมีสิทธิ์ Admin/เจ้าของร้าน)"
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Schedules",
-					"item": [
-						{
-							"name": "Get Restaurant Schedule",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrlReservation}}/api/schedules/{{restaurantId}}",
-									"host": [
-										"{{baseUrlReservation}}"
-									],
-									"path": [
-										"api",
-										"schedules",
-										"{{restaurantId}}"
-									]
-								},
-								"description": "ดึงข้อมูลตารางเวลา/โควต้าการจองของร้านอาหาร"
-							},
-							"response": []
-						},
-						{
-							"name": "Update Restaurant Schedule",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{authToken}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"quotas\": [\n        {\n            \"startTime\": \"12:00\",\n            \"endTime\": \"14:00\",\n            \"quota\": 10, // จำนวนโต๊ะสูงสุดที่จองได้ในช่วงเวลานี้\n            \"daysOfWeek\": [\"MONDAY\", \"TUESDAY\", \"WEDNESDAY\", \"THURSDAY\", \"FRIDAY\"]\n        },\n        {\n            \"startTime\": \"18:00\",\n            \"endTime\": \"21:00\",\n            \"quota\": 15,\n            \"daysOfWeek\": [\"MONDAY\", \"TUESDAY\", \"WEDNESDAY\", \"THURSDAY\", \"FRIDAY\", \"SATURDAY\", \"SUNDAY\"]\n        }\n    ]\n}"
-								},
-								"url": {
-									"raw": "{{baseUrlReservation}}/api/schedules/{{restaurantId}}",
-									"host": [
-										"{{baseUrlReservation}}"
-									],
-									"path": [
-										"api",
-										"schedules",
-										"{{restaurantId}}"
-									]
-								},
-								"description": "อัปเดตตารางเวลา/โควต้าการจองของร้านอาหาร (ต้องใช้ Token และสิทธิ์ Admin/เจ้าของร้าน)"
-							},
-							"response": []
-						}
-					]
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"username\": \"{{test_username}}\",\n  \"password\": \"{{test_password}}\"\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_user}}/api/auth/login",
+				"host": [
+				  "{{base_url_user}}"
+				],
+				"path": [
+				  "api",
+				  "auth",
+				  "login"
+				]
+			  },
+			  "description": "Login using the registered username/password"
+			},
+			"response": []
+		  },
+		  {
+			"name": "1.3 Get Current User",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that user data is correct",
+					"pm.test(\"User data is correct\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data.id).to.eql(pm.environment.get(\"user_id\"));",
+					"});"
+				  ],
+				  "type": "text/javascript"
 				}
+			  }
 			],
-			"variable": [
+			"request": {
+			  "method": "GET",
+			  "header": [
 				{
-					"key": "baseUrlReservation",
-					"value": "http://localhost:8083",
-					"type": "string"
-				},
-				{
-					"key": "reservationId",
-					"value": "1",
-					"type": "string"
-				},
-				{
-					"key": "currentDate",
-					"value": "2025-03-27",
-					"type": "string",
-					"description": "ตั้งค่าเป็นวันปัจจุบัน (YYYY-MM-DD)"
-				},
-				{
-					"key": "currentTime",
-					"value": "19:00",
-					"type": "string",
-					"description": "ตั้งค่าเป็นเวลาที่ต้องการ (HH:MM)"
-				},
-				{
-					"key": "updatedTime",
-					"value": "20:00",
-					"type": "string"
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
 				}
-			]
-		}
-	],
-	"variable": [
-		{
-			"key": "authToken",
-			"value": "",
-			"type": "string",
-			"description": "JWT Token ที่ได้จากการ Login"
-		},
-		{
-			"key": "loggedInUserId",
-			"value": "",
-			"type": "string",
-			"description": "User ID ที่ได้จากการ Login"
-		}
-	],
-	"event": [
-		{
+			  ],
+			  "url": {
+				"raw": "{{base_url_user}}/api/users/me",
+				"host": [
+				  "{{base_url_user}}"
+				],
+				"path": [
+				  "api",
+				  "users",
+				  "me"
+				]
+			  },
+			  "description": "Get current user information using the auth token"
+			},
+			"response": []
+		  },
+		  {
+			"name": "1.4 Get User Profile",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that profile data is correct",
+					"pm.test(\"Profile data is correct\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('userId');",
+					"    pm.expect(jsonData.data.userId).to.eql(pm.environment.get(\"user_id\"));",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				}
+			  ],
+			  "url": {
+				"raw": "{{base_url_user}}/api/users/{{user_id}}/profile",
+				"host": [
+				  "{{base_url_user}}"
+				],
+				"path": [
+				  "api",
+				  "users",
+				  "{{user_id}}",
+				  "profile"
+				]
+			  },
+			  "description": "Get user profile information"
+			},
+			"response": []
+		  },
+		  {
+			"name": "1.5 Update User Profile",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that profile was updated successfully",
+					"pm.test(\"Profile updated successfully\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data.firstName).to.eql(\"Updated\");",
+					"    pm.expect(jsonData.data.lastName).to.eql(\"Name\");",
+					"    pm.expect(jsonData.data.phoneNumber).to.eql(\"9876543210\");",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "PUT",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				},
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"Name\",\n  \"phoneNumber\": \"9876543210\"\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_user}}/api/users/{{user_id}}/profile",
+				"host": [
+				  "{{base_url_user}}"
+				],
+				"path": [
+				  "api",
+				  "users",
+				  "{{user_id}}",
+				  "profile"
+				]
+			  },
+			  "description": "Update user profile information"
+			},
+			"response": []
+		  }
+		],
+		"description": "Endpoints for user management, authentication, and profile management"
+	  },
+	  {
+		"name": "2. Restaurant Service",
+		"item": [
+		  {
+			"name": "2.1 Get All Restaurants",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that restaurant data is returned",
+					"pm.test(\"Restaurant data is returned\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('content');",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [],
+			  "url": {
+				"raw": "{{base_url_restaurant}}/api/restaurants/public",
+				"host": [
+				  "{{base_url_restaurant}}"
+				],
+				"path": [
+				  "api",
+				  "restaurants",
+				  "public"
+				]
+			  },
+			  "description": "Get a paged list of all active restaurants (public endpoint)"
+			},
+			"response": []
+		  },
+		  {
+			"name": "2.2 Create Restaurant",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 201\", function () {",
+					"    pm.response.to.have.status(201);",
+					"});",
+					"",
+					"// Test that restaurant was created",
+					"pm.test(\"Restaurant created successfully\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data.name).to.eql(pm.environment.get(\"restaurant_name\"));",
+					"});",
+					"",
+					"// Save restaurant ID to environment",
+					"if (jsonData.data && jsonData.data.id) {",
+					"    pm.environment.set(\"restaurant_id\", jsonData.data.id);",
+					"    console.log(\"Restaurant ID saved to environment: \" + jsonData.data.id);",
+					"}"
+				  ],
+				  "type": "text/javascript"
+				}
+			  },
+			  {
+				"listen": "prerequest",
+				"script": {
+				  "exec": [
+					"// Generate a unique restaurant name",
+					"var timestamp = new Date().getTime();",
+					"var restaurantName = \"Test Restaurant \" + timestamp;",
+					"",
+					"// Store test data in environment",
+					"pm.environment.set(\"restaurant_name\", restaurantName);"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				},
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"name\": \"{{restaurant_name}}\",\n  \"description\": \"A great place to eat\",\n  \"address\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zipCode\": \"10001\",\n  \"country\": \"USA\",\n  \"phoneNumber\": \"1234567890\",\n  \"email\": \"info@testrestaurant.com\",\n  \"website\": \"https://www.testrestaurant.com\",\n  \"latitude\": 40.7128,\n  \"longitude\": -74.0060,\n  \"cuisineType\": \"Italian\",\n  \"totalCapacity\": 50\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_restaurant}}/api/restaurants",
+				"host": [
+				  "{{base_url_restaurant}}"
+				],
+				"path": [
+				  "api",
+				  "restaurants"
+				]
+			  },
+			  "description": "Create a new restaurant with a unique name"
+			},
+			"response": []
+		  },
+		  {
+			"name": "2.3 Get Restaurant By ID",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that restaurant data is correct",
+					"pm.test(\"Restaurant data is correct\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data.id).to.eql(pm.environment.get(\"restaurant_id\"));",
+					"    pm.expect(jsonData.data.name).to.eql(pm.environment.get(\"restaurant_name\"));",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [],
+			  "url": {
+				"raw": "{{base_url_restaurant}}/api/restaurants/public/{{restaurant_id}}",
+				"host": [
+				  "{{base_url_restaurant}}"
+				],
+				"path": [
+				  "api",
+				  "restaurants",
+				  "public",
+				  "{{restaurant_id}}"
+				]
+			  },
+			  "description": "Get details of the created restaurant"
+			},
+			"response": []
+		  },
+		  {
+			"name": "2.4 Update Restaurant",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that restaurant was updated",
+					"pm.test(\"Restaurant updated successfully\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('description');",
+					"    pm.expect(jsonData.data.description).to.eql(\"Updated description\");",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "PUT",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				},
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"description\": \"Updated description\",\n  \"cuisineType\": \"Italian\",\n  \"totalCapacity\": 60\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_restaurant}}/api/restaurants/{{restaurant_id}}",
+				"host": [
+				  "{{base_url_restaurant}}"
+				],
+				"path": [
+				  "api",
+				  "restaurants",
+				  "{{restaurant_id}}"
+				]
+			  },
+			  "description": "Update the restaurant details"
+			},
+			"response": []
+		  },
+		  {
+			"name": "2.5 Create Table",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 201\", function () {",
+					"    pm.response.to.have.status(201);",
+					"});",
+					"",
+					"// Test that table was created",
+					"pm.test(\"Table created successfully\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data.tableNumber).to.eql(pm.environment.get(\"table_number\"));",
+					"});",
+					"",
+					"// Save table ID to environment",
+					"if (jsonData.data && jsonData.data.id) {",
+					"    pm.environment.set(\"table_id\", jsonData.data.id);",
+					"    console.log(\"Table ID saved to environment: \" + jsonData.data.id);",
+					"}"
+				  ],
+				  "type": "text/javascript"
+				}
+			  },
+			  {
+				"listen": "prerequest",
+				"script": {
+				  "exec": [
+					"// Generate a unique table number",
+					"var timestamp = new Date().getTime();",
+					"var tableNumber = \"T\" + timestamp % 10000;",
+					"",
+					"// Store test data in environment",
+					"pm.environment.set(\"table_number\", tableNumber);"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				},
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"tableNumber\": \"{{table_number}}\",\n  \"capacity\": 4,\n  \"location\": \"INDOOR\",\n  \"accessible\": true,\n  \"shape\": \"SQUARE\",\n  \"minCapacity\": 2,\n  \"combinable\": false,\n  \"specialFeatures\": \"Near window\"\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_restaurant}}/api/restaurants/{{restaurant_id}}/tables",
+				"host": [
+				  "{{base_url_restaurant}}"
+				],
+				"path": [
+				  "api",
+				  "restaurants",
+				  "{{restaurant_id}}",
+				  "tables"
+				]
+			  },
+			  "description": "Create a new table for the restaurant"
+			},
+			"response": []
+		  },
+		  {
+			"name": "2.6 Get Restaurant Tables",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that tables are returned",
+					"pm.test(\"Tables are returned\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.be.an('array');",
+					"    pm.expect(jsonData.data.length).to.be.at.least(1);",
+					"    ",
+					"    // Find our created table",
+					"    var foundTable = jsonData.data.find(function(table) {",
+					"        return table.id === pm.environment.get(\"table_id\");",
+					"    });",
+					"    ",
+					"    pm.expect(foundTable).to.not.be.undefined;",
+					"    pm.expect(foundTable.tableNumber).to.eql(pm.environment.get(\"table_number\"));",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [],
+			  "url": {
+				"raw": "{{base_url_restaurant}}/api/restaurants/{{restaurant_id}}/tables/public",
+				"host": [
+				  "{{base_url_restaurant}}"
+				],
+				"path": [
+				  "api",
+				  "restaurants",
+				  "{{restaurant_id}}",
+				  "tables",
+				  "public"
+				]
+			  },
+			  "description": "Get all tables for the restaurant"
+			},
+			"response": []
+		  },
+		  {
+			"name": "2.7 Update Operating Hours",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that operating hours were updated",
+					"pm.test(\"Operating hours updated successfully\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('openTime');",
+					"    pm.expect(jsonData.data).to.have.property('closeTime');",
+					"    pm.expect(jsonData.data.specialHoursDescription).to.eql(\"Regular hours\");",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "PUT",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				},
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"openTime\": \"10:00:00\",\n  \"closeTime\": \"22:00:00\",\n  \"closed\": false,\n  \"specialHoursDescription\": \"Regular hours\"\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_restaurant}}/api/restaurants/{{restaurant_id}}/operating-hours/MONDAY",
+				"host": [
+				  "{{base_url_restaurant}}"
+				],
+				"path": [
+				  "api",
+				  "restaurants",
+				  "{{restaurant_id}}",
+				  "operating-hours",
+				  "MONDAY"
+				]
+			  },
+			  "description": "Update operating hours for Monday"
+			},
+			"response": []
+		  }
+		],
+		"description": "Endpoints for restaurant management, table management, and operating hours"
+	  },
+	  {
+		"name": "3. Reservation Service",
+		"item": [
+		  {
+			"name": "3.1 Create Reservation",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 201\", function () {",
+					"    pm.response.to.have.status(201);",
+					"});",
+					"",
+					"// Test that reservation was created",
+					"pm.test(\"Reservation created successfully\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data.restaurantId).to.eql(pm.environment.get(\"restaurant_id\"));",
+					"    pm.expect(jsonData.data.status).to.eql(\"PENDING\");",
+					"});",
+					"",
+					"// Save reservation ID to environment",
+					"if (jsonData.data && jsonData.data.id) {",
+					"    pm.environment.set(\"reservation_id\", jsonData.data.id);",
+					"    console.log(\"Reservation ID saved to environment: \" + jsonData.data.id);",
+					"}"
+				  ],
+				  "type": "text/javascript"
+				}
+			  },
+			  {
+				"listen": "prerequest",
+				"script": {
+				  "exec": [
+					"// Generate a future date for reservation (7 days from now at 7:00 PM)",
+					"var futureDate = new Date();",
+					"futureDate.setDate(futureDate.getDate() + 7);",
+					"futureDate.setHours(19, 0, 0, 0);",
+					"",
+					"// Format as ISO string",
+					"var reservationTime = futureDate.toISOString().split('.')[0];",
+					"",
+					"// Store test data in environment",
+					"pm.environment.set(\"reservation_time\", reservationTime);"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				},
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"restaurantId\": \"{{restaurant_id}}\",\n  \"reservationTime\": \"{{reservation_time}}\",\n  \"partySize\": 4,\n  \"durationMinutes\": 120,\n  \"customerName\": \"John Doe\",\n  \"customerPhone\": \"1234567890\",\n  \"customerEmail\": \"john@example.com\",\n  \"specialRequests\": \"Window seat preferred\",\n  \"remindersEnabled\": true\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/reservations",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "reservations"
+				]
+			  },
+			  "description": "Create a new reservation for the test restaurant"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.2 Get User Reservations",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that reservations are returned",
+					"pm.test(\"User reservations are returned\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('content');",
+					"    pm.expect(jsonData.data.content).to.be.an('array');",
+					"    pm.expect(jsonData.data.content.length).to.be.at.least(1);",
+					"    ",
+					"    // Find our created reservation",
+					"    var foundReservation = jsonData.data.content.find(function(reservation) {",
+					"        return reservation.id === pm.environment.get(\"reservation_id\");",
+					"    });",
+					"    ",
+					"    pm.expect(foundReservation).to.not.be.undefined;",
+					"    pm.expect(foundReservation.restaurantId).to.eql(pm.environment.get(\"restaurant_id\"));",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				}
+			  ],
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/reservations/user",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "reservations",
+				  "user"
+				]
+			  },
+			  "description": "Get reservations for the current user"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.3 Get Reservation By ID",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that reservation data is correct",
+					"pm.test(\"Reservation data is correct\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data.id).to.eql(pm.environment.get(\"reservation_id\"));",
+					"    pm.expect(jsonData.data.restaurantId).to.eql(pm.environment.get(\"restaurant_id\"));",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				}
+			  ],
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/reservations/{{reservation_id}}",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "reservations",
+				  "{{reservation_id}}"
+				]
+			  },
+			  "description": "Get details of the created reservation"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.4 Confirm Reservation",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that reservation was confirmed",
+					"pm.test(\"Reservation confirmed successfully\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data.id).to.eql(pm.environment.get(\"reservation_id\"));",
+					"    pm.expect(jsonData.data.status).to.eql(\"CONFIRMED\");",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				}
+			  ],
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/reservations/{{reservation_id}}/confirm",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "reservations",
+				  "{{reservation_id}}",
+				  "confirm"
+				]
+			  },
+			  "description": "Confirm the pending reservation"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.5 Update Reservation",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that reservation was updated",
+					"pm.test(\"Reservation updated successfully\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data.id).to.eql(pm.environment.get(\"reservation_id\"));",
+					"    pm.expect(jsonData.data.partySize).to.eql(5);",
+					"    pm.expect(jsonData.data.specialRequests).to.eql(\"Updated special requests\");",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "PUT",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				},
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"partySize\": 5,\n  \"specialRequests\": \"Updated special requests\"\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/reservations/{{reservation_id}}",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "reservations",
+				  "{{reservation_id}}"
+				]
+			  },
+			  "description": "Update the reservation details"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.6 Get Restaurant Schedule",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that schedule data is returned",
+					"pm.test(\"Schedule data is returned\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.be.an('array');",
+					"    pm.expect(jsonData.data.length).to.be.at.least(1);",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  },
+			  {
+				"listen": "prerequest",
+				"script": {
+				  "exec": [
+					"// Generate start date (beginning of current month)",
+					"var startDate = new Date();",
+					"startDate.setDate(1);",
+					"var startDateStr = startDate.toISOString().split('T')[0];",
+					"",
+					"// Generate end date (end of current month)",
+					"var endDate = new Date(startDate);",
+					"endDate.setMonth(endDate.getMonth() + 1);",
+					"endDate.setDate(0);",
+					"var endDateStr = endDate.toISOString().split('T')[0];",
+					"",
+					"// Store in environment",
+					"pm.environment.set(\"schedule_start_date\", startDateStr);",
+					"pm.environment.set(\"schedule_end_date\", endDateStr);"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [],
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/schedules/restaurant/{{restaurant_id}}?startDate={{schedule_start_date}}&endDate={{schedule_end_date}}",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "schedules",
+				  "restaurant",
+				  "{{restaurant_id}}"
+				],
+				"query": [
+				  {
+					"key": "startDate",
+					"value": "{{schedule_start_date}}"
+				  },
+				  {
+					"key": "endDate",
+					"value": "{{schedule_end_date}}"
+				  }
+				]
+			  },
+			  "description": "Get schedule for the restaurant within the current month"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.7 Cancel Reservation",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that reservation was cancelled",
+					"pm.test(\"Reservation cancelled successfully\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data.id).to.eql(pm.environment.get(\"reservation_id\"));",
+					"    pm.expect(jsonData.data.status).to.eql(\"CANCELLED\");",
+					"    pm.expect(jsonData.data.cancellationReason).to.eql(\"Changed plans\");",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				}
+			  ],
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/reservations/{{reservation_id}}/cancel?reason=Changed plans",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "reservations",
+				  "{{reservation_id}}",
+				  "cancel"
+				],
+				"query": [
+				  {
+					"key": "reason",
+					"value": "Changed plans"
+				  }
+				]
+			  },
+			  "description": "Cancel the confirmed reservation"
+			},
+			"response": []
+		  }
+		],
+		"description": "Endpoints for reservation management and scheduling",
+		"event": [
+		  {
 			"listen": "prerequest",
 			"script": {
-				"type": "text/javascript",
-				"exec": [
-					""
-				]
+			  "type": "text/javascript",
+			  "exec": [
+				""
+			  ]
 			}
-		},
-		{
+		  },
+		  {
 			"listen": "test",
 			"script": {
-				"type": "text/javascript",
-				"exec": [
-					""
-				]
+			  "type": "text/javascript",
+			  "exec": [
+				""
+			  ]
 			}
+		  }
+		]
+	  }
+	],
+	"event": [
+	  {
+		"listen": "prerequest",
+		"script": {
+		  "type": "text/javascript",
+		  "exec": [
+			"// Global pre-request script",
+			"// Check if required environment variables are set",
+			"const requiredVars = ['base_url_user', 'base_url_restaurant', 'base_url_reservation'];",
+			"const missingVars = [];",
+			"",
+			"requiredVars.forEach(function(variable) {",
+			"    if (!pm.environment.get(variable)) {",
+			"        missingVars.push(variable);",
+			"    }",
+			"});",
+			"",
+			"if (missingVars.length > 0) {",
+			"    console.error('Missing required environment variables: ' + missingVars.join(', '));",
+			"    console.log('Please set these variables in your environment before running the collection.');",
+			"}"
+		  ]
 		}
+	  },
+	  {
+		"listen": "test",
+		"script": {
+		  "type": "text/javascript",
+		  "exec": [
+			"// Global test script",
+			"// Log response time for every request",
+			"console.log(\"Response time: \" + pm.response.responseTime + \" ms\");"
+		  ]
+		}
+	  }
 	]
-}
+  }

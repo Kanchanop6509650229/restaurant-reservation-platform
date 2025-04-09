@@ -37,32 +37,63 @@ import com.restaurant.reservation.kafka.producers.ReservationEventProducer;
 
 import jakarta.transaction.Transactional;
 
+/**
+ * Service class responsible for managing restaurant reservations.
+ * Handles all reservation-related operations including creation, modification,
+ * confirmation, and cancellation of reservations.
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
+ */
 @Service
 public class ReservationService {
 
     private static final Logger logger = LoggerFactory.getLogger(ReservationService.class);
 
+    /** Repository for managing reservation data */
     private final ReservationRepository reservationRepository;
+    
+    /** Repository for managing reservation quota data */
     private final ReservationQuotaRepository quotaRepository;
+    
+    /** Service for managing table availability */
     private final TableAvailabilityService tableAvailabilityService;
+    
+    /** Producer for publishing reservation-related events */
     private final ReservationEventProducer eventProducer;
+    
+    /** Service for validating restaurant-related operations */
     private final RestaurantValidationService restaurantValidationService;
 
+    /** Time in minutes before a reservation expires if not confirmed */
     @Value("${reservation.confirmation-expiration-minutes:15}")
     private int confirmationExpirationMinutes;
 
+    /** Default duration of a reservation session in minutes */
     @Value("${reservation.default-session-length-minutes:120}")
     private int defaultSessionLengthMinutes;
 
+    /** Minimum time in minutes required for advance booking */
     @Value("${reservation.min-advance-booking-minutes:60}")
     private int minAdvanceBookingMinutes;
 
+    /** Maximum allowed party size for a reservation */
     @Value("${reservation.max-party-size:20}")
     private int maxPartySize;
 
+    /** Maximum number of days in advance a reservation can be made */
     @Value("${reservation.max-future-days:90}")
     private int maxFutureDays;
 
+    /**
+     * Constructs a new ReservationService with required dependencies.
+     *
+     * @param reservationRepository Repository for reservation data
+     * @param quotaRepository Repository for reservation quota data
+     * @param tableAvailabilityService Service for managing table availability
+     * @param eventProducer Producer for reservation events
+     * @param restaurantValidationService Service for restaurant validation
+     */
     public ReservationService(ReservationRepository reservationRepository,
             ReservationQuotaRepository quotaRepository,
             TableAvailabilityService tableAvailabilityService,
@@ -75,22 +106,53 @@ public class ReservationService {
         this.restaurantValidationService = restaurantValidationService;
     }
 
+    /**
+     * Retrieves all reservations for a specific user with pagination.
+     *
+     * @param userId The ID of the user whose reservations to retrieve
+     * @param pageable Pagination information
+     * @return Page of ReservationDTO objects
+     */
     public Page<ReservationDTO> getReservationsByUserId(String userId, Pageable pageable) {
         return reservationRepository.findByUserId(userId, pageable)
                 .map(this::convertToDTO);
     }
 
+    /**
+     * Retrieves all reservations for a specific restaurant with pagination.
+     *
+     * @param restaurantId The ID of the restaurant whose reservations to retrieve
+     * @param pageable Pagination information
+     * @return Page of ReservationDTO objects
+     */
     public Page<ReservationDTO> getReservationsByRestaurantId(String restaurantId, Pageable pageable) {
         return reservationRepository.findByRestaurantId(restaurantId, pageable)
                 .map(this::convertToDTO);
     }
 
+    /**
+     * Retrieves a specific reservation by its ID.
+     *
+     * @param id The ID of the reservation to retrieve
+     * @return ReservationDTO object
+     * @throws EntityNotFoundException if the reservation is not found
+     */
     public ReservationDTO getReservationById(String id) {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Reservation", id));
         return convertToDTO(reservation);
     }
 
+    /**
+     * Creates a new reservation with the provided details.
+     * Validates the request, checks availability, and assigns a table if possible.
+     *
+     * @param createRequest The reservation creation request containing all necessary details
+     * @param userId The ID of the user creating the reservation
+     * @return Created ReservationDTO object
+     * @throws ValidationException if the request is invalid
+     * @throws RestaurantCapacityException if no suitable table is available
+     */
     @Transactional
     public ReservationDTO createReservation(ReservationCreateRequest createRequest, String userId) {
         validateReservationRequest(createRequest);
@@ -166,6 +228,16 @@ public class ReservationService {
         return convertToDTO(reservation);
     }
 
+    /**
+     * Confirms a pending reservation.
+     * Validates the reservation status and confirmation deadline before proceeding.
+     *
+     * @param id The ID of the reservation to confirm
+     * @param userId The ID of the user confirming the reservation
+     * @return Updated ReservationDTO object
+     * @throws EntityNotFoundException if the reservation is not found
+     * @throws ValidationException if the reservation cannot be confirmed
+     */
     @Transactional
     public ReservationDTO confirmReservation(String id, String userId) {
         Reservation reservation = reservationRepository.findById(id)
@@ -212,6 +284,17 @@ public class ReservationService {
         return convertToDTO(updatedReservation);
     }
 
+    /**
+     * Cancels an existing reservation.
+     * Updates the reservation status and releases any assigned table.
+     *
+     * @param id The ID of the reservation to cancel
+     * @param reason The reason for cancellation
+     * @param userId The ID of the user cancelling the reservation
+     * @return Updated ReservationDTO object
+     * @throws EntityNotFoundException if the reservation is not found
+     * @throws ValidationException if the reservation cannot be cancelled
+     */
     @Transactional
     public ReservationDTO cancelReservation(String id, String reason, String userId) {
         Reservation reservation = reservationRepository.findById(id)
@@ -257,6 +340,17 @@ public class ReservationService {
         return convertToDTO(updatedReservation);
     }
 
+    /**
+     * Updates an existing reservation with new details.
+     * Validates the changes and updates the reservation accordingly.
+     *
+     * @param id The ID of the reservation to update
+     * @param updateRequest The update request containing new details
+     * @param userId The ID of the user updating the reservation
+     * @return Updated ReservationDTO object
+     * @throws EntityNotFoundException if the reservation is not found
+     * @throws ValidationException if the update request is invalid
+     */
     @Transactional
     public ReservationDTO updateReservation(String id, ReservationUpdateRequest updateRequest, String userId) {
         Reservation reservation = reservationRepository.findById(id)
@@ -390,6 +484,10 @@ public class ReservationService {
         return convertToDTO(updatedReservation);
     }
 
+    /**
+     * Processes expired reservations that have not been confirmed.
+     * Automatically cancels reservations that have passed their confirmation deadline.
+     */
     @Transactional
     public void processExpiredReservations() {
         LocalDateTime now = LocalDateTime.now();
@@ -455,6 +553,14 @@ public class ReservationService {
         }
     }
 
+    /**
+     * Checks if a time slot is available for a given restaurant and party size.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param reservationTime The requested reservation time
+     * @param partySize The size of the party
+     * @return true if the time slot is available, false otherwise
+     */
     private boolean isTimeSlotAvailable(String restaurantId, LocalDateTime reservationTime, int partySize) {
         LocalDate date = reservationTime.toLocalDate();
         LocalTime time = reservationTime.toLocalTime();
@@ -484,6 +590,12 @@ public class ReservationService {
         return true;
     }
 
+    /**
+     * Updates the reservation quota for a specific reservation.
+     *
+     * @param reservation The reservation to update quota for
+     * @param isAdd true to add to quota, false to subtract
+     */
     private void updateReservationQuota(Reservation reservation, boolean isAdd) {
         updateReservationQuotaForTime(
                 reservation.getRestaurantId(),
@@ -493,11 +605,20 @@ public class ReservationService {
                 isAdd);
     }
 
+    /**
+     * Updates the reservation quota for a specific time slot.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param date The date of the reservation
+     * @param time The time of the reservation
+     * @param partySize The size of the party
+     * @param isAdd true to add to quota, false to subtract
+     */
     private void updateReservationQuotaForTime(String restaurantId, LocalDate date,
             LocalTime time, int partySize, boolean isAdd) {
         ReservationQuota quota = quotaRepository
                 .findByRestaurantIdAndDateAndTimeSlot(restaurantId, date, time)
-                .orElse(new ReservationQuota(restaurantId, date, time, 10, 100)); // Default values
+                .orElse(new ReservationQuota(restaurantId, date, time, 10, 100));
 
         if (isAdd) {
             quota.setCurrentReservations(quota.getCurrentReservations() + 1);
@@ -510,6 +631,13 @@ public class ReservationService {
         quotaRepository.save(quota);
     }
 
+    /**
+     * Validates a reservation creation request.
+     * Checks all required fields and business rules.
+     *
+     * @param request The reservation creation request to validate
+     * @throws ValidationException if the request is invalid
+     */
     private void validateReservationRequest(ReservationCreateRequest request) {
         if (request.getRestaurantId() == null || request.getRestaurantId().isEmpty()) {
             throw new ValidationException("restaurantId", "Restaurant ID is required to create a reservation");
@@ -553,6 +681,12 @@ public class ReservationService {
         }
     }
 
+    /**
+     * Validates a reservation time against business rules.
+     *
+     * @param reservationTime The time to validate
+     * @throws ValidationException if the time is invalid
+     */
     private void validateReservationTime(LocalDateTime reservationTime) {
         // Check if reservation time is in the future
         LocalDateTime minTime = LocalDateTime.now().plusMinutes(minAdvanceBookingMinutes);
@@ -583,6 +717,12 @@ public class ReservationService {
         // }
     }
 
+    /**
+     * Validates a party size against business rules.
+     *
+     * @param partySize The party size to validate
+     * @throws ValidationException if the party size is invalid
+     */
     private void validatePartySize(int partySize) {
         if (partySize <= 0) {
             throw new ValidationException("partySize", "Party size must be at least 1 person");
@@ -598,6 +738,12 @@ public class ReservationService {
         }
     }
 
+    /**
+     * Converts a Reservation entity to a ReservationDTO.
+     *
+     * @param reservation The reservation entity to convert
+     * @return Converted ReservationDTO object
+     */
     private ReservationDTO convertToDTO(Reservation reservation) {
         ReservationDTO dto = new ReservationDTO();
         dto.setId(reservation.getId());
