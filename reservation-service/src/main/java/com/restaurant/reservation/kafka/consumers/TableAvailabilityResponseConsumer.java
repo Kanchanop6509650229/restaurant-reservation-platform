@@ -9,17 +9,44 @@ import com.restaurant.common.constants.KafkaTopics;
 import com.restaurant.common.events.reservation.FindAvailableTableResponseEvent;
 import com.restaurant.reservation.service.TableResponseManager;
 
+/**
+ * Kafka consumer for table availability responses in the reservation service.
+ * This class handles responses to table availability requests, processing the
+ * results and completing the corresponding asynchronous requests through the
+ * TableResponseManager.
+ * 
+ * The consumer ensures that table availability checks are properly completed
+ * and their results are made available to the requesting components.
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
+ */
 @Component
 public class TableAvailabilityResponseConsumer {
 
+    /** Logger instance for tracking table availability responses */
     private static final Logger logger = LoggerFactory.getLogger(TableAvailabilityResponseConsumer.class);
     
+    /** Manager for handling table availability responses */
     private final TableResponseManager tableResponseManager;
     
+    /**
+     * Constructs a new TableAvailabilityResponseConsumer with the specified response manager.
+     *
+     * @param tableResponseManager The manager for handling table availability responses
+     */
     public TableAvailabilityResponseConsumer(TableResponseManager tableResponseManager) {
         this.tableResponseManager = tableResponseManager;
     }
     
+    /**
+     * Consumes table availability response events from the Kafka topic.
+     * This method processes responses to table availability requests,
+     * logging the response details and completing the corresponding
+     * CompletableFuture in the response manager.
+     *
+     * @param event The table availability response event containing availability details
+     */
     @KafkaListener(
             topics = KafkaTopics.FIND_AVAILABLE_TABLE_RESPONSE,
             groupId = "${spring.kafka.consumer.group-id}",
@@ -30,7 +57,7 @@ public class TableAvailabilityResponseConsumer {
                 event.getCorrelationId(), event.getTableId(), event.isSuccess());
         
         try {
-            // ส่งข้อมูลไปยัง TableResponseManager เพื่อให้ CompletableFuture ที่รออยู่ได้รับข้อมูล
+            // Send the response to the TableResponseManager to complete the waiting CompletableFuture
             tableResponseManager.completeResponse(event);
         } catch (Exception e) {
             logger.error("Error processing table availability response: {}", e.getMessage(), e);

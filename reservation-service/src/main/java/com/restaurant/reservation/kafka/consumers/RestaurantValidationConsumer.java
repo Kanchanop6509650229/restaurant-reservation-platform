@@ -11,21 +11,46 @@ import com.restaurant.common.events.restaurant.RestaurantValidationResponseEvent
 import com.restaurant.reservation.service.RestaurantResponseManager;
 
 /**
- * Kafka consumer for restaurant validation responses.
+ * Kafka consumer for restaurant validation responses in the reservation service.
+ * This class handles responses to restaurant validation requests and reservation
+ * time validation requests, ensuring that reservations are only made for valid
+ * restaurants and during valid operating hours.
+ * 
+ * The consumer processes two types of responses:
+ * 1. Restaurant validation responses - confirming restaurant existence
+ * 2. Reservation time validation responses - confirming valid reservation times
+ * 
+ * Responses are processed through the RestaurantResponseManager to complete
+ * asynchronous validation requests.
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
  */
 @Component
 public class RestaurantValidationConsumer {
 
+    /** Logger instance for tracking validation responses */
     private static final Logger logger = LoggerFactory.getLogger(RestaurantValidationConsumer.class);
     
+    /** Manager for handling restaurant validation responses */
     private final RestaurantResponseManager responseManager;
     
+    /**
+     * Constructs a new RestaurantValidationConsumer with the specified response manager.
+     *
+     * @param responseManager The manager for handling validation responses
+     */
     public RestaurantValidationConsumer(RestaurantResponseManager responseManager) {
         this.responseManager = responseManager;
     }
     
     /**
-     * Consumes restaurant validation response events.
+     * Consumes restaurant validation response events from the Kafka topic.
+     * This method processes responses to restaurant validation requests,
+     * logging the response details and completing the corresponding
+     * CompletableFuture in the response manager.
+     *
+     * @param event The restaurant validation response event
      */
     @KafkaListener(
             topics = KafkaTopics.RESTAURANT_VALIDATION_RESPONSE,
@@ -45,7 +70,12 @@ public class RestaurantValidationConsumer {
     }
     
     /**
-     * Consumes reservation time validation response events.
+     * Consumes reservation time validation response events from the Kafka topic.
+     * This method processes responses to reservation time validation requests,
+     * converting them to restaurant validation responses and completing the
+     * corresponding CompletableFuture in the response manager.
+     *
+     * @param event The reservation time validation response event
      */
     @KafkaListener(
             topics = KafkaTopics.RESERVATION_TIME_VALIDATION_RESPONSE,

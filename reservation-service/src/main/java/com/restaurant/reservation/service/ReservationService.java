@@ -285,8 +285,8 @@ public class ReservationService {
     }
 
     /**
-     * Cancels an existing reservation.
-     * Updates the reservation status and releases any assigned table.
+     * Cancels a reservation with the specified reason.
+     * Updates the reservation status, creates a history record, and publishes a cancellation event.
      *
      * @param id The ID of the reservation to cancel
      * @param reason The reason for cancellation
@@ -342,7 +342,7 @@ public class ReservationService {
 
     /**
      * Updates an existing reservation with new details.
-     * Validates the changes and updates the reservation accordingly.
+     * Validates the update request and checks availability for the new time slot.
      *
      * @param id The ID of the reservation to update
      * @param updateRequest The update request containing new details
@@ -350,6 +350,7 @@ public class ReservationService {
      * @return Updated ReservationDTO object
      * @throws EntityNotFoundException if the reservation is not found
      * @throws ValidationException if the update request is invalid
+     * @throws RestaurantCapacityException if no suitable table is available for the new time
      */
     @Transactional
     public ReservationDTO updateReservation(String id, ReservationUpdateRequest updateRequest, String userId) {
@@ -485,8 +486,10 @@ public class ReservationService {
     }
 
     /**
-     * Processes expired reservations that have not been confirmed.
-     * Automatically cancels reservations that have passed their confirmation deadline.
+     * Processes reservations that should be expired.
+     * This method is typically called by a scheduled task to handle:
+     * - Pending reservations that have passed their confirmation deadline
+     * - Confirmed reservations that have passed their start time
      */
     @Transactional
     public void processExpiredReservations() {
@@ -554,10 +557,15 @@ public class ReservationService {
     }
 
     /**
-     * Checks if a time slot is available for a given restaurant and party size.
+     * Checks if a time slot is available for a reservation.
+     * Validates against:
+     * - Restaurant operating hours
+     * - Existing reservations
+     * - Table availability
+     * - Reservation quotas
      *
      * @param restaurantId The ID of the restaurant
-     * @param reservationTime The requested reservation time
+     * @param reservationTime The desired reservation time
      * @param partySize The size of the party
      * @return true if the time slot is available, false otherwise
      */
@@ -592,6 +600,7 @@ public class ReservationService {
 
     /**
      * Updates the reservation quota for a specific reservation.
+     * This affects the restaurant's capacity tracking for the reservation time.
      *
      * @param reservation The reservation to update quota for
      * @param isAdd true to add to quota, false to subtract
@@ -607,6 +616,7 @@ public class ReservationService {
 
     /**
      * Updates the reservation quota for a specific time slot.
+     * Creates or updates the quota record for the given restaurant, date, and time.
      *
      * @param restaurantId The ID of the restaurant
      * @param date The date of the reservation
@@ -633,10 +643,13 @@ public class ReservationService {
 
     /**
      * Validates a reservation creation request.
-     * Checks all required fields and business rules.
+     * Checks:
+     * - Party size limits
+     * - Reservation time constraints
+     * - Required fields
      *
      * @param request The reservation creation request to validate
-     * @throws ValidationException if the request is invalid
+     * @throws ValidationException if any validation fails
      */
     private void validateReservationRequest(ReservationCreateRequest request) {
         if (request.getRestaurantId() == null || request.getRestaurantId().isEmpty()) {
@@ -683,6 +696,10 @@ public class ReservationService {
 
     /**
      * Validates a reservation time against business rules.
+     * Checks:
+     * - Minimum advance booking time
+     * - Maximum future booking days
+     * - Time is not in the past
      *
      * @param reservationTime The time to validate
      * @throws ValidationException if the time is invalid
@@ -718,7 +735,8 @@ public class ReservationService {
     }
 
     /**
-     * Validates a party size against business rules.
+     * Validates the party size against business rules.
+     * Checks if the size is within the allowed range (1 to maxPartySize).
      *
      * @param partySize The party size to validate
      * @throws ValidationException if the party size is invalid
@@ -740,9 +758,10 @@ public class ReservationService {
 
     /**
      * Converts a Reservation entity to a ReservationDTO.
+     * Maps all relevant fields from the entity to the DTO.
      *
      * @param reservation The reservation entity to convert
-     * @return Converted ReservationDTO object
+     * @return A new ReservationDTO object
      */
     private ReservationDTO convertToDTO(Reservation reservation) {
         ReservationDTO dto = new ReservationDTO();

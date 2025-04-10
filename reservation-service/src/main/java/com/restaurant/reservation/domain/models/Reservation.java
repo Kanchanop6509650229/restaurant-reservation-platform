@@ -275,7 +275,7 @@ public class Reservation {
     /**
      * Sets the duration of the reservation in minutes.
      *
-     * @param durationMinutes The duration to set
+     * @param durationMinutes The duration in minutes to set
      */
     public void setDurationMinutes(int durationMinutes) {
         this.durationMinutes = durationMinutes;
@@ -329,7 +329,7 @@ public class Reservation {
     /**
      * Sets the phone number of the customer.
      *
-     * @param customerPhone The phone number to set
+     * @param customerPhone The customer phone number to set
      */
     public void setCustomerPhone(String customerPhone) {
         this.customerPhone = customerPhone;
@@ -347,7 +347,7 @@ public class Reservation {
     /**
      * Sets the email address of the customer.
      *
-     * @param customerEmail The email to set
+     * @param customerEmail The customer email to set
      */
     public void setCustomerEmail(String customerEmail) {
         this.customerEmail = customerEmail;
@@ -383,7 +383,7 @@ public class Reservation {
     /**
      * Sets whether reminders are enabled for this reservation.
      *
-     * @param remindersEnabled true to enable reminders, false to disable
+     * @param remindersEnabled true to enable reminders, false otherwise
      */
     public void setRemindersEnabled(boolean remindersEnabled) {
         this.remindersEnabled = remindersEnabled;
@@ -437,7 +437,7 @@ public class Reservation {
     /**
      * Sets the date and time when the reservation was last updated.
      *
-     * @param updatedAt The update timestamp to set
+     * @param updatedAt The last update timestamp to set
      */
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
@@ -455,7 +455,7 @@ public class Reservation {
     /**
      * Sets the deadline for confirming the reservation.
      *
-     * @param confirmationDeadline The deadline to set
+     * @param confirmationDeadline The confirmation deadline to set
      */
     public void setConfirmationDeadline(LocalDateTime confirmationDeadline) {
         this.confirmationDeadline = confirmationDeadline;

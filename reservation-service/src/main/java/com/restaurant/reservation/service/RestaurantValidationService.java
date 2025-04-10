@@ -17,19 +17,39 @@ import com.restaurant.common.exceptions.ValidationException;
 import com.restaurant.reservation.kafka.producers.RestaurantEventProducer;
 
 /**
- * Service for validating restaurant existence and operating hours via Kafka.
+ * Service responsible for validating restaurant-related information through Kafka-based communication.
+ * This service handles:
+ * - Restaurant existence and status validation
+ * - Operating hours validation for reservations
+ * 
+ * The service uses a request-response pattern over Kafka to communicate with the restaurant service,
+ * with built-in timeout handling and error management.
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
  */
 @Service
 public class RestaurantValidationService {
 
+    /** Logger for this service */
     private static final Logger logger = LoggerFactory.getLogger(RestaurantValidationService.class);
 
+    /** Producer for sending validation requests to Kafka */
     private final RestaurantEventProducer eventProducer;
+    
+    /** Manager for handling validation responses */
     private final RestaurantResponseManager responseManager;
 
+    /** Timeout in seconds for waiting for validation responses */
     @Value("${restaurant.validation.request.timeout:5}")
     private long requestTimeoutSeconds;
 
+    /**
+     * Constructs a new RestaurantValidationService with required dependencies.
+     *
+     * @param eventProducer Producer for sending validation requests
+     * @param responseManager Manager for handling validation responses
+     */
     public RestaurantValidationService(RestaurantEventProducer eventProducer,
             RestaurantResponseManager responseManager) {
         this.eventProducer = eventProducer;
@@ -38,10 +58,17 @@ public class RestaurantValidationService {
 
     /**
      * Validates that a restaurant exists and is active.
+     * This method:
+     * 1. Generates a correlation ID for the request
+     * 2. Creates a pending response entry
+     * 3. Sends a validation request via Kafka
+     * 4. Waits for the response with timeout
+     * 5. Validates the response
+     * 6. Cleans up the pending response
      * 
      * @param restaurantId the restaurant ID to validate
      * @throws EntityNotFoundException if the restaurant doesn't exist
-     * @throws ValidationException     if there's an error during validation
+     * @throws ValidationException if there's an error during validation or timeout occurs
      */
     public void validateRestaurantExists(String restaurantId) {
         // Generate correlation ID for this request
@@ -101,10 +128,18 @@ public class RestaurantValidationService {
 
     /**
      * Validates that a specific time is within the restaurant's operating hours.
+     * This method:
+     * 1. Generates a correlation ID for the request
+     * 2. Creates a pending response entry
+     * 3. Sends a time validation request via Kafka
+     * 4. Waits for the response with timeout
+     * 5. Validates the response
+     * 6. Cleans up the pending response
      * 
-     * @param restaurantId        the restaurant ID
+     * @param restaurantId the restaurant ID
      * @param reservationDateTime the date and time to validate
-     * @throws ValidationException if the time is outside operating hours
+     * @throws ValidationException if the time is outside operating hours or validation fails
+     * @throws EntityNotFoundException if the restaurant doesn't exist
      */
     public void validateOperatingHours(String restaurantId, java.time.LocalDateTime reservationDateTime) {
         // Generate correlation ID for this request

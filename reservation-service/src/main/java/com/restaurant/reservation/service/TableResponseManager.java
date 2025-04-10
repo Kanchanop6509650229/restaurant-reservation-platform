@@ -12,20 +12,33 @@ import org.springframework.stereotype.Component;
 import com.restaurant.common.events.reservation.FindAvailableTableResponseEvent;
 
 /**
- * Service ที่ใช้ในการจัดการกับการรอ Response จาก Kafka
- * โดยใช้ CompletableFuture เพื่อให้สามารถทำงานแบบ Asynchronous ได้
+ * Manages asynchronous responses for table availability requests using a correlation-based pattern.
+ * This component:
+ * - Tracks pending table availability requests using correlation IDs
+ * - Handles response completion and timeout scenarios
+ * - Provides cleanup mechanisms for expired responses
+ * 
+ * The manager uses CompletableFuture to handle asynchronous responses and ConcurrentHashMap
+ * for thread-safe storage of pending requests.
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
  */
 @Component
 public class TableResponseManager {
     
+    /** Logger for this component */
     private static final Logger logger = LoggerFactory.getLogger(TableResponseManager.class);
     
-    // Map สำหรับเก็บค่า CompletableFuture ที่รอ Response
-    // Key: correlationId, Value: CompletableFuture ที่จะได้รับผลลัพธ์เมื่อมี Response
+    /** Thread-safe map to store pending responses by correlation ID */
     private final Map<String, CompletableFuture<FindAvailableTableResponseEvent>> pendingResponses = new ConcurrentHashMap<>();
     
     /**
-     * สร้าง CompletableFuture สำหรับรอ Response ตาม correlationId
+     * Creates a new pending response entry for a table availability request.
+     * The response is stored in the pendingResponses map using the correlation ID as the key.
+     *
+     * @param correlationId unique identifier for the request-response pair
+     * @return CompletableFuture that will be completed when the response is received
      */
     public CompletableFuture<FindAvailableTableResponseEvent> createPendingResponse(String correlationId) {
         CompletableFuture<FindAvailableTableResponseEvent> future = new CompletableFuture<>();
@@ -34,7 +47,10 @@ public class TableResponseManager {
     }
     
     /**
-     * เมื่อได้รับ Response จาก Kafka ให้เรียกเมธอดนี้เพื่อส่งผลลัพธ์ไปยัง CompletableFuture ที่รออยู่
+     * Completes a pending response when a table availability response event is received.
+     * Removes the completed response from the pending responses map.
+     *
+     * @param response the table availability response event containing the result
      */
     public void completeResponse(FindAvailableTableResponseEvent response) {
         String correlationId = response.getCorrelationId();
@@ -49,7 +65,11 @@ public class TableResponseManager {
     }
     
     /**
-     * ยกเลิกการรอ Response หากเกิด timeout หรือกรณีอื่นๆ
+     * Cancels a pending response and removes it from the pending responses map.
+     * The associated CompletableFuture is completed exceptionally with a RuntimeException.
+     *
+     * @param correlationId unique identifier for the request-response pair
+     * @param reason description of why the response was cancelled
      */
     public void cancelPendingResponse(String correlationId, String reason) {
         CompletableFuture<FindAvailableTableResponseEvent> future = pendingResponses.remove(correlationId);
@@ -61,7 +81,8 @@ public class TableResponseManager {
     }
     
     /**
-     * เคลียร์ response ที่หมดเวลารอแล้ว
+     * Removes completed, cancelled, or exceptionally completed responses from the pending responses map.
+     * This method should be called periodically to prevent memory leaks from abandoned requests.
      */
     public void cleanupExpiredResponses() {
         pendingResponses.forEach((correlationId, future) -> {
@@ -72,7 +93,15 @@ public class TableResponseManager {
     }
     
     /**
-     * รับ Response โดยมีการตั้ง timeout
+     * Retrieves a response with a specified timeout period.
+     * If the response is not received within the timeout period, the request is removed
+     * and an exception is thrown.
+     *
+     * @param correlationId unique identifier for the request-response pair
+     * @param timeout duration to wait for the response
+     * @param unit time unit for the timeout duration
+     * @return the table availability response event if received within the timeout period
+     * @throws Exception if the timeout is exceeded or other errors occur
      */
     public FindAvailableTableResponseEvent getResponseWithTimeout(String correlationId, long timeout, TimeUnit unit) throws Exception {
         CompletableFuture<FindAvailableTableResponseEvent> future = pendingResponses.get(correlationId);

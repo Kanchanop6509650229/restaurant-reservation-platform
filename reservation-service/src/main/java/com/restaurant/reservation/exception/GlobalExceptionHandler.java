@@ -27,11 +27,41 @@ import com.restaurant.reservation.filters.RequestIdFilter;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+/**
+ * Global exception handler for the Reservation Service that centralizes
+ * the handling of all exceptions thrown by the application. This class
+ * provides consistent error responses across all endpoints and ensures
+ * proper logging of exceptions.
+ * 
+ * The handler processes various types of exceptions:
+ * - Entity not found exceptions
+ * - Validation exceptions
+ * - Authentication and authorization exceptions
+ * - Reservation-specific exceptions
+ * - General application exceptions
+ * 
+ * Each exception handler method returns a standardized ResponseDTO
+ * with appropriate HTTP status codes and error messages.
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
+ */
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+        /** Logger instance for tracking exception occurrences */
         private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+        /**
+         * Handles exceptions when a requested entity cannot be found in the system.
+         * Provides specific error messages based on the entity type and includes
+         * the entity ID in the response.
+         *
+         * @param ex The EntityNotFoundException that was thrown
+         * @param request The web request that caused the exception
+         * @param httpRequest The HTTP servlet request for request ID tracking
+         * @return ResponseEntity containing error details with HTTP 404 status
+         */
         @ExceptionHandler(EntityNotFoundException.class)
         public ResponseEntity<ResponseDTO<Void>> handleEntityNotFoundException(EntityNotFoundException ex,
                         WebRequest request, HttpServletRequest httpRequest) {
@@ -60,6 +90,14 @@ public class GlobalExceptionHandler {
                                 .body(responseDTO);
         }
 
+        /**
+         * Handles validation exceptions that occur during request processing.
+         * Returns a detailed map of validation errors for each field that failed validation.
+         *
+         * @param ex The ValidationException containing validation errors
+         * @param request The HTTP servlet request for request ID tracking
+         * @return ResponseEntity containing validation errors with HTTP 400 status
+         */
         @ExceptionHandler(ValidationException.class)
         public ResponseEntity<ResponseDTO<Map<String, String>>> handleValidationException(ValidationException ex,
                         HttpServletRequest request) {
@@ -78,6 +116,14 @@ public class GlobalExceptionHandler {
                                 .body(responseDTO);
         }
 
+        /**
+         * Handles authentication-related exceptions, such as invalid credentials
+         * or missing authentication tokens.
+         *
+         * @param ex The AuthenticationException that was thrown
+         * @param request The HTTP servlet request for request ID tracking
+         * @return ResponseEntity containing authentication error with HTTP 401 status
+         */
         @ExceptionHandler(AuthenticationException.class)
         public ResponseEntity<ResponseDTO<Void>> handleAuthenticationException(AuthenticationException ex,
                         HttpServletRequest request) {
@@ -91,6 +137,13 @@ public class GlobalExceptionHandler {
                                 .body(responseDTO);
         }
 
+        /**
+         * Handles access denied exceptions when a user attempts to perform
+         * an operation they don't have permission for.
+         *
+         * @param ex The AccessDeniedException that was thrown
+         * @return ResponseEntity containing access denied error with HTTP 403 status
+         */
         @ExceptionHandler(AccessDeniedException.class)
         public ResponseEntity<ResponseDTO<Void>> handleAccessDeniedException(AccessDeniedException ex) {
                 String message = "You don't have permission to perform this operation. Please contact an administrator if you require access.";
@@ -101,6 +154,13 @@ public class GlobalExceptionHandler {
                                 .body(ResponseDTO.error(message, ErrorCodes.FORBIDDEN));
         }
 
+        /**
+         * Handles method argument validation failures during request processing.
+         * Extracts field-level validation errors and returns them in a structured format.
+         *
+         * @param ex The MethodArgumentNotValidException containing validation errors
+         * @return ResponseEntity containing field validation errors with HTTP 400 status
+         */
         @ExceptionHandler(MethodArgumentNotValidException.class)
         public ResponseEntity<ResponseDTO<Map<String, String>>> handleMethodArgumentNotValidException(
                         MethodArgumentNotValidException ex) {
@@ -126,6 +186,13 @@ public class GlobalExceptionHandler {
                                 .body(responseDTO);
         }
 
+        /**
+         * Handles type mismatch exceptions when request parameters cannot be
+         * converted to their expected types.
+         *
+         * @param ex The MethodArgumentTypeMismatchException that was thrown
+         * @return ResponseEntity containing type mismatch error with HTTP 400 status
+         */
         @ExceptionHandler(MethodArgumentTypeMismatchException.class)
         public ResponseEntity<ResponseDTO<Void>> handleMethodArgumentTypeMismatchException(
                         MethodArgumentTypeMismatchException ex) {
@@ -141,6 +208,13 @@ public class GlobalExceptionHandler {
                                 .body(ResponseDTO.error(message, ErrorCodes.VALIDATION_ERROR));
         }
 
+        /**
+         * Handles cases where no handler is found for a requested endpoint.
+         * Provides a clear error message indicating the invalid URL or HTTP method.
+         *
+         * @param ex The NoHandlerFoundException that was thrown
+         * @return ResponseEntity containing endpoint not found error with HTTP 404 status
+         */
         @ExceptionHandler(NoHandlerFoundException.class)
         public ResponseEntity<ResponseDTO<Void>> handleNoHandlerFoundException(NoHandlerFoundException ex) {
                 String message = String.format(
@@ -154,6 +228,13 @@ public class GlobalExceptionHandler {
                                 .body(ResponseDTO.error(message, ErrorCodes.NOT_FOUND));
         }
 
+        /**
+         * Handles reservation conflict exceptions, such as overlapping reservations
+         * or invalid reservation times.
+         *
+         * @param ex The ReservationConflictException that was thrown
+         * @return ResponseEntity containing conflict error with HTTP 409 status
+         */
         @ExceptionHandler(ReservationConflictException.class)
         public ResponseEntity<ResponseDTO<Void>> handleReservationConflictException(ReservationConflictException ex) {
                 logger.error("Reservation conflict: {}", ex.getMessage());
@@ -163,6 +244,13 @@ public class GlobalExceptionHandler {
                                 .body(ResponseDTO.error(ex.getMessage(), ErrorCodes.RESERVATION_CONFLICT));
         }
 
+        /**
+         * Handles restaurant capacity exceptions when a restaurant cannot
+         * accommodate a reservation due to capacity constraints.
+         *
+         * @param ex The RestaurantCapacityException that was thrown
+         * @return ResponseEntity containing capacity error with HTTP 409 status
+         */
         @ExceptionHandler(RestaurantCapacityException.class)
         public ResponseEntity<ResponseDTO<Void>> handleRestaurantCapacityException(RestaurantCapacityException ex) {
                 logger.error("Restaurant capacity issue: {}", ex.getMessage());
@@ -172,6 +260,13 @@ public class GlobalExceptionHandler {
                                 .body(ResponseDTO.error(ex.getMessage(), ErrorCodes.RESTAURANT_FULLY_BOOKED));
         }
 
+        /**
+         * Handles base application exceptions that don't have specific handlers.
+         * Provides a generic error response for unexpected application errors.
+         *
+         * @param ex The BaseException that was thrown
+         * @return ResponseEntity containing application error with HTTP 500 status
+         */
         @ExceptionHandler(BaseException.class)
         public ResponseEntity<ResponseDTO<Void>> handleBaseException(BaseException ex) {
                 logger.error("Application error: {} with error code: {}",
@@ -182,6 +277,14 @@ public class GlobalExceptionHandler {
                                 .body(ResponseDTO.error(ex.getMessage(), ex.getErrorCode()));
         }
 
+        /**
+         * Handles any unhandled exceptions that occur during request processing.
+         * Provides a generic error message and logs the full exception details
+         * for debugging purposes.
+         *
+         * @param ex The Exception that was thrown
+         * @return ResponseEntity containing generic error with HTTP 500 status
+         */
         @ExceptionHandler(Exception.class)
         public ResponseEntity<ResponseDTO<Void>> handleGenericException(Exception ex) {
                 logger.error("Unhandled exception: {}", ex.getMessage(), ex);

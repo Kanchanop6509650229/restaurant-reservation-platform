@@ -12,19 +12,34 @@ import org.springframework.stereotype.Component;
 import com.restaurant.common.events.restaurant.RestaurantValidationResponseEvent;
 
 /**
- * Manages asynchronous responses for restaurant validation requests.
+ * Manages asynchronous responses for restaurant validation requests using a correlation-based pattern.
+ * This component:
+ * - Tracks pending validation requests using correlation IDs
+ * - Handles response completion and timeout scenarios
+ * - Provides cleanup mechanisms for expired responses
+ * 
+ * The manager uses CompletableFuture to handle asynchronous responses and ConcurrentHashMap
+ * for thread-safe storage of pending requests.
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
  */
 @Component
 public class RestaurantResponseManager {
     
+    /** Logger for this component */
     private static final Logger logger = LoggerFactory.getLogger(RestaurantResponseManager.class);
     
-    // Map to store pending responses by correlation ID
+    /** Thread-safe map to store pending responses by correlation ID */
     private final Map<String, CompletableFuture<RestaurantValidationResponseEvent>> pendingResponses = 
             new ConcurrentHashMap<>();
     
     /**
-     * Creates a pending response for the given correlation ID.
+     * Creates a new pending response entry for a validation request.
+     * The response is stored in the pendingResponses map using the correlation ID as the key.
+     *
+     * @param correlationId unique identifier for the request-response pair
+     * @return CompletableFuture that will be completed when the response is received
      */
     public CompletableFuture<RestaurantValidationResponseEvent> createPendingResponse(String correlationId) {
         CompletableFuture<RestaurantValidationResponseEvent> future = new CompletableFuture<>();
@@ -33,7 +48,10 @@ public class RestaurantResponseManager {
     }
     
     /**
-     * Completes a pending response when a Kafka event is received.
+     * Completes a pending response when a validation response event is received.
+     * Removes the completed response from the pending responses map.
+     *
+     * @param response the validation response event containing the result
      */
     public void completeResponse(RestaurantValidationResponseEvent response) {
         String correlationId = response.getCorrelationId();
@@ -48,7 +66,11 @@ public class RestaurantResponseManager {
     }
     
     /**
-     * Cancels a pending response.
+     * Cancels a pending response and removes it from the pending responses map.
+     * The associated CompletableFuture is completed exceptionally with a RuntimeException.
+     *
+     * @param correlationId unique identifier for the request-response pair
+     * @param reason description of why the response was cancelled
      */
     public void cancelPendingResponse(String correlationId, String reason) {
         CompletableFuture<RestaurantValidationResponseEvent> future = pendingResponses.remove(correlationId);
@@ -61,7 +83,15 @@ public class RestaurantResponseManager {
     }
     
     /**
-     * Gets a response with timeout.
+     * Retrieves a response with a specified timeout period.
+     * If the response is not received within the timeout period, the request is removed
+     * and an exception is thrown.
+     *
+     * @param correlationId unique identifier for the request-response pair
+     * @param timeout duration to wait for the response
+     * @param unit time unit for the timeout duration
+     * @return the validation response event if received within the timeout period
+     * @throws Exception if the timeout is exceeded or other errors occur
      */
     public RestaurantValidationResponseEvent getResponseWithTimeout(String correlationId, long timeout, TimeUnit unit) 
             throws Exception {
@@ -79,7 +109,8 @@ public class RestaurantResponseManager {
     }
     
     /**
-     * Cleans up expired responses.
+     * Removes completed, cancelled, or exceptionally completed responses from the pending responses map.
+     * This method should be called periodically to prevent memory leaks from abandoned requests.
      */
     public void cleanupExpiredResponses() {
         pendingResponses.forEach((correlationId, future) -> {

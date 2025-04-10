@@ -19,15 +19,48 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Service class responsible for managing restaurant schedules and operating hours.
+ * This service handles:
+ * - Retrieving and managing restaurant schedules
+ * - Setting default operating hours based on day of week
+ * - Updating schedule information including special hours and capacity
+ * - Converting schedule entities to DTOs with formatted time information
+ * 
+ * The service ensures that restaurants have consistent operating hours while allowing
+ * for custom schedules and special hours when needed.
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
+ */
 @Service
 public class ScheduleService {
 
+    /** Repository for managing schedule data */
     private final ScheduleRepository scheduleRepository;
 
+    /**
+     * Constructs a new ScheduleService with required dependencies.
+     *
+     * @param scheduleRepository Repository for schedule data
+     */
     public ScheduleService(ScheduleRepository scheduleRepository) {
         this.scheduleRepository = scheduleRepository;
     }
 
+    /**
+     * Retrieves the schedule for a restaurant over a specified date range.
+     * This method:
+     * 1. Fetches existing schedules from the database
+     * 2. Creates default schedules for any missing dates
+     * 3. Sets default operating hours based on day of week
+     * 4. Returns a sorted list of schedule DTOs
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param startDate The start date of the schedule range
+     * @param endDate The end date of the schedule range
+     * @return List of ScheduleDTO objects for the specified date range
+     */
     public List<ScheduleDTO> getScheduleForRestaurant(String restaurantId, LocalDate startDate, LocalDate endDate) {
         List<Schedule> schedules = scheduleRepository.findByRestaurantIdAndDateBetween(
                 restaurantId, startDate, endDate);
@@ -58,6 +91,19 @@ public class ScheduleService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Updates the schedule for a specific restaurant and date.
+     * This method:
+     * 1. Retrieves or creates a new schedule for the specified date
+     * 2. Updates schedule properties based on the update request
+     * 3. Handles special cases like custom operating hours
+     * 4. Saves and returns the updated schedule as a DTO
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param date The date to update
+     * @param updateRequest The update request containing new schedule information
+     * @return Updated ScheduleDTO object
+     */
     @Transactional
     public ScheduleDTO updateSchedule(String restaurantId, LocalDate date, 
                                     ScheduleUpdateRequest updateRequest) {
@@ -89,6 +135,16 @@ public class ScheduleService {
         return convertToDTO(scheduleRepository.save(schedule));
     }
 
+    /**
+     * Sets default operating hours for a schedule based on the day of week.
+     * Default hours are:
+     * - Weekdays: 10:00 AM - 10:00 PM
+     * - Friday/Saturday: 10:00 AM - 11:00 PM
+     * - Monday: Closed
+     *
+     * @param schedule The schedule to set default hours for
+     * @param dayOfWeek The day of week to determine default hours
+     */
     private void setDefaultHours(Schedule schedule, DayOfWeek dayOfWeek) {
         // Default hours: 10 AM - 10 PM
         LocalTime defaultOpenTime = LocalTime.of(10, 0);
@@ -108,6 +164,17 @@ public class ScheduleService {
         schedule.setCloseTime(defaultCloseTime);
     }
 
+    /**
+     * Converts a Schedule entity to a ScheduleDTO.
+     * This method:
+     * 1. Copies all basic schedule information
+     * 2. Calculates operating hours duration
+     * 3. Formats time strings for display
+     * 4. Includes capacity and booking information
+     *
+     * @param schedule The schedule entity to convert
+     * @return A new ScheduleDTO object with formatted information
+     */
     private ScheduleDTO convertToDTO(Schedule schedule) {
         ScheduleDTO dto = new ScheduleDTO();
         dto.setId(schedule.getId());
