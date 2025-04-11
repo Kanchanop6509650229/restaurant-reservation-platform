@@ -29,22 +29,57 @@ import com.restaurant.restaurant.service.RestaurantService;
 
 import jakarta.validation.Valid;
 
+/**
+ * REST Controller for managing restaurant operations.
+ * This controller provides endpoints for:
+ * - Public access to restaurant information
+ * - Restaurant creation and management by owners
+ * - Restaurant search and filtering
+ * - Location-based restaurant discovery
+ * 
+ * All endpoints are prefixed with '/api/restaurants'.
+ * Public endpoints are further prefixed with '/public'.
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
+ */
 @RestController
 @RequestMapping("/api/restaurants")
 public class RestaurantController {
 
+    /** Service layer for restaurant operations */
     private final RestaurantService restaurantService;
 
+    /**
+     * Constructs a new RestaurantController with required dependencies.
+     *
+     * @param restaurantService Service layer for restaurant operations
+     */
     public RestaurantController(RestaurantService restaurantService) {
         this.restaurantService = restaurantService;
     }
 
+    /**
+     * Retrieves all restaurants in the system.
+     * This endpoint is publicly accessible and returns a list of all restaurants
+     * without pagination.
+     *
+     * @return ResponseEntity containing a list of RestaurantDTOs
+     */
     @GetMapping("/public/all")
     public ResponseEntity<ResponseDTO<List<RestaurantDTO>>> getAllRestaurants() {
         List<RestaurantDTO> restaurants = restaurantService.getAllRestaurants();
         return ResponseEntity.ok(ResponseDTO.success(restaurants));
     }
 
+    /**
+     * Retrieves restaurants with pagination support.
+     * This endpoint is publicly accessible and returns a page of restaurants
+     * with default page size of 10.
+     *
+     * @param pageable Pagination parameters (page number, size, sort)
+     * @return ResponseEntity containing a page of RestaurantDTOs
+     */
     @GetMapping("/public")
     public ResponseEntity<ResponseDTO<Page<RestaurantDTO>>> getRestaurantsPaged(
             @PageableDefault(size = 10) Pageable pageable) {
@@ -52,12 +87,27 @@ public class RestaurantController {
         return ResponseEntity.ok(ResponseDTO.success(restaurants));
     }
 
+    /**
+     * Retrieves a specific restaurant by its ID.
+     * This endpoint is publicly accessible.
+     *
+     * @param id The ID of the restaurant to retrieve
+     * @return ResponseEntity containing the requested RestaurantDTO
+     */
     @GetMapping("/public/{id}")
     public ResponseEntity<ResponseDTO<RestaurantDTO>> getRestaurantById(@PathVariable String id) {
         RestaurantDTO restaurant = restaurantService.getRestaurantById(id);
         return ResponseEntity.ok(ResponseDTO.success(restaurant));
     }
 
+    /**
+     * Searches restaurants based on provided criteria.
+     * This endpoint is publicly accessible and supports pagination.
+     *
+     * @param criteria Search criteria (name, cuisine, location, etc.)
+     * @param pageable Pagination parameters
+     * @return ResponseEntity containing a page of matching RestaurantDTOs
+     */
     @GetMapping("/public/search")
     public ResponseEntity<ResponseDTO<Page<RestaurantDTO>>> searchRestaurants(
             @Valid RestaurantSearchCriteria criteria,
@@ -66,6 +116,16 @@ public class RestaurantController {
         return ResponseEntity.ok(ResponseDTO.success(restaurants));
     }
 
+    /**
+     * Finds restaurants near a specified location.
+     * This endpoint is publicly accessible and returns restaurants within
+     * a specified distance (in kilometers) from the given coordinates.
+     *
+     * @param latitude The latitude coordinate
+     * @param longitude The longitude coordinate
+     * @param distance Maximum distance in kilometers (default: 5.0)
+     * @return ResponseEntity containing a list of nearby RestaurantDTOs
+     */
     @GetMapping("/public/nearby")
     public ResponseEntity<ResponseDTO<List<RestaurantDTO>>> findNearbyRestaurants(
             @RequestParam double latitude,
@@ -75,6 +135,14 @@ public class RestaurantController {
         return ResponseEntity.ok(ResponseDTO.success(restaurants));
     }
 
+    /**
+     * Creates a new restaurant.
+     * This endpoint requires authentication and sets the current user as the owner.
+     *
+     * @param createRequest The restaurant creation request
+     * @param userId The ID of the current authenticated user
+     * @return ResponseEntity containing the created RestaurantDTO
+     */
     @PostMapping
     public ResponseEntity<ResponseDTO<RestaurantDTO>> createRestaurant(
             @Valid @RequestBody RestaurantCreateRequest createRequest,
@@ -88,6 +156,16 @@ public class RestaurantController {
                 .body(ResponseDTO.success(restaurant, "Restaurant created successfully"));
     }
 
+    /**
+     * Updates an existing restaurant.
+     * This endpoint requires authentication and ownership verification.
+     *
+     * @param id The ID of the restaurant to update
+     * @param updateRequest The restaurant update request
+     * @param userId The ID of the current authenticated user
+     * @return ResponseEntity containing the updated RestaurantDTO
+     * @throws ValidationException if the user is not the owner of the restaurant
+     */
     @PutMapping("/{id}")
     public ResponseEntity<ResponseDTO<RestaurantDTO>> updateRestaurant(
             @PathVariable String id,
@@ -104,6 +182,16 @@ public class RestaurantController {
         return ResponseEntity.ok(ResponseDTO.success(updatedRestaurant, "Restaurant updated successfully"));
     }
 
+    /**
+     * Toggles the active status of a restaurant.
+     * This endpoint requires authentication and ownership verification.
+     *
+     * @param id The ID of the restaurant to update
+     * @param active The new active status
+     * @param userId The ID of the current authenticated user
+     * @return ResponseEntity with success message
+     * @throws ValidationException if the user is not the owner of the restaurant
+     */
     @PatchMapping("/{id}/active")
     public ResponseEntity<ResponseDTO<Void>> toggleRestaurantActive(
             @PathVariable String id,
@@ -121,6 +209,15 @@ public class RestaurantController {
         return ResponseEntity.ok(ResponseDTO.success(null, message));
     }
 
+    /**
+     * Deletes a restaurant.
+     * This endpoint requires authentication and ownership verification.
+     *
+     * @param id The ID of the restaurant to delete
+     * @param userId The ID of the current authenticated user
+     * @return ResponseEntity with success message
+     * @throws ValidationException if the user is not the owner of the restaurant
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<ResponseDTO<Void>> deleteRestaurant(
             @PathVariable String id,

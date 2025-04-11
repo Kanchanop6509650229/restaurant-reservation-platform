@@ -23,16 +23,42 @@ import com.restaurant.restaurant.service.TableService;
 
 import jakarta.validation.Valid;
 
+/**
+ * REST Controller for managing restaurant table operations.
+ * This controller provides endpoints for:
+ * - Managing restaurant tables (CRUD operations)
+ * - Checking table availability
+ * - Updating table status
+ * 
+ * All endpoints are prefixed with '/api/restaurants/{restaurantId}/tables'.
+ * Public endpoints are further prefixed with '/public'.
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
+ */
 @RestController
 @RequestMapping("/api/restaurants/{restaurantId}/tables")
 public class TableController {
 
+    /** Service layer for table operations */
     private final TableService tableService;
 
+    /**
+     * Constructs a new TableController with required dependencies.
+     *
+     * @param tableService Service layer for table operations
+     */
     public TableController(TableService tableService) {
         this.tableService = tableService;
     }
 
+    /**
+     * Retrieves all tables for a specific restaurant.
+     * This endpoint is publicly accessible.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @return ResponseEntity containing a list of TableDTOs
+     */
     @GetMapping("/public")
     public ResponseEntity<ResponseDTO<List<TableDTO>>> getAllTablesByRestaurantId(
             @PathVariable String restaurantId) {
@@ -40,6 +66,13 @@ public class TableController {
         return ResponseEntity.ok(ResponseDTO.success(tables));
     }
 
+    /**
+     * Retrieves all available tables for a specific restaurant.
+     * This endpoint is publicly accessible.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @return ResponseEntity containing a list of available TableDTOs
+     */
     @GetMapping("/public/available")
     public ResponseEntity<ResponseDTO<List<TableDTO>>> getAvailableTablesByRestaurantId(
             @PathVariable String restaurantId) {
@@ -47,6 +80,14 @@ public class TableController {
         return ResponseEntity.ok(ResponseDTO.success(tables));
     }
 
+    /**
+     * Retrieves a specific table by its ID.
+     * This endpoint is publicly accessible.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param tableId The ID of the table to retrieve
+     * @return ResponseEntity containing the requested TableDTO
+     */
     @GetMapping("/public/{tableId}")
     public ResponseEntity<ResponseDTO<TableDTO>> getTableById(
             @PathVariable String restaurantId,
@@ -55,6 +96,13 @@ public class TableController {
         return ResponseEntity.ok(ResponseDTO.success(table));
     }
 
+    /**
+     * Creates a new table for a restaurant.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param createRequest The table creation request
+     * @return ResponseEntity containing the created TableDTO
+     */
     @PostMapping
     public ResponseEntity<ResponseDTO<TableDTO>> createTable(
             @PathVariable String restaurantId,
@@ -65,6 +113,14 @@ public class TableController {
                 .body(ResponseDTO.success(table, "Table created successfully"));
     }
 
+    /**
+     * Updates an existing table.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param tableId The ID of the table to update
+     * @param updateRequest The table update request
+     * @return ResponseEntity containing the updated TableDTO
+     */
     @PutMapping("/{tableId}")
     public ResponseEntity<ResponseDTO<TableDTO>> updateTable(
             @PathVariable String restaurantId,
@@ -74,6 +130,16 @@ public class TableController {
         return ResponseEntity.ok(ResponseDTO.success(table, "Table updated successfully"));
     }
 
+    /**
+     * Updates the status of a table.
+     * This endpoint is used to mark tables as occupied, available, or reserved.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param tableId The ID of the table to update
+     * @param status The new status of the table
+     * @param reservationId The ID of the reservation (optional)
+     * @return ResponseEntity containing the updated TableDTO
+     */
     @PatchMapping("/{tableId}/status")
     public ResponseEntity<ResponseDTO<TableDTO>> updateTableStatus(
             @PathVariable String restaurantId,
@@ -84,6 +150,13 @@ public class TableController {
         return ResponseEntity.ok(ResponseDTO.success(table, "Table status updated successfully"));
     }
 
+    /**
+     * Deletes a table.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param tableId The ID of the table to delete
+     * @return ResponseEntity with success message
+     */
     @DeleteMapping("/{tableId}")
     public ResponseEntity<ResponseDTO<Void>> deleteTable(
             @PathVariable String restaurantId,

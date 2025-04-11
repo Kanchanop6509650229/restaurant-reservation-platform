@@ -28,15 +28,43 @@ import com.restaurant.restaurant.kafka.producers.RestaurantEventProducer;
 
 import jakarta.transaction.Transactional;
 
+/**
+ * Service class for managing restaurant operations.
+ * This service provides functionality for:
+ * - Managing restaurant CRUD operations
+ * - Searching and filtering restaurants
+ * - Finding nearby restaurants
+ * - Managing restaurant status and activation
+ * - Validating restaurant data
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
+ */
 @Service
 public class RestaurantService {
 
+    /** Logger for this service */
     private static final Logger logger = LoggerFactory.getLogger(RestaurantService.class);
+
+    /** Repository for restaurant data access */
     private final RestaurantRepository restaurantRepository;
+
+    /** Service for managing operating hours */
     private final OperatingHoursService operatingHoursService;
+
+    /** Producer for restaurant-related events */
     private final RestaurantEventProducer restaurantEventProducer;
+
+    /** Factory for creating geometric objects */
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
+    /**
+     * Constructs a new RestaurantService with required dependencies.
+     *
+     * @param restaurantRepository Repository for restaurant data access
+     * @param operatingHoursService Service for managing operating hours
+     * @param restaurantEventProducer Producer for restaurant-related events
+     */
     public RestaurantService(RestaurantRepository restaurantRepository,
             OperatingHoursService operatingHoursService,
             RestaurantEventProducer restaurantEventProducer) {
@@ -45,17 +73,36 @@ public class RestaurantService {
         this.restaurantEventProducer = restaurantEventProducer;
     }
 
+    /**
+     * Retrieves all active restaurants in the system.
+     *
+     * @return List of RestaurantDTOs for all active restaurants
+     */
     public List<RestaurantDTO> getAllRestaurants() {
         return restaurantRepository.findByActiveTrue().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Retrieves all active restaurants with pagination support.
+     *
+     * @param pageable Pagination parameters (page number, size, sort)
+     * @return Page of RestaurantDTOs
+     */
     public Page<RestaurantDTO> getAllRestaurantsPaged(Pageable pageable) {
         return restaurantRepository.findByActiveTrue(pageable)
                 .map(this::convertToDTO);
     }
 
+    /**
+     * Retrieves a specific restaurant by its ID.
+     *
+     * @param id The ID of the restaurant to retrieve
+     * @return RestaurantDTO for the requested restaurant
+     * @throws EntityNotFoundException if the restaurant is not found
+     * @throws ValidationException if the restaurant is inactive
+     */
     public RestaurantDTO getRestaurantById(String id) {
         Restaurant restaurant = restaurantRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", id));
@@ -67,6 +114,15 @@ public class RestaurantService {
         return convertToDTO(restaurant);
     }
 
+    /**
+     * Searches restaurants based on provided criteria.
+     * If a keyword is provided, performs a text search.
+     * Otherwise, returns all restaurants with pagination.
+     *
+     * @param criteria Search criteria (keyword, filters)
+     * @param pageable Pagination parameters
+     * @return Page of matching RestaurantDTOs
+     */
     public Page<RestaurantDTO> searchRestaurants(RestaurantSearchCriteria criteria, Pageable pageable) {
         if (criteria.getKeyword() != null && !criteria.getKeyword().isEmpty()) {
             return restaurantRepository.searchRestaurants(criteria.getKeyword(), pageable)
@@ -77,6 +133,16 @@ public class RestaurantService {
         }
     }
 
+    /**
+     * Finds restaurants near a specified location.
+     * Returns restaurants within a specified distance (in kilometers)
+     * from the given coordinates.
+     *
+     * @param latitude The latitude coordinate
+     * @param longitude The longitude coordinate
+     * @param distanceInKm Maximum distance in kilometers
+     * @return List of nearby RestaurantDTOs
+     */
     public List<RestaurantDTO> findNearbyRestaurants(double latitude, double longitude, double distanceInKm) {
         // Convert km to meters
         double distanceInMeters = distanceInKm * 1000;
@@ -86,6 +152,17 @@ public class RestaurantService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Creates a new restaurant.
+     * This method:
+     * - Validates the creation request
+     * - Creates the restaurant entity
+     * - Sets up default operating hours
+     *
+     * @param createRequest The restaurant creation request
+     * @return Created RestaurantDTO
+     * @throws ValidationException if validation fails
+     */
     @Transactional
     public RestaurantDTO createRestaurant(RestaurantCreateRequest createRequest) {
         validateRestaurantRequest(createRequest);
@@ -125,6 +202,19 @@ public class RestaurantService {
         return convertToDTO(savedRestaurant);
     }
 
+    /**
+     * Updates an existing restaurant.
+     * This method:
+     * - Validates the update request
+     * - Updates restaurant fields
+     * - Publishes events for significant changes
+     *
+     * @param id The ID of the restaurant to update
+     * @param updateRequest The update request
+     * @return Updated RestaurantDTO
+     * @throws EntityNotFoundException if the restaurant is not found
+     * @throws ValidationException if the restaurant is inactive or validation fails
+     */
     @Transactional
     public RestaurantDTO updateRestaurant(String id, RestaurantUpdateRequest updateRequest) {
         Restaurant restaurant = restaurantRepository.findById(id)
@@ -268,6 +358,13 @@ public class RestaurantService {
         return convertToDTO(updatedRestaurant);
     }
 
+    /**
+     * Toggles the active status of a restaurant.
+     *
+     * @param id The ID of the restaurant
+     * @param active The new active status
+     * @throws EntityNotFoundException if the restaurant is not found
+     */
     @Transactional
     public void toggleRestaurantActive(String id, boolean active) {
         Restaurant restaurant = restaurantRepository.findById(id)
@@ -288,6 +385,12 @@ public class RestaurantService {
         }
     }
 
+    /**
+     * Deletes a restaurant by setting its active status to false.
+     *
+     * @param id The ID of the restaurant to delete
+     * @throws EntityNotFoundException if the restaurant is not found
+     */
     @Transactional
     public void deleteRestaurant(String id) {
         Restaurant restaurant = restaurantRepository.findById(id)
@@ -302,6 +405,16 @@ public class RestaurantService {
                 new RestaurantUpdatedEvent(id, "active", "true", "false"));
     }
 
+    /**
+     * Validates a restaurant creation request.
+     * This method checks:
+     * - Required fields are present
+     * - Field lengths and formats
+     * - Geographic coordinates
+     *
+     * @param request The creation request to validate
+     * @throws ValidationException if validation fails
+     */
     private void validateRestaurantRequest(RestaurantCreateRequest request) {
         Map<String, String> errors = new HashMap<>();
 
@@ -366,6 +479,12 @@ public class RestaurantService {
         }
     }
 
+    /**
+     * Converts a Restaurant entity to its DTO representation.
+     *
+     * @param restaurant The Restaurant entity to convert
+     * @return RestaurantDTO representation of the entity
+     */
     public RestaurantDTO convertToDTO(Restaurant restaurant) {
         RestaurantDTO dto = new RestaurantDTO();
         dto.setId(restaurant.getId());

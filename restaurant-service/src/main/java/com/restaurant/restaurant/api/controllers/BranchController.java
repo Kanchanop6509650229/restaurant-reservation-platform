@@ -13,16 +13,42 @@ import com.restaurant.common.dto.ResponseDTO;
 import com.restaurant.restaurant.domain.models.Branch;
 import com.restaurant.restaurant.domain.repositories.BranchRepository;
 
+/**
+ * REST Controller for managing restaurant branch information.
+ * This controller provides endpoints for:
+ * - Retrieving branches for a specific restaurant
+ * - Finding nearby branches based on location
+ * - Managing branch information and locations
+ * 
+ * All endpoints are prefixed with '/api/restaurants/{restaurantId}/branches'.
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
+ */
 @RestController
 @RequestMapping("/api/restaurants/{restaurantId}/branches")
 public class BranchController {
 
+    /** Repository for branch data access */
     private final BranchRepository branchRepository;
 
+    /**
+     * Constructs a new BranchController with required dependencies.
+     *
+     * @param branchRepository Repository for branch data access
+     */
     public BranchController(BranchRepository branchRepository) {
         this.branchRepository = branchRepository;
     }
 
+    /**
+     * Retrieves all active branches for a specific restaurant.
+     * This endpoint returns a list of all active branches associated
+     * with the given restaurant, including their location and contact information.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @return ResponseEntity containing a list of Branch objects
+     */
     @GetMapping
     public ResponseEntity<ResponseDTO<List<Branch>>> getBranchesByRestaurantId(
             @PathVariable String restaurantId) {
@@ -30,6 +56,17 @@ public class BranchController {
         return ResponseEntity.ok(ResponseDTO.success(branches));
     }
 
+    /**
+     * Finds branches near a specified location.
+     * This endpoint returns branches within a specified distance
+     * (in kilometers) from the given coordinates.
+     * The distance is converted to meters for the database query.
+     *
+     * @param latitude The latitude coordinate
+     * @param longitude The longitude coordinate
+     * @param distance Maximum distance in kilometers (default: 5.0)
+     * @return ResponseEntity containing a list of nearby Branch objects
+     */
     @GetMapping("/nearby")
     public ResponseEntity<ResponseDTO<List<Branch>>> findNearbyBranches(
             @RequestParam double latitude,

@@ -32,21 +32,48 @@ import com.restaurant.restaurant.kafka.producers.RestaurantEventProducer;
 
 import jakarta.transaction.Transactional;
 
+/**
+ * Service class for managing restaurant operating hours.
+ * This service provides functionality for:
+ * - Managing operating hours for restaurants
+ * - Creating default operating hours for new restaurants
+ * - Updating operating hours for specific days
+ * - Batch updating operating hours for all days
+ * - Validating operating hours and break times
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
+ */
 @Service
 public class OperatingHoursService {
 
+    /** Logger for this service */
     private static final Logger logger = LoggerFactory.getLogger(OperatingHoursService.class);
 
+    /** Repository for operating hours data access */
     private final OperatingHoursRepository operatingHoursRepository;
+
+    /** Repository for restaurant data access */
     private final RestaurantRepository restaurantRepository;
+
+    /** Producer for restaurant-related events */
     private final RestaurantEventProducer restaurantEventProducer;
 
+    /** Default opening time for restaurants (configurable) */
     @Value("${restaurant.default.open-time:10:00}")
     private String defaultOpenTime;
 
+    /** Default closing time for restaurants (configurable) */
     @Value("${restaurant.default.close-time:22:00}")
     private String defaultCloseTime;
 
+    /**
+     * Constructs a new OperatingHoursService with required dependencies.
+     *
+     * @param operatingHoursRepository Repository for operating hours data access
+     * @param restaurantRepository Repository for restaurant data access
+     * @param restaurantEventProducer Producer for restaurant-related events
+     */
     public OperatingHoursService(OperatingHoursRepository operatingHoursRepository,
             RestaurantRepository restaurantRepository,
             RestaurantEventProducer restaurantEventProducer) {
@@ -55,6 +82,15 @@ public class OperatingHoursService {
         this.restaurantEventProducer = restaurantEventProducer;
     }
 
+    /**
+     * Retrieves all operating hours for a specific restaurant.
+     * This method returns operating hours for all days of the week.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @return List of OperatingHoursDTOs for the restaurant
+     * @throws EntityNotFoundException if the restaurant is not found
+     * @throws ValidationException if the restaurant is inactive
+     */
     public List<OperatingHoursDTO> getOperatingHoursByRestaurantId(String restaurantId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
@@ -68,6 +104,13 @@ public class OperatingHoursService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Creates default operating hours for a new restaurant.
+     * This method sets up standard operating hours for all days of the week,
+     * with configurable default open and close times.
+     *
+     * @param restaurant The restaurant to create operating hours for
+     */
     @Transactional
     public void createDefaultOperatingHours(Restaurant restaurant) {
         LocalTime openTime = LocalTime.parse(defaultOpenTime);
@@ -99,6 +142,21 @@ public class OperatingHoursService {
         }
     }
 
+    /**
+     * Updates operating hours for a specific day of the week.
+     * This method handles:
+     * - Validating the update request
+     * - Updating operating hours
+     * - Managing break times
+     * - Publishing events for significant changes
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param day The day of the week to update
+     * @param updateRequest The update request containing new operating hours
+     * @return Updated OperatingHoursDTO
+     * @throws EntityNotFoundException if the restaurant is not found
+     * @throws ValidationException if the restaurant is inactive or validation fails
+     */
     @Transactional
     public OperatingHoursDTO updateOperatingHours(String restaurantId, DayOfWeek day,
             OperatingHoursUpdateRequest updateRequest) {
@@ -205,6 +263,17 @@ public class OperatingHoursService {
         return convertToDTO(updatedHours);
     }
 
+    /**
+     * Validates an operating hours update request.
+     * This method checks:
+     * - Opening and closing times are valid
+     * - Break times are valid
+     * - Operating periods meet minimum duration requirements
+     *
+     * @param updateRequest The update request to validate
+     * @param day The day of the week being updated
+     * @throws ValidationException if validation fails
+     */
     private void validateOperatingHoursUpdate(OperatingHoursUpdateRequest updateRequest, DayOfWeek day) {
         Map<String, String> errors = new HashMap<>();
 
@@ -249,6 +318,16 @@ public class OperatingHoursService {
         }
     }
 
+    /**
+     * Updates operating hours for all days of the week in a single operation.
+     * This method handles batch updates efficiently and validates all changes.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param updateRequest The batch update request containing operating hours for all days
+     * @return List of updated OperatingHoursDTOs
+     * @throws EntityNotFoundException if the restaurant is not found
+     * @throws ValidationException if validation fails
+     */
     @Transactional
     public List<OperatingHoursDTO> updateAllOperatingHours(String restaurantId,
             OperatingHoursBatchUpdateRequest updateRequest) {
@@ -295,6 +374,13 @@ public class OperatingHoursService {
         return getOperatingHoursByRestaurantId(restaurantId);
     }
 
+    /**
+     * Validates a batch update request for operating hours.
+     * This method ensures all days have valid operating hours and break times.
+     *
+     * @param updateRequest The batch update request to validate
+     * @throws ValidationException if validation fails
+     */
     private void validateBatchUpdateRequest(OperatingHoursBatchUpdateRequest updateRequest) {
         if (updateRequest.getOperatingHours() == null || updateRequest.getOperatingHours().isEmpty()) {
             throw new ValidationException("operatingHours",
@@ -330,6 +416,14 @@ public class OperatingHoursService {
         }
     }
 
+    /**
+     * Retrieves operating hours for a specific day of the week.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param day The day of the week to retrieve
+     * @return OperatingHoursDTO for the specified day
+     * @throws EntityNotFoundException if the restaurant is not found
+     */
     public OperatingHoursDTO getOperatingHoursByDay(String restaurantId, DayOfWeek day) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
@@ -345,6 +439,12 @@ public class OperatingHoursService {
         return convertToDTO(hours);
     }
 
+    /**
+     * Converts an OperatingHours entity to its DTO representation.
+     *
+     * @param hours The OperatingHours entity to convert
+     * @return OperatingHoursDTO representation of the entity
+     */
     private OperatingHoursDTO convertToDTO(OperatingHours hours) {
         OperatingHoursDTO dto = new OperatingHoursDTO();
         dto.setId(hours.getId());

@@ -25,15 +25,39 @@ import com.restaurant.restaurant.kafka.producers.RestaurantEventProducer;
 
 import jakarta.transaction.Transactional;
 
+/**
+ * Service class for managing restaurant table operations.
+ * This service provides functionality for:
+ * - Managing restaurant tables (CRUD operations)
+ * - Updating table status and availability
+ * - Validating table configurations
+ * - Managing table capacity and features
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
+ */
 @Service
 public class TableService {
 
+    /** Logger for this service */
     private static final Logger logger = LoggerFactory.getLogger(TableService.class);
 
+    /** Repository for table data access */
     private final RestaurantTableRepository tableRepository;
+
+    /** Repository for restaurant data access */
     private final RestaurantRepository restaurantRepository;
+
+    /** Producer for restaurant-related events */
     private final RestaurantEventProducer restaurantEventProducer;
 
+    /**
+     * Constructs a new TableService with required dependencies.
+     *
+     * @param tableRepository Repository for table data access
+     * @param restaurantRepository Repository for restaurant data access
+     * @param restaurantEventProducer Producer for restaurant-related events
+     */
     public TableService(RestaurantTableRepository tableRepository,
             RestaurantRepository restaurantRepository,
             RestaurantEventProducer restaurantEventProducer) {
@@ -42,6 +66,14 @@ public class TableService {
         this.restaurantEventProducer = restaurantEventProducer;
     }
 
+    /**
+     * Retrieves all tables for a specific restaurant.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @return List of TableDTOs for the restaurant
+     * @throws EntityNotFoundException if the restaurant is not found
+     * @throws ValidationException if the restaurant is inactive
+     */
     public List<TableDTO> getAllTablesByRestaurantId(String restaurantId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
@@ -56,6 +88,14 @@ public class TableService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Retrieves all available tables for a specific restaurant.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @return List of available TableDTOs
+     * @throws EntityNotFoundException if the restaurant is not found
+     * @throws ValidationException if the restaurant is inactive
+     */
     public List<TableDTO> getAvailableTablesByRestaurantId(String restaurantId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurant", restaurantId));
@@ -70,6 +110,14 @@ public class TableService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Retrieves a specific table by its ID.
+     *
+     * @param id The ID of the table to retrieve
+     * @return TableDTO for the requested table
+     * @throws EntityNotFoundException if the table is not found
+     * @throws ValidationException if the restaurant is inactive
+     */
     public TableDTO getTableById(String id) {
         RestaurantTable table = tableRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Table", id));
@@ -82,6 +130,19 @@ public class TableService {
         return convertToDTO(table);
     }
 
+    /**
+     * Creates a new table for a restaurant.
+     * This method:
+     * - Validates the creation request
+     * - Creates the table entity
+     * - Updates restaurant capacity
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param createRequest The table creation request
+     * @return Created TableDTO
+     * @throws EntityNotFoundException if the restaurant is not found
+     * @throws ValidationException if the restaurant is inactive or validation fails
+     */
     @Transactional
     public TableDTO createTable(String restaurantId, TableCreateRequest createRequest) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
@@ -114,6 +175,19 @@ public class TableService {
         return convertToDTO(savedTable);
     }
 
+    /**
+     * Updates an existing table.
+     * This method:
+     * - Validates the update request
+     * - Updates table fields
+     * - Updates restaurant capacity if needed
+     *
+     * @param id The ID of the table to update
+     * @param updateRequest The update request
+     * @return Updated TableDTO
+     * @throws EntityNotFoundException if the table is not found
+     * @throws ValidationException if the restaurant is inactive
+     */
     @Transactional
     public TableDTO updateTable(String id, TableUpdateRequest updateRequest) {
         RestaurantTable table = tableRepository.findById(id)
@@ -161,12 +235,18 @@ public class TableService {
     }
 
     /**
-     * Update table status based on a REST API call or Kafka event.
-     * 
-     * @param id            The table ID
-     * @param status        The new status
-     * @param reservationId The reservation ID (optional)
-     * @return The updated table DTO
+     * Updates the status of a table.
+     * This method:
+     * - Validates the status transition
+     * - Updates the table status
+     * - Publishes a status change event
+     *
+     * @param id The ID of the table
+     * @param status The new status
+     * @param reservationId The ID of the reservation (optional)
+     * @return Updated TableDTO
+     * @throws EntityNotFoundException if the table is not found
+     * @throws ValidationException if the restaurant is inactive or validation fails
      */
     @Transactional
     public TableDTO updateTableStatus(String id, String status, String reservationId) {
@@ -174,12 +254,15 @@ public class TableService {
     }
 
     /**
-     * Update table status without publishing an event (used by Kafka consumer).
-     * 
-     * @param id            The table ID
-     * @param status        The new status
-     * @param reservationId The reservation ID (optional)
-     * @return The updated table DTO
+     * Updates table status without publishing an event.
+     * This method is used by Kafka consumers to avoid event loops.
+     *
+     * @param id The ID of the table
+     * @param status The new status
+     * @param reservationId The ID of the reservation (optional)
+     * @return Updated TableDTO
+     * @throws EntityNotFoundException if the table is not found
+     * @throws ValidationException if the restaurant is inactive or validation fails
      */
     @Transactional
     public TableDTO updateTableStatusWithoutEvent(String id, String status, String reservationId) {
@@ -217,6 +300,16 @@ public class TableService {
         }
     }
 
+    /**
+     * Internal method for updating table status.
+     * This method handles the core status update logic and event publishing.
+     *
+     * @param id The ID of the table
+     * @param status The new status
+     * @param reservationId The ID of the reservation (optional)
+     * @param publishEvent Whether to publish a status change event
+     * @return Updated TableDTO
+     */
     private TableDTO updateTableStatusInternal(String id, String status, String reservationId, boolean publishEvent) {
         RestaurantTable table = tableRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Table", id));
@@ -260,6 +353,14 @@ public class TableService {
         return convertToDTO(updatedTable);
     }
 
+    /**
+     * Validates a table status transition.
+     * This method ensures that status changes follow valid transitions.
+     *
+     * @param table The table to validate
+     * @param newStatus The new status to validate
+     * @throws TableStatusException if the transition is invalid
+     */
     private void validateStatusTransition(RestaurantTable table, String newStatus) {
         String currentStatus = table.getStatus();
         String tableNumber = table.getTableNumber();
@@ -279,6 +380,15 @@ public class TableService {
         }
     }
 
+    /**
+     * Deletes a table.
+     * This method:
+     * - Removes the table
+     * - Updates restaurant capacity
+     *
+     * @param id The ID of the table to delete
+     * @throws EntityNotFoundException if the table is not found
+     */
     @Transactional
     public void deleteTable(String id) {
         RestaurantTable table = tableRepository.findById(id)
@@ -298,6 +408,17 @@ public class TableService {
         updateRestaurantCapacity(restaurant);
     }
 
+    /**
+     * Validates a table creation request.
+     * This method checks:
+     * - Required fields are present
+     * - Table number is unique
+     * - Capacity values are valid
+     *
+     * @param request The creation request to validate
+     * @param restaurantId The ID of the restaurant
+     * @throws ValidationException if validation fails
+     */
     private void validateTableRequest(TableCreateRequest request, String restaurantId) {
         Map<String, String> errors = new HashMap<>();
 
@@ -325,6 +446,13 @@ public class TableService {
         }
     }
 
+    /**
+     * Checks if a table status is valid.
+     *
+     * @param status The status to validate
+     * @return true if the status is valid
+     * @throws ValidationException if the status is invalid
+     */
     private boolean isValidTableStatus(String status) {
         boolean isValid = status.equals(StatusCodes.TABLE_AVAILABLE) ||
                 status.equals(StatusCodes.TABLE_OCCUPIED) ||
@@ -344,6 +472,12 @@ public class TableService {
         return true;
     }
 
+    /**
+     * Updates the total capacity of a restaurant.
+     * This method recalculates the total capacity based on all tables.
+     *
+     * @param restaurant The restaurant to update
+     */
     private void updateRestaurantCapacity(Restaurant restaurant) {
         if (!restaurant.isActive()) {
             throw new ValidationException("restaurant",
@@ -369,6 +503,12 @@ public class TableService {
         }
     }
 
+    /**
+     * Converts a RestaurantTable entity to its DTO representation.
+     *
+     * @param table The RestaurantTable entity to convert
+     * @return TableDTO representation of the entity
+     */
     private TableDTO convertToDTO(RestaurantTable table) {
         TableDTO dto = new TableDTO();
         dto.setId(table.getId());

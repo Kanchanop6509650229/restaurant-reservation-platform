@@ -18,11 +18,40 @@ import com.restaurant.restaurant.domain.repositories.OperatingHoursRepository;
 import com.restaurant.restaurant.domain.repositories.RestaurantRepository;
 import com.restaurant.restaurant.domain.repositories.RestaurantTableRepository;
 
+/**
+ * Configuration class for initializing sample data in the restaurant service.
+ * This class provides sample data for development and testing purposes, including:
+ * - Sample restaurants with different cuisines and locations
+ * - Restaurant tables with varying capacities and locations
+ * - Operating hours with different schedules based on restaurant type
+ * 
+ * The initialization is performed only when:
+ * - The application is not running in test profile
+ * - The restaurant repository is empty
+ * 
+ * Sample data includes:
+ * - Three restaurants: Italian Bistro, Sushi Paradise, and Spice of India
+ * - Customized tables and operating hours for each restaurant type
+ * - Realistic business hours with breaks and special schedules
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
+ */
 @Configuration
 public class DataInitializer {
 
     // Removing the GeometryFactory to avoid issues with spatial data
 
+    /**
+     * Creates a CommandLineRunner bean that initializes sample data.
+     * This method is only active when not running in test profile.
+     * It creates sample restaurants, tables, and operating hours if the database is empty.
+     *
+     * @param restaurantRepository Repository for restaurant entities
+     * @param tableRepository Repository for restaurant table entities
+     * @param operatingHoursRepository Repository for operating hours entities
+     * @return CommandLineRunner that executes the initialization
+     */
     @Bean
     @Profile("!test")
     public CommandLineRunner initData(RestaurantRepository restaurantRepository,
@@ -48,6 +77,17 @@ public class DataInitializer {
         };
     }
     
+    /**
+     * Creates sample restaurant entities with different cuisines and locations.
+     * Each restaurant has:
+     * - Unique name and description
+     * - Complete address information
+     * - Contact details
+     * - Capacity and location coordinates
+     * - Active status and owner ID
+     *
+     * @return List of sample restaurant entities
+     */
     private List<Restaurant> createSampleRestaurants() {
         List<Restaurant> restaurants = new ArrayList<>();
 
@@ -117,6 +157,17 @@ public class DataInitializer {
         return restaurants;
     }
     
+    /**
+     * Creates sample tables for a given restaurant.
+     * The number and configuration of tables varies based on the restaurant's cuisine type:
+     * - Italian: 6 tables with window, center, private, and outdoor locations
+     * - Japanese: 5 tables with tatami, sushi bar, and private locations
+     * - Indian: 7 tables with window, center, outdoor, and private locations
+     * - Others: 3 generic tables
+     *
+     * @param restaurant The restaurant to create tables for
+     * @return List of sample table entities
+     */
     private List<RestaurantTable> createSampleTables(Restaurant restaurant) {
         List<RestaurantTable> tables = new ArrayList<>();
         
@@ -181,6 +232,17 @@ public class DataInitializer {
         return tables;
     }
     
+    /**
+     * Creates operating hours for a given restaurant.
+     * Operating hours vary based on the restaurant's cuisine type:
+     * - Italian: 11:30-22:00, closed on Mondays
+     * - Japanese: 12:00-22:30, closed on Tuesdays, with lunch break 15:00-17:00
+     * - Indian: 12:00-23:00, with special Sunday hours 13:00-22:00
+     * - Others: Default hours 11:00-22:00
+     *
+     * @param restaurant The restaurant to create operating hours for
+     * @return List of operating hours for each day of the week
+     */
     private List<OperatingHours> createSampleOperatingHours(Restaurant restaurant) {
         List<OperatingHours> hours = new ArrayList<>();
         

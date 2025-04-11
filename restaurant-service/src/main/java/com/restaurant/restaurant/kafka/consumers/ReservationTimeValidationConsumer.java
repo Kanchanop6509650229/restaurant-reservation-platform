@@ -20,15 +20,43 @@ import com.restaurant.restaurant.domain.repositories.OperatingHoursRepository;
 import com.restaurant.restaurant.domain.repositories.RestaurantRepository;
 import com.restaurant.restaurant.kafka.producers.RestaurantEventProducer;
 
+/**
+ * Kafka consumer for handling reservation time validation requests.
+ * This consumer provides:
+ * - Time slot validation against restaurant operating hours
+ * - Break time validation
+ * - Restaurant availability checking
+ * - Response event publishing
+ * 
+ * Processes reservation time validation requests and ensures
+ * the requested time is within the restaurant's operating hours
+ * and not during break times.
+ * 
+ * @author Restaurant Reservation Team
+ * @version 1.0
+ */
 @Component
 public class ReservationTimeValidationConsumer {
 
+    /** Logger instance for tracking validation events */
     private static final Logger logger = LoggerFactory.getLogger(ReservationTimeValidationConsumer.class);
     
+    /** Repository for accessing restaurant data */
     private final RestaurantRepository restaurantRepository;
+    
+    /** Repository for accessing operating hours data */
     private final OperatingHoursRepository operatingHoursRepository;
+    
+    /** Producer for publishing validation response events */
     private final RestaurantEventProducer restaurantEventProducer;
     
+    /**
+     * Constructs a new ReservationTimeValidationConsumer with required dependencies.
+     *
+     * @param restaurantRepository Repository for accessing restaurant data
+     * @param operatingHoursRepository Repository for accessing operating hours data
+     * @param restaurantEventProducer Producer for publishing validation responses
+     */
     public ReservationTimeValidationConsumer(
             RestaurantRepository restaurantRepository,
             OperatingHoursRepository operatingHoursRepository,
@@ -38,6 +66,17 @@ public class ReservationTimeValidationConsumer {
         this.restaurantEventProducer = restaurantEventProducer;
     }
     
+    /**
+     * Consumes and processes reservation time validation requests.
+     * Validates the requested reservation time against:
+     * - Restaurant existence and active status
+     * - Operating hours for the specific day
+     * - Break time restrictions
+     * 
+     * Publishes appropriate validation response events based on the validation result.
+     *
+     * @param event The reservation time validation request event
+     */
     @KafkaListener(
             topics = KafkaTopics.RESERVATION_TIME_VALIDATION_REQUEST,
             groupId = "${spring.kafka.consumer.group-id}",
@@ -125,6 +164,12 @@ public class ReservationTimeValidationConsumer {
         }
     }
     
+    /**
+     * Sends a valid reservation time validation response.
+     * Creates and publishes a response event indicating the requested time is valid.
+     *
+     * @param request The original validation request event
+     */
     private void sendValidResponse(ReservationTimeValidationRequestEvent request) {
         ReservationTimeValidationResponseEvent response = new ReservationTimeValidationResponseEvent(
                 request.getRestaurantId(),
@@ -136,10 +181,23 @@ public class ReservationTimeValidationConsumer {
         logger.info("Sent valid time validation response: correlationId={}", request.getCorrelationId());
     }
     
+    /**
+     * Sends an invalid reservation time validation response with default error code.
+     *
+     * @param request The original validation request event
+     * @param errorMessage The error message describing why the time is invalid
+     */
     private void sendInvalidResponse(ReservationTimeValidationRequestEvent request, String errorMessage) {
         sendInvalidResponse(request, errorMessage, ErrorCodes.INVALID_RESERVATION_TIME);
     }
     
+    /**
+     * Sends an invalid reservation time validation response with custom error code.
+     *
+     * @param request The original validation request event
+     * @param errorMessage The error message describing why the time is invalid
+     * @param errorCode The specific error code for this validation failure
+     */
     private void sendInvalidResponse(ReservationTimeValidationRequestEvent request, String errorMessage, String errorCode) {
         ReservationTimeValidationResponseEvent response = new ReservationTimeValidationResponseEvent(
                 request.getRestaurantId(),
