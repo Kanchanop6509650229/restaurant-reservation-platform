@@ -41,7 +41,7 @@ import jakarta.transaction.Transactional;
  * Service class responsible for managing restaurant reservations.
  * Handles all reservation-related operations including creation, modification,
  * confirmation, and cancellation of reservations.
- * 
+ *
  * @author Restaurant Reservation Team
  * @version 1.0
  */
@@ -52,16 +52,16 @@ public class ReservationService {
 
     /** Repository for managing reservation data */
     private final ReservationRepository reservationRepository;
-    
+
     /** Repository for managing reservation quota data */
     private final ReservationQuotaRepository quotaRepository;
-    
+
     /** Service for managing table availability */
     private final TableAvailabilityService tableAvailabilityService;
-    
+
     /** Producer for publishing reservation-related events */
     private final ReservationEventProducer eventProducer;
-    
+
     /** Service for validating restaurant-related operations */
     private final RestaurantValidationService restaurantValidationService;
 
@@ -559,17 +559,22 @@ public class ReservationService {
     /**
      * Checks if a time slot is available for a reservation.
      * Validates against:
-     * - Restaurant operating hours
-     * - Existing reservations
-     * - Table availability
      * - Reservation quotas
+     * - Capacity constraints
+     *
+     * Note: Restaurant operating hours validation is handled separately by RestaurantValidationService
      *
      * @param restaurantId The ID of the restaurant
      * @param reservationTime The desired reservation time
      * @param partySize The size of the party
      * @return true if the time slot is available, false otherwise
+     * @throws RestaurantCapacityException if the time slot is not available or cannot accommodate the party
      */
     private boolean isTimeSlotAvailable(String restaurantId, LocalDateTime reservationTime, int partySize) {
+        if (restaurantId == null || reservationTime == null || partySize <= 0) {
+            throw new IllegalArgumentException("Invalid parameters for checking time slot availability");
+        }
+
         LocalDate date = reservationTime.toLocalDate();
         LocalTime time = reservationTime.toLocalTime();
 
@@ -578,20 +583,30 @@ public class ReservationService {
                 .findByRestaurantIdAndDateAndTimeSlot(restaurantId, date, time)
                 .orElse(null);
 
-        // If no quota exists, assume available (will be created when reservation is
-        // made)
+        // If no quota exists, assume available (will be created when reservation is made)
         if (quota == null) {
+            logger.debug("No quota found for restaurant {} on {} at {}, assuming available",
+                    restaurantId, date, time);
             return true;
         }
 
         // Check availability and throw specific exceptions for better error messages
         if (!quota.hasAvailability()) {
-            String formattedDate = date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy"));
-            String formattedTime = time.format(DateTimeFormatter.ofPattern("h:mm a"));
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMMM d, yyyy");
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("h:mm a");
+            String formattedDate = date.format(dateFormatter);
+            String formattedTime = time.format(timeFormatter);
+
+            logger.debug("No availability for restaurant {} on {} at {}, current capacity: {}/{}",
+                    restaurantId, date, time, quota.getCurrentCapacity(), quota.getMaxCapacity());
+
             throw RestaurantCapacityException.noAvailability(formattedDate, formattedTime);
         }
 
         if (!quota.canAccommodateParty(partySize)) {
+            logger.debug("Cannot accommodate party of {} for restaurant {} on {} at {}, current capacity: {}/{}",
+                    partySize, restaurantId, date, time, quota.getCurrentCapacity(), quota.getMaxCapacity());
+
             throw RestaurantCapacityException.noSuitableTables(partySize);
         }
 
@@ -626,19 +641,66 @@ public class ReservationService {
      */
     private void updateReservationQuotaForTime(String restaurantId, LocalDate date,
             LocalTime time, int partySize, boolean isAdd) {
-        ReservationQuota quota = quotaRepository
-                .findByRestaurantIdAndDateAndTimeSlot(restaurantId, date, time)
-                .orElse(new ReservationQuota(restaurantId, date, time, 10, 100));
-
-        if (isAdd) {
-            quota.setCurrentReservations(quota.getCurrentReservations() + 1);
-            quota.setCurrentCapacity(quota.getCurrentCapacity() + partySize);
-        } else {
-            quota.setCurrentReservations(Math.max(0, quota.getCurrentReservations() - 1));
-            quota.setCurrentCapacity(Math.max(0, quota.getCurrentCapacity() - partySize));
+        if (restaurantId == null || date == null || time == null || partySize <= 0) {
+            logger.warn("Invalid parameters for updating reservation quota");
+            return;
         }
 
-        quotaRepository.save(quota);
+        try {
+            ReservationQuota quota = quotaRepository
+                    .findByRestaurantIdAndDateAndTimeSlot(restaurantId, date, time)
+                    .orElse(null);
+
+            if (quota == null) {
+                // Create new quota if it doesn't exist
+                quota = new ReservationQuota(restaurantId, date, time, 10, 100);
+
+                if (isAdd) {
+                    quota.setCurrentReservations(1);
+                    quota.setCurrentCapacity(partySize);
+                }
+
+                quotaRepository.save(quota);
+                logger.debug("Created new quota: restaurant={}, date={}, time={}, party={}, capacity={}/{}",
+                        restaurantId, date, time, partySize, quota.getCurrentCapacity(), quota.getMaxCapacity());
+            } else {
+                // Update existing quota
+                if (isAdd) {
+                    // Try to increment the quota
+                    int result = quotaRepository.incrementCurrentQuota(
+                            restaurantId, date, time, 1, partySize);
+
+                    if (result > 0) {
+                        logger.debug("Added reservation to quota: restaurant={}, date={}, time={}, party={}",
+                                restaurantId, date, time, partySize);
+                    } else {
+                        logger.warn("Failed to increment quota: restaurant={}, date={}, time={}, party={}",
+                                restaurantId, date, time, partySize);
+                    }
+                } else {
+                    // Try to decrement the quota
+                    int result = quotaRepository.decrementCurrentQuota(
+                            restaurantId, date, time, 1, partySize);
+
+                    if (result > 0) {
+                        logger.debug("Removed reservation from quota: restaurant={}, date={}, time={}, party={}",
+                                restaurantId, date, time, partySize);
+                    } else {
+                        logger.warn("Failed to decrement quota: restaurant={}, date={}, time={}, party={}",
+                                restaurantId, date, time, partySize);
+
+                        // Fallback to direct update if the decrement fails
+                        quota.setCurrentReservations(Math.max(0, quota.getCurrentReservations() - 1));
+                        quota.setCurrentCapacity(Math.max(0, quota.getCurrentCapacity() - partySize));
+                        quotaRepository.save(quota);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error updating reservation quota: {}", e.getMessage(), e);
+            // Don't throw the exception as this is a non-critical operation
+            // The reservation can still be created/updated even if quota update fails
+        }
     }
 
     /**
@@ -647,50 +709,73 @@ public class ReservationService {
      * - Party size limits
      * - Reservation time constraints
      * - Required fields
+     * - Contact information
      *
      * @param request The reservation creation request to validate
      * @throws ValidationException if any validation fails
      */
     private void validateReservationRequest(ReservationCreateRequest request) {
+        Map<String, String> errors = new HashMap<>();
+
+        // Validate restaurant ID
         if (request.getRestaurantId() == null || request.getRestaurantId().isEmpty()) {
-            throw new ValidationException("restaurantId", "Restaurant ID is required to create a reservation");
+            errors.put("restaurantId", "Restaurant ID is required to create a reservation");
         }
 
+        // Validate reservation time
         if (request.getReservationTime() == null) {
-            throw new ValidationException("reservationTime", "Reservation date and time are required");
+            errors.put("reservationTime", "Reservation date and time are required");
+        } else {
+            try {
+                validateReservationTime(request.getReservationTime());
+            } catch (ValidationException e) {
+                errors.put("reservationTime", e.getMessage());
+            }
         }
 
-        validateReservationTime(request.getReservationTime());
-        validatePartySize(request.getPartySize());
+        // Validate party size
+        try {
+            validatePartySize(request.getPartySize());
+        } catch (ValidationException e) {
+            errors.put("partySize", e.getMessage());
+        }
 
+        // Validate customer name
         if (request.getCustomerName() == null || request.getCustomerName().isEmpty()) {
-            throw new ValidationException("customerName", "Customer name is required for the reservation");
+            errors.put("customerName", "Customer name is required for the reservation");
+        } else if (request.getCustomerName().length() < 2) {
+            errors.put("customerName", "Customer name must be at least 2 characters");
         }
 
-        // Check phone or email is provided
-        if ((request.getCustomerPhone() == null || request.getCustomerPhone().isEmpty()) &&
-                (request.getCustomerEmail() == null || request.getCustomerEmail().isEmpty())) {
-            Map<String, String> errors = new HashMap<>();
+        // Validate contact information (phone or email is required)
+        boolean hasPhone = request.getCustomerPhone() != null && !request.getCustomerPhone().isEmpty();
+        boolean hasEmail = request.getCustomerEmail() != null && !request.getCustomerEmail().isEmpty();
+
+        if (!hasPhone && !hasEmail) {
             errors.put("customerPhone", "Either phone number or email is required");
             errors.put("customerEmail", "Either phone number or email is required");
-            throw new ValidationException("Contact information required", errors);
-        }
+        } else {
+            // Validate email format if provided
+            if (hasEmail) {
+                String emailRegex = "^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}$";
+                Pattern pattern = Pattern.compile(emailRegex, Pattern.CASE_INSENSITIVE);
+                if (!pattern.matcher(request.getCustomerEmail()).matches()) {
+                    errors.put("customerEmail", "Please provide a valid email address");
+                }
+            }
 
-        // Validate email format if provided
-        if (request.getCustomerEmail() != null && !request.getCustomerEmail().isEmpty()) {
-            String emailRegex = "^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}$";
-            Pattern pattern = Pattern.compile(emailRegex, Pattern.CASE_INSENSITIVE);
-            if (!pattern.matcher(request.getCustomerEmail()).matches()) {
-                throw new ValidationException("customerEmail", "Please provide a valid email address");
+            // Validate phone format if provided
+            if (hasPhone) {
+                String phoneRegex = "^\\+?[0-9]{10,15}$";
+                if (!request.getCustomerPhone().matches(phoneRegex)) {
+                    errors.put("customerPhone", "Please provide a valid phone number");
+                }
             }
         }
 
-        // Validate phone format if provided
-        if (request.getCustomerPhone() != null && !request.getCustomerPhone().isEmpty()) {
-            String phoneRegex = "^\\+?[0-9]{10,15}$";
-            if (!request.getCustomerPhone().matches(phoneRegex)) {
-                throw new ValidationException("customerPhone", "Please provide a valid phone number");
-            }
+        // If any validation errors were found, throw an exception
+        if (!errors.isEmpty()) {
+            throw new ValidationException("Validation failed for reservation request", errors);
         }
     }
 
@@ -705,33 +790,33 @@ public class ReservationService {
      * @throws ValidationException if the time is invalid
      */
     private void validateReservationTime(LocalDateTime reservationTime) {
-        // Check if reservation time is in the future
+        if (reservationTime == null) {
+            throw new ValidationException("reservationTime", "Reservation time cannot be null");
+        }
+
+        // Check if reservation time is in the future with minimum advance notice
         LocalDateTime minTime = LocalDateTime.now().plusMinutes(minAdvanceBookingMinutes);
         if (reservationTime.isBefore(minTime)) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("h:mm a 'on' MMMM d, yyyy");
             throw new ValidationException("reservationTime",
                     String.format("Reservations must be made at least %d minutes in advance. " +
                             "The earliest available time is %s.",
                             minAdvanceBookingMinutes,
-                            minTime.format(DateTimeFormatter.ofPattern("h:mm a 'on' MMMM d, yyyy"))));
+                            minTime.format(formatter)));
         }
 
-        // Check if reservation is within acceptable future window (e.g., not more than
-        // 3 months ahead)
+        // Check if reservation is within acceptable future window
         LocalDateTime maxFutureTime = LocalDateTime.now().plusDays(maxFutureDays);
         if (reservationTime.isAfter(maxFutureTime)) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy");
             throw new ValidationException("reservationTime",
                     String.format("Reservations cannot be made more than %d days in advance. " +
                             "The latest date available for reservations is %s.",
                             maxFutureDays,
-                            maxFutureTime.format(DateTimeFormatter.ofPattern("MMMM d, yyyy"))));
+                            maxFutureTime.format(formatter)));
         }
 
-        // Check if reservation is during operating hours (simplified example)
-        // LocalTime time = reservationTime.toLocalTime();
-        // if (time.isBefore(LocalTime.of(10, 0)) || time.isAfter(LocalTime.of(22, 0))) {
-        //     throw new ValidationException("reservationTime",
-        //             "Reservations are only accepted between 10:00 AM and 10:00 PM");
-        // }
+        // Note: Operating hours validation is handled by RestaurantValidationService
     }
 
     /**
@@ -740,6 +825,7 @@ public class ReservationService {
      *
      * @param partySize The party size to validate
      * @throws ValidationException if the party size is invalid
+     * @throws RestaurantCapacityException if the party is too large for the restaurant
      */
     private void validatePartySize(int partySize) {
         if (partySize <= 0) {
@@ -750,7 +836,7 @@ public class ReservationService {
             throw RestaurantCapacityException.partyTooLarge(partySize, maxPartySize);
         }
 
-        // If it's a large party (e.g., >8), provide additional information
+        // Log large party reservations for monitoring
         if (partySize > 8) {
             logger.info("Large party reservation requested: {} people", partySize);
         }

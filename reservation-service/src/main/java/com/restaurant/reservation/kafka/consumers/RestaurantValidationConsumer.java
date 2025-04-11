@@ -15,14 +15,14 @@ import com.restaurant.reservation.service.RestaurantResponseManager;
  * This class handles responses to restaurant validation requests and reservation
  * time validation requests, ensuring that reservations are only made for valid
  * restaurants and during valid operating hours.
- * 
+ *
  * The consumer processes two types of responses:
  * 1. Restaurant validation responses - confirming restaurant existence
  * 2. Reservation time validation responses - confirming valid reservation times
- * 
+ *
  * Responses are processed through the RestaurantResponseManager to complete
  * asynchronous validation requests.
- * 
+ *
  * @author Restaurant Reservation Team
  * @version 1.0
  */
@@ -31,10 +31,10 @@ public class RestaurantValidationConsumer {
 
     /** Logger instance for tracking validation responses */
     private static final Logger logger = LoggerFactory.getLogger(RestaurantValidationConsumer.class);
-    
+
     /** Manager for handling restaurant validation responses */
     private final RestaurantResponseManager responseManager;
-    
+
     /**
      * Constructs a new RestaurantValidationConsumer with the specified response manager.
      *
@@ -43,7 +43,7 @@ public class RestaurantValidationConsumer {
     public RestaurantValidationConsumer(RestaurantResponseManager responseManager) {
         this.responseManager = responseManager;
     }
-    
+
     /**
      * Consumes restaurant validation response events from the Kafka topic.
      * This method processes responses to restaurant validation requests,
@@ -58,17 +58,28 @@ public class RestaurantValidationConsumer {
             containerFactory = "restaurantValidationKafkaListenerContainerFactory"
     )
     public void consumeRestaurantValidationResponse(RestaurantValidationResponseEvent event) {
-        logger.info("Received restaurant validation response: correlationId={}, restaurantId={}, exists={}", 
-                event.getCorrelationId(), event.getRestaurantId(), event.isExists());
-        
+        if (event == null) {
+            logger.warn("Received null restaurant validation response event");
+            return;
+        }
+
+        logger.info("Received restaurant validation response: correlationId={}, restaurantId={}, exists={}, active={}, errorMessage={}",
+                event.getCorrelationId(),
+                event.getRestaurantId(),
+                event.isExists(),
+                event.isActive(),
+                event.getErrorMessage() != null ? event.getErrorMessage() : "none");
+
         try {
             // Pass the response to the manager to complete the CompletableFuture
             responseManager.completeResponse(event);
+            logger.debug("Processed restaurant validation response for correlationId={}", event.getCorrelationId());
         } catch (Exception e) {
-            logger.error("Error processing restaurant validation response: {}", e.getMessage(), e);
+            logger.error("Error processing restaurant validation response: correlationId={}, error={}",
+                    event.getCorrelationId(), e.getMessage(), e);
         }
     }
-    
+
     /**
      * Consumes reservation time validation response events from the Kafka topic.
      * This method processes responses to reservation time validation requests,
@@ -83,9 +94,17 @@ public class RestaurantValidationConsumer {
             containerFactory = "reservationTimeValidationKafkaListenerContainerFactory"
     )
     public void consumeReservationTimeValidationResponse(ReservationTimeValidationResponseEvent event) {
-        logger.info("Received reservation time validation response: correlationId={}, restaurantId={}, valid={}", 
-                event.getCorrelationId(), event.getRestaurantId(), event.isValid());
-        
+        if (event == null) {
+            logger.warn("Received null reservation time validation response event");
+            return;
+        }
+
+        logger.info("Received reservation time validation response: correlationId={}, restaurantId={}, valid={}, errorMessage={}",
+                event.getCorrelationId(),
+                event.getRestaurantId(),
+                event.isValid(),
+                event.getErrorMessage() != null ? event.getErrorMessage() : "none");
+
         try {
             // Convert to RestaurantValidationResponseEvent since that's what our response manager expects
             RestaurantValidationResponseEvent responseEvent = new RestaurantValidationResponseEvent(
@@ -94,16 +113,18 @@ public class RestaurantValidationConsumer {
                 true,  // Always set exists to true as we're handling time validation only
                 true   // Set active to true by default
             );
-            
+
             // If time validation failed, set the error message
             if (!event.isValid()) {
                 responseEvent.setErrorMessage(event.getErrorMessage());
             }
-            
+
             // Pass the converted response to the manager to complete the CompletableFuture
             responseManager.completeResponse(responseEvent);
+            logger.debug("Processed time validation response for correlationId={}", event.getCorrelationId());
         } catch (Exception e) {
-            logger.error("Error processing reservation time validation response: {}", e.getMessage(), e);
+            logger.error("Error processing reservation time validation response: correlationId={}, error={}",
+                    event.getCorrelationId(), e.getMessage(), e);
         }
     }
 }

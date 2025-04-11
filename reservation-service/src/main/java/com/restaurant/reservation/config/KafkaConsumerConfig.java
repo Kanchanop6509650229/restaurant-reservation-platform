@@ -24,6 +24,19 @@ import com.restaurant.common.events.user.UserEvent;
  * Defines multiple consumer factories and listener container factories
  * for different types of events in the system.
  * Handles deserialization and error handling for Kafka messages.
+ *
+ * This configuration includes:
+ * - General restaurant event consumers
+ * - User event consumers
+ * - Table availability event consumers
+ * - Restaurant validation event consumers
+ * - Reservation time validation event consumers
+ *
+ * Each consumer type has its own factory and container factory with specific
+ * settings for handling different event types.
+ *
+ * @author Restaurant Reservation Team
+ * @version 1.0
  */
 @Configuration
 public class KafkaConsumerConfig {

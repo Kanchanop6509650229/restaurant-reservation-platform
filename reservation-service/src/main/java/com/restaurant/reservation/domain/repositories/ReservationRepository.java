@@ -1,23 +1,33 @@
 package com.restaurant.reservation.domain.repositories;
 
-import com.restaurant.reservation.domain.models.Reservation;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import com.restaurant.reservation.domain.models.Reservation;
 
 /**
  * Repository interface for managing Reservation entities.
  * Provides methods for querying and managing restaurant reservations,
  * including pagination support and complex queries for reservation management.
- * 
+ *
+ * This repository includes:
+ * - User-specific reservation queries
+ * - Restaurant-specific reservation queries
+ * - Time-based reservation filtering
+ * - Conflict detection for overlapping reservations
+ * - Status-based reservation management
+ * - Automated reservation lifecycle management
+ *
  * @author Restaurant Reservation Team
- * @version 1.0
+ * @version 1.1
  */
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, String> {
@@ -26,10 +36,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, String
      * Finds all reservations for a specific user.
      *
      * @param userId The ID of the user
-     * @return List of reservations for the specified user
+     * @return List of reservations for the specified user, ordered by reservation time descending
      */
-    List<Reservation> findByUserId(String userId);
-    
+    @Query("SELECT r FROM Reservation r WHERE r.userId = :userId ORDER BY r.reservationTime DESC")
+    List<Reservation> findByUserId(@Param("userId") String userId);
+
     /**
      * Finds all reservations for a specific user with pagination support.
      *
@@ -37,16 +48,18 @@ public interface ReservationRepository extends JpaRepository<Reservation, String
      * @param pageable Pagination information
      * @return Page of reservations for the specified user
      */
-    Page<Reservation> findByUserId(String userId, Pageable pageable);
-    
+    @Query("SELECT r FROM Reservation r WHERE r.userId = :userId ORDER BY r.reservationTime DESC")
+    Page<Reservation> findByUserId(@Param("userId") String userId, Pageable pageable);
+
     /**
      * Finds all reservations for a specific restaurant.
      *
      * @param restaurantId The ID of the restaurant
-     * @return List of reservations for the specified restaurant
+     * @return List of reservations for the specified restaurant, ordered by reservation time descending
      */
-    List<Reservation> findByRestaurantId(String restaurantId);
-    
+    @Query("SELECT r FROM Reservation r WHERE r.restaurantId = :restaurantId ORDER BY r.reservationTime DESC")
+    List<Reservation> findByRestaurantId(@Param("restaurantId") String restaurantId);
+
     /**
      * Finds all reservations for a specific restaurant with pagination support.
      *
@@ -54,17 +67,21 @@ public interface ReservationRepository extends JpaRepository<Reservation, String
      * @param pageable Pagination information
      * @return Page of reservations for the specified restaurant
      */
-    Page<Reservation> findByRestaurantId(String restaurantId, Pageable pageable);
-    
+    @Query("SELECT r FROM Reservation r WHERE r.restaurantId = :restaurantId ORDER BY r.reservationTime DESC")
+    Page<Reservation> findByRestaurantId(@Param("restaurantId") String restaurantId, Pageable pageable);
+
     /**
      * Finds all reservations for a specific restaurant with a given status.
      *
      * @param restaurantId The ID of the restaurant
      * @param status The status of the reservations to find
-     * @return List of reservations matching the criteria
+     * @return List of reservations matching the criteria, ordered by reservation time descending
      */
-    List<Reservation> findByRestaurantIdAndStatus(String restaurantId, String status);
-    
+    @Query("SELECT r FROM Reservation r WHERE r.restaurantId = :restaurantId AND r.status = :status ORDER BY r.reservationTime DESC")
+    List<Reservation> findByRestaurantIdAndStatus(
+            @Param("restaurantId") String restaurantId,
+            @Param("status") String status);
+
     /**
      * Finds all reservations for a specific restaurant within a given time range.
      *
@@ -79,7 +96,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, String
             @Param("restaurantId") String restaurantId,
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime);
-    
+
     /**
      * Finds all reservations that conflict with a given time slot for a specific table.
      * A conflict occurs when:
@@ -103,7 +120,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, String
             @Param("tableId") String tableId,
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime);
-    
+
     /**
      * Finds all pending reservations that have passed their confirmation deadline.
      * These reservations should be automatically cancelled.
@@ -114,7 +131,22 @@ public interface ReservationRepository extends JpaRepository<Reservation, String
     @Query("SELECT r FROM Reservation r WHERE r.status = 'PENDING' AND " +
            "r.confirmationDeadline < :now")
     List<Reservation> findExpiredPendingReservations(@Param("now") LocalDateTime now);
-    
+
+    /**
+     * Updates the status of expired pending reservations to CANCELLED.
+     * This method is used for batch processing of expired reservations.
+     *
+     * @param now The current time
+     * @param newStatus The new status to set (typically 'CANCELLED')
+     * @return The number of reservations updated
+     */
+    @Modifying
+    @Query("UPDATE Reservation r SET r.status = :newStatus, r.updatedAt = :now " +
+           "WHERE r.status = 'PENDING' AND r.confirmationDeadline < :now")
+    int updateExpiredPendingReservations(
+            @Param("now") LocalDateTime now,
+            @Param("newStatus") String newStatus);
+
     /**
      * Finds all confirmed reservations that are in the past but not yet marked as completed.
      * These reservations should be automatically marked as completed.
@@ -125,4 +157,36 @@ public interface ReservationRepository extends JpaRepository<Reservation, String
     @Query("SELECT r FROM Reservation r WHERE r.status = 'CONFIRMED' AND " +
            "r.reservationTime < :pastTime")
     List<Reservation> findUncompletedPastReservations(@Param("pastTime") LocalDateTime pastTime);
+
+    /**
+     * Updates the status of past confirmed reservations to COMPLETED.
+     * This method is used for batch processing of completed reservations.
+     *
+     * @param pastTime The time to compare against (typically current time)
+     * @param newStatus The new status to set (typically 'COMPLETED')
+     * @return The number of reservations updated
+     */
+    @Modifying
+    @Query("UPDATE Reservation r SET r.status = :newStatus, r.updatedAt = :now " +
+           "WHERE r.status = 'CONFIRMED' AND r.reservationTime < :pastTime")
+    int updateUncompletedPastReservations(
+            @Param("pastTime") LocalDateTime pastTime,
+            @Param("now") LocalDateTime now,
+            @Param("newStatus") String newStatus);
+
+    /**
+     * Counts the number of reservations for a specific restaurant on a given date.
+     *
+     * @param restaurantId The ID of the restaurant
+     * @param startOfDay The start of the day
+     * @param endOfDay The end of the day
+     * @return The count of reservations
+     */
+    @Query("SELECT COUNT(r) FROM Reservation r WHERE r.restaurantId = :restaurantId AND " +
+           "r.reservationTime >= :startOfDay AND r.reservationTime < :endOfDay AND " +
+           "r.status IN ('CONFIRMED', 'PENDING')")
+    long countReservationsForDate(
+            @Param("restaurantId") String restaurantId,
+            @Param("startOfDay") LocalDateTime startOfDay,
+            @Param("endOfDay") LocalDateTime endOfDay);
 }

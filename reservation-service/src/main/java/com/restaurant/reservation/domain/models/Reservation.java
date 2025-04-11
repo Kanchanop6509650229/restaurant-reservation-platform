@@ -1,20 +1,53 @@
 package com.restaurant.reservation.domain.models;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
+
+import com.restaurant.common.constants.StatusCodes;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * Entity class representing a restaurant reservation.
  * This class maps to the 'reservations' table in the database and contains
  * all the information about a restaurant reservation.
- * 
+ *
+ * Features:
+ * - Complete reservation lifecycle management (creation, confirmation, cancellation, completion)
+ * - History tracking for all changes
+ * - Status-based state management
+ * - Validation constraints for data integrity
+ * - Automatic timestamp management
+ *
  * @author Restaurant Reservation Team
- * @version 1.0
+ * @version 1.1
  */
 @Entity
-@Table(name = "reservations")
+@Table(name = "reservations",
+       indexes = {
+           @Index(name = "idx_reservation_user_id", columnList = "userId"),
+           @Index(name = "idx_reservation_restaurant_id", columnList = "restaurantId"),
+           @Index(name = "idx_reservation_status", columnList = "status"),
+           @Index(name = "idx_reservation_time", columnList = "reservationTime")
+       })
 public class Reservation {
 
     /** Unique identifier for the reservation */
@@ -23,10 +56,12 @@ public class Reservation {
     private String id;
 
     /** ID of the user who made the reservation */
+    @NotBlank(message = "User ID is required")
     @Column(nullable = false)
     private String userId;
 
     /** ID of the restaurant where the reservation is made */
+    @NotBlank(message = "Restaurant ID is required")
     @Column(nullable = false)
     private String restaurantId;
 
@@ -34,39 +69,51 @@ public class Reservation {
     private String tableId;
 
     /** Date and time of the reservation */
+    @NotNull(message = "Reservation time is required")
     @Column(nullable = false)
     private LocalDateTime reservationTime;
 
     /** Number of people in the party */
+    @Min(value = 1, message = "Party size must be at least 1")
     @Column(nullable = false)
     private int partySize;
 
     /** Duration of the reservation in minutes */
+    @Min(value = 15, message = "Duration must be at least 15 minutes")
     @Column(nullable = false)
     private int durationMinutes;
 
-    /** Current status of the reservation (PENDING, CONFIRMED, CANCELLED, COMPLETED, NO_SHOW) */
+    /** Current status of the reservation */
+    @NotBlank(message = "Status is required")
     @Column(nullable = false)
-    private String status; // PENDING, CONFIRMED, CANCELLED, COMPLETED, NO_SHOW
+    private String status = StatusCodes.RESERVATION_PENDING;
 
     /** Name of the customer making the reservation */
+    @NotBlank(message = "Customer name is required")
+    @Size(min = 2, max = 255, message = "Customer name must be between 2 and 255 characters")
     @Column(nullable = false)
     private String customerName;
 
     /** Phone number of the customer */
+    @Size(max = 20, message = "Phone number must be at most 20 characters")
     private String customerPhone;
 
     /** Email address of the customer */
+    @Email(message = "Email must be valid")
+    @Size(max = 255, message = "Email must be at most 255 characters")
     private String customerEmail;
 
     /** Any special requests or notes for the reservation */
+    @Size(max = 1000, message = "Special requests must be at most 1000 characters")
+    @Column(length = 1000)
     private String specialRequests;
 
     /** Flag indicating if reminders are enabled for this reservation */
-    private boolean remindersEnabled;
+    @Column(nullable = false)
+    private boolean remindersEnabled = true;
 
     /** Set of history records tracking changes to the reservation */
-    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Set<ReservationHistory> history = new HashSet<>();
 
     /** Date and time when the reservation was created */
@@ -90,6 +137,8 @@ public class Reservation {
     private LocalDateTime completedAt;
 
     /** Reason for cancellation if the reservation was cancelled */
+    @Size(max = 500, message = "Cancellation reason must be at most 500 characters")
+    @Column(length = 500)
     private String cancellationReason;
 
     /**
@@ -98,8 +147,14 @@ public class Reservation {
      */
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = this.createdAt;
+        LocalDateTime now = LocalDateTime.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+
+        // Set default status if not already set
+        if (this.status == null) {
+            this.status = StatusCodes.RESERVATION_PENDING;
+        }
     }
 
     /**
@@ -127,7 +182,79 @@ public class Reservation {
      * @return The end time of the reservation
      */
     public LocalDateTime getEndTime() {
-        return reservationTime.plusMinutes(durationMinutes);
+        return reservationTime != null ? reservationTime.plusMinutes(durationMinutes) : null;
+    }
+
+    /**
+     * Checks if the reservation is in a final state (completed, cancelled, or no-show).
+     *
+     * @return true if the reservation is in a final state, false otherwise
+     */
+    public boolean isInFinalState() {
+        if (status == null) {
+            return false;
+        }
+        return StatusCodes.RESERVATION_COMPLETED.equals(status) ||
+               StatusCodes.RESERVATION_CANCELLED.equals(status) ||
+               StatusCodes.RESERVATION_NO_SHOW.equals(status);
+    }
+
+    /**
+     * Checks if the reservation is active (pending or confirmed).
+     *
+     * @return true if the reservation is active, false otherwise
+     */
+    public boolean isActive() {
+        if (status == null) {
+            return false;
+        }
+        return StatusCodes.RESERVATION_PENDING.equals(status) ||
+               StatusCodes.RESERVATION_CONFIRMED.equals(status);
+    }
+
+    /**
+     * Checks if the reservation is confirmed.
+     *
+     * @return true if the reservation is confirmed, false otherwise
+     */
+    public boolean isConfirmed() {
+        return StatusCodes.RESERVATION_CONFIRMED.equals(status);
+    }
+
+    /**
+     * Checks if the reservation is pending.
+     *
+     * @return true if the reservation is pending, false otherwise
+     */
+    public boolean isPending() {
+        return StatusCodes.RESERVATION_PENDING.equals(status);
+    }
+
+    /**
+     * Checks if the reservation is cancelled.
+     *
+     * @return true if the reservation is cancelled, false otherwise
+     */
+    public boolean isCancelled() {
+        return StatusCodes.RESERVATION_CANCELLED.equals(status);
+    }
+
+    /**
+     * Checks if the reservation is completed.
+     *
+     * @return true if the reservation is completed, false otherwise
+     */
+    public boolean isCompleted() {
+        return StatusCodes.RESERVATION_COMPLETED.equals(status);
+    }
+
+    /**
+     * Checks if the reservation is marked as no-show.
+     *
+     * @return true if the reservation is marked as no-show, false otherwise
+     */
+    public boolean isNoShow() {
+        return StatusCodes.RESERVATION_NO_SHOW.equals(status);
     }
 
     /** Default constructor required by JPA */
@@ -144,7 +271,7 @@ public class Reservation {
      * @param durationMinutes Duration of the reservation in minutes
      * @param customerName Name of the customer
      */
-    public Reservation(String userId, String restaurantId, LocalDateTime reservationTime, 
+    public Reservation(String userId, String restaurantId, LocalDateTime reservationTime,
                       int partySize, int durationMinutes, String customerName) {
         this.userId = userId;
         this.restaurantId = restaurantId;
@@ -531,5 +658,31 @@ public class Reservation {
      */
     public void setCancellationReason(String cancellationReason) {
         this.cancellationReason = cancellationReason;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Reservation that = (Reservation) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "Reservation{" +
+                "id='" + id + '\'' +
+                ", restaurantId='" + restaurantId + '\'' +
+                ", tableId='" + tableId + '\'' +
+                ", reservationTime=" + reservationTime +
+                ", partySize=" + partySize +
+                ", status='" + status + '\'' +
+                ", customerName='" + customerName + '\'' +
+                '}';
     }
 }

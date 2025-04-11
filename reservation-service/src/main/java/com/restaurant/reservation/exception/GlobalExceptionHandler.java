@@ -1,5 +1,6 @@
 package com.restaurant.reservation.exception;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,17 +33,17 @@ import jakarta.servlet.http.HttpServletRequest;
  * the handling of all exceptions thrown by the application. This class
  * provides consistent error responses across all endpoints and ensures
  * proper logging of exceptions.
- * 
+ *
  * The handler processes various types of exceptions:
  * - Entity not found exceptions
  * - Validation exceptions
  * - Authentication and authorization exceptions
  * - Reservation-specific exceptions
  * - General application exceptions
- * 
+ *
  * Each exception handler method returns a standardized ResponseDTO
  * with appropriate HTTP status codes and error messages.
- * 
+ *
  * @author Restaurant Reservation Team
  * @version 1.0
  */
@@ -84,6 +85,7 @@ public class GlobalExceptionHandler {
 
                 ResponseDTO<Void> responseDTO = ResponseDTO.error(message, errorCode);
                 responseDTO.setRequestId(RequestIdFilter.getCurrentRequestId(httpRequest));
+                responseDTO.setTimestamp(LocalDateTime.now());
 
                 return ResponseEntity
                                 .status(HttpStatus.NOT_FOUND)
@@ -110,6 +112,7 @@ public class GlobalExceptionHandler {
                 responseDTO.setErrorCode(ErrorCodes.VALIDATION_ERROR);
                 responseDTO.setData(ex.getValidationErrors());
                 responseDTO.setRequestId(RequestIdFilter.getCurrentRequestId(request));
+                responseDTO.setTimestamp(LocalDateTime.now());
 
                 return ResponseEntity
                                 .status(HttpStatus.BAD_REQUEST)
@@ -131,6 +134,7 @@ public class GlobalExceptionHandler {
 
                 ResponseDTO<Void> responseDTO = ResponseDTO.error(ex.getMessage(), ex.getErrorCode());
                 responseDTO.setRequestId(RequestIdFilter.getCurrentRequestId(request));
+                responseDTO.setTimestamp(LocalDateTime.now());
 
                 return ResponseEntity
                                 .status(HttpStatus.UNAUTHORIZED)
@@ -149,9 +153,12 @@ public class GlobalExceptionHandler {
                 String message = "You don't have permission to perform this operation. Please contact an administrator if you require access.";
                 logger.error("Access denied: {}", ex.getMessage());
 
+                ResponseDTO<Void> responseDTO = ResponseDTO.error(message, ErrorCodes.FORBIDDEN);
+                responseDTO.setTimestamp(LocalDateTime.now());
+
                 return ResponseEntity
                                 .status(HttpStatus.FORBIDDEN)
-                                .body(ResponseDTO.error(message, ErrorCodes.FORBIDDEN));
+                                .body(responseDTO);
         }
 
         /**
@@ -180,6 +187,7 @@ public class GlobalExceptionHandler {
                                 "The request contains invalid data. Please review the errors and correct your submission.");
                 responseDTO.setErrorCode(ErrorCodes.VALIDATION_ERROR);
                 responseDTO.setData(errors);
+                responseDTO.setTimestamp(LocalDateTime.now());
 
                 return ResponseEntity
                                 .status(HttpStatus.BAD_REQUEST)
@@ -197,15 +205,21 @@ public class GlobalExceptionHandler {
         public ResponseEntity<ResponseDTO<Void>> handleMethodArgumentTypeMismatchException(
                         MethodArgumentTypeMismatchException ex) {
 
+                String requiredType = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "appropriate";
+                String value = ex.getValue() != null ? ex.getValue().toString() : "null";
+
                 String message = String.format(
                                 "The parameter '%s' has an invalid value: '%s'. Please provide a valid %s value.",
-                                ex.getName(), ex.getValue(), ex.getRequiredType().getSimpleName());
+                                ex.getName(), value, requiredType);
 
                 logger.error("Type mismatch: {}", message);
 
+                ResponseDTO<Void> responseDTO = ResponseDTO.error(message, ErrorCodes.VALIDATION_ERROR);
+                responseDTO.setTimestamp(LocalDateTime.now());
+
                 return ResponseEntity
                                 .status(HttpStatus.BAD_REQUEST)
-                                .body(ResponseDTO.error(message, ErrorCodes.VALIDATION_ERROR));
+                                .body(responseDTO);
         }
 
         /**
@@ -223,9 +237,12 @@ public class GlobalExceptionHandler {
 
                 logger.error("Endpoint not found: {}", message);
 
+                ResponseDTO<Void> responseDTO = ResponseDTO.error(message, ErrorCodes.NOT_FOUND);
+                responseDTO.setTimestamp(LocalDateTime.now());
+
                 return ResponseEntity
                                 .status(HttpStatus.NOT_FOUND)
-                                .body(ResponseDTO.error(message, ErrorCodes.NOT_FOUND));
+                                .body(responseDTO);
         }
 
         /**
@@ -239,9 +256,12 @@ public class GlobalExceptionHandler {
         public ResponseEntity<ResponseDTO<Void>> handleReservationConflictException(ReservationConflictException ex) {
                 logger.error("Reservation conflict: {}", ex.getMessage());
 
+                ResponseDTO<Void> responseDTO = ResponseDTO.error(ex.getMessage(), ErrorCodes.RESERVATION_CONFLICT);
+                responseDTO.setTimestamp(LocalDateTime.now());
+
                 return ResponseEntity
                                 .status(HttpStatus.CONFLICT)
-                                .body(ResponseDTO.error(ex.getMessage(), ErrorCodes.RESERVATION_CONFLICT));
+                                .body(responseDTO);
         }
 
         /**
@@ -255,9 +275,12 @@ public class GlobalExceptionHandler {
         public ResponseEntity<ResponseDTO<Void>> handleRestaurantCapacityException(RestaurantCapacityException ex) {
                 logger.error("Restaurant capacity issue: {}", ex.getMessage());
 
+                ResponseDTO<Void> responseDTO = ResponseDTO.error(ex.getMessage(), ErrorCodes.RESTAURANT_FULLY_BOOKED);
+                responseDTO.setTimestamp(LocalDateTime.now());
+
                 return ResponseEntity
                                 .status(HttpStatus.CONFLICT)
-                                .body(ResponseDTO.error(ex.getMessage(), ErrorCodes.RESTAURANT_FULLY_BOOKED));
+                                .body(responseDTO);
         }
 
         /**
@@ -272,9 +295,12 @@ public class GlobalExceptionHandler {
                 logger.error("Application error: {} with error code: {}",
                                 ex.getMessage(), ex.getErrorCode(), ex);
 
+                ResponseDTO<Void> responseDTO = ResponseDTO.error(ex.getMessage(), ex.getErrorCode());
+                responseDTO.setTimestamp(LocalDateTime.now());
+
                 return ResponseEntity
                                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(ResponseDTO.error(ex.getMessage(), ex.getErrorCode()));
+                                .body(responseDTO);
         }
 
         /**
@@ -292,8 +318,11 @@ public class GlobalExceptionHandler {
                 String message = "An unexpected error occurred while processing your request. " +
                                 "Our technical team has been notified and is working to resolve the issue.";
 
+                ResponseDTO<Void> responseDTO = ResponseDTO.error(message, ErrorCodes.GENERAL_ERROR);
+                responseDTO.setTimestamp(LocalDateTime.now());
+
                 return ResponseEntity
                                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(ResponseDTO.error(message, ErrorCodes.GENERAL_ERROR));
+                                .body(responseDTO);
         }
 }

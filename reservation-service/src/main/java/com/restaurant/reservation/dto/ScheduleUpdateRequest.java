@@ -2,13 +2,23 @@ package com.restaurant.reservation.dto;
 
 import java.time.LocalTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
+
 /**
  * Data Transfer Object (DTO) for updating restaurant schedule information.
  * This class represents the request payload for modifying an existing schedule,
  * containing only the fields that can be updated by the client.
- * 
+ *
+ * This class includes validation constraints to ensure that:
+ * - Time values are properly formatted
+ * - Text fields don't exceed maximum lengths
+ * - Numeric values are within acceptable ranges
+ *
  * @author Restaurant Reservation Team
- * @version 1.0
+ * @version 1.1
  */
 public class ScheduleUpdateRequest {
 
@@ -16,15 +26,19 @@ public class ScheduleUpdateRequest {
     private boolean closed;
 
     /** New opening time for the restaurant */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     private LocalTime openTime;
 
     /** New closing time for the restaurant */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     private LocalTime closeTime;
 
     /** Description of special hours or events (e.g., "Holiday Hours", "Special Event") */
+    @Size(max = 200, message = "Special hours description cannot exceed 200 characters")
     private String specialHoursDescription;
 
     /** New total seating capacity for the restaurant */
+    @Min(value = 1, message = "Total capacity must be at least 1")
     private int totalCapacity;
 
     /**
@@ -115,5 +129,16 @@ public class ScheduleUpdateRequest {
      */
     public void setTotalCapacity(int totalCapacity) {
         this.totalCapacity = totalCapacity;
+    }
+
+    @Override
+    public String toString() {
+        return "ScheduleUpdateRequest{" +
+               "closed=" + closed +
+               ", openTime=" + openTime +
+               ", closeTime=" + closeTime +
+               ", specialHoursDescription='" + specialHoursDescription + '\'' +
+               ", totalCapacity=" + totalCapacity +
+               '}';
     }
 }

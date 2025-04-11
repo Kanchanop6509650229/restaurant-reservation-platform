@@ -3,67 +3,84 @@ package com.restaurant.reservation.dto;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
  * Data Transfer Object (DTO) representing a restaurant reservation.
  * This class is used to transfer reservation data between different layers of the application.
- * 
+ *
+ * Features:
+ * - Complete reservation details including customer information
+ * - Temporal data with proper formatting
+ * - Reservation status tracking
+ * - History of changes to the reservation
+ * - Null fields are excluded from JSON serialization
+ *
  * @author Restaurant Reservation Team
- * @version 1.0
+ * @version 1.1
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ReservationDTO {
 
     /** Unique identifier for the reservation */
     private String id;
-    
+
     /** ID of the user who made the reservation */
     private String userId;
-    
+
     /** ID of the restaurant where the reservation is made */
     private String restaurantId;
-    
+
     /** ID of the table assigned to the reservation */
     private String tableId;
-    
+
     /** Scheduled date and time of the reservation */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime reservationTime;
-    
+
     /** Expected end time of the reservation */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime endTime;
-    
+
     /** Number of people in the party */
     private int partySize;
-    
+
     /** Duration of the reservation in minutes */
     private int durationMinutes;
-    
+
     /** Current status of the reservation */
     private String status;
-    
+
     /** Name of the customer making the reservation */
     private String customerName;
-    
+
     /** Phone number of the customer */
     private String customerPhone;
-    
+
     /** Email address of the customer */
     private String customerEmail;
-    
+
     /** Any special requests or notes for the reservation */
     private String specialRequests;
-    
+
     /** Flag indicating if reminders are enabled for this reservation */
     private boolean remindersEnabled;
-    
+
     /** Date and time when the reservation was created */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
-    
+
     /** Date and time when the reservation was last updated */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updatedAt;
-    
+
     /** Deadline for confirming the reservation */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime confirmationDeadline;
-    
+
     /** List of history records tracking changes to the reservation */
     private List<HistoryRecord> historyRecords = new ArrayList<>();
 
@@ -74,10 +91,11 @@ public class ReservationDTO {
     public static class HistoryRecord {
         /** Type of action performed (e.g., CREATED, UPDATED, CANCELLED) */
         private String action;
-        
+
         /** Date and time when the action was performed */
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
         private LocalDateTime timestamp;
-        
+
         /** Detailed description of the action */
         private String details;
 
@@ -476,5 +494,40 @@ public class ReservationDTO {
      */
     public void setHistoryRecords(List<HistoryRecord> historyRecords) {
         this.historyRecords = historyRecords;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ReservationDTO that = (ReservationDTO) o;
+        return partySize == that.partySize &&
+               durationMinutes == that.durationMinutes &&
+               remindersEnabled == that.remindersEnabled &&
+               Objects.equals(id, that.id) &&
+               Objects.equals(userId, that.userId) &&
+               Objects.equals(restaurantId, that.restaurantId) &&
+               Objects.equals(tableId, that.tableId) &&
+               Objects.equals(reservationTime, that.reservationTime) &&
+               Objects.equals(status, that.status);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, userId, restaurantId, tableId, reservationTime,
+                          partySize, durationMinutes, status, remindersEnabled);
+    }
+
+    @Override
+    public String toString() {
+        return "ReservationDTO{" +
+               "id='" + id + '\'' +
+               ", restaurantId='" + restaurantId + '\'' +
+               ", tableId='" + tableId + '\'' +
+               ", reservationTime=" + reservationTime +
+               ", status='" + status + '\'' +
+               ", partySize=" + partySize +
+               ", customerName='" + customerName + '\'' +
+               '}';
     }
 }

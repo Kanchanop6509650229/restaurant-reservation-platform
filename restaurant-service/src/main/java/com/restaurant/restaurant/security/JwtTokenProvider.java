@@ -25,10 +25,10 @@ import io.jsonwebtoken.security.Keys;
  * - Authentication extraction from tokens
  * - Token signing key management
  * - Role/authority parsing from claims
- * 
+ *
  * Uses HMAC-SHA for token signing and validates tokens against
  * the configured secret and expiration settings.
- * 
+ *
  * @author Restaurant Reservation Team
  * @version 1.0
  */
@@ -71,7 +71,11 @@ public class JwtTokenProvider {
                 .parseClaimsJws(token)
                 .getBody();
 
-        String userId = claims.getSubject();
+        // Extract userId from the dedicated claim, fallback to subject if not present
+        String userId = claims.get("userId", String.class);
+        if (userId == null) {
+            userId = claims.getSubject();
+        }
 
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
 

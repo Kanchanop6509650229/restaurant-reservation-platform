@@ -19,6 +19,18 @@ import com.restaurant.common.events.BaseEvent;
  * Configuration class for Kafka Producer settings.
  * Defines the producer factory and template for sending events to Kafka topics.
  * Configures serialization and type mappings for various event types.
+ *
+ * This configuration supports sending the following event types:
+ * - Reservation lifecycle events (created, confirmed, cancelled, modified)
+ * - Table assignment and status events
+ * - Restaurant validation requests
+ * - Reservation time validation requests
+ *
+ * The configuration includes proper type mappings to ensure correct serialization
+ * and deserialization of events across services.
+ *
+ * @author Restaurant Reservation Team
+ * @version 1.0
  */
 @Configuration
 public class KafkaProducerConfig {
@@ -50,23 +62,19 @@ public class KafkaProducerConfig {
         // Configure value serializer for JSON messages
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
         // Define type mappings for event classes to enable proper deserialization
-        configProps.put(JsonSerializer.TYPE_MAPPINGS,
-                "ReservationCreatedEvent:com.restaurant.common.events.reservation.ReservationCreatedEvent," +
-                        "ReservationConfirmedEvent:com.restaurant.common.events.reservation.ReservationConfirmedEvent,"
-                        +
-                        "ReservationCancelledEvent:com.restaurant.common.events.reservation.ReservationCancelledEvent,"
-                        +
-                        "ReservationModifiedEvent:com.restaurant.common.events.reservation.ReservationModifiedEvent," +
-                        "TableAssignedEvent:com.restaurant.common.events.reservation.TableAssignedEvent," +
-                        "TableStatusChangedEvent:com.restaurant.common.events.restaurant.TableStatusChangedEvent," +
-                        "TableStatusEvent:com.restaurant.common.events.reservation.TableStatusEvent," +
-                        "FindAvailableTableRequestEvent:com.restaurant.common.events.reservation.FindAvailableTableRequestEvent,"
-                        +
-                        "RestaurantValidationRequestEvent:com.restaurant.common.events.restaurant.RestaurantValidationRequestEvent,"
-                        +
-                        "RestaurantValidationResponseEvent:com.restaurant.common.events.restaurant.RestaurantValidationResponseEvent,"
-                        +
-                        "ReservationTimeValidationRequestEvent:com.restaurant.common.events.restaurant.ReservationTimeValidationRequestEvent");
+        configProps.put(JsonSerializer.TYPE_MAPPINGS, String.join(",",
+                "ReservationCreatedEvent:com.restaurant.common.events.reservation.ReservationCreatedEvent",
+                "ReservationConfirmedEvent:com.restaurant.common.events.reservation.ReservationConfirmedEvent",
+                "ReservationCancelledEvent:com.restaurant.common.events.reservation.ReservationCancelledEvent",
+                "ReservationModifiedEvent:com.restaurant.common.events.reservation.ReservationModifiedEvent",
+                "TableAssignedEvent:com.restaurant.common.events.reservation.TableAssignedEvent",
+                "TableStatusChangedEvent:com.restaurant.common.events.restaurant.TableStatusChangedEvent",
+                "TableStatusEvent:com.restaurant.common.events.reservation.TableStatusEvent",
+                "FindAvailableTableRequestEvent:com.restaurant.common.events.reservation.FindAvailableTableRequestEvent",
+                "RestaurantValidationRequestEvent:com.restaurant.common.events.restaurant.RestaurantValidationRequestEvent",
+                "RestaurantValidationResponseEvent:com.restaurant.common.events.restaurant.RestaurantValidationResponseEvent",
+                "ReservationTimeValidationRequestEvent:com.restaurant.common.events.restaurant.ReservationTimeValidationRequestEvent"
+        ));
         return new DefaultKafkaProducerFactory<>(configProps);
     }
 

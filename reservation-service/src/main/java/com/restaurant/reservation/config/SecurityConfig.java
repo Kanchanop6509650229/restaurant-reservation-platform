@@ -1,7 +1,7 @@
 package com.restaurant.reservation.config;
 
-import com.restaurant.reservation.security.JwtAuthorizationFilter;
-import com.restaurant.reservation.security.JwtTokenProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -12,19 +12,33 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.restaurant.reservation.security.JwtAuthorizationFilter;
+import com.restaurant.reservation.security.JwtTokenProvider;
+
 /**
  * Security configuration for the reservation service.
  * Configures JWT-based authentication and authorization.
  * Defines security rules for API endpoints and enables method-level security.
+ *
+ * This configuration:
+ * - Disables CSRF for REST API endpoints
+ * - Configures stateless session management
+ * - Sets up public and protected endpoints
+ * - Adds JWT authentication filter
+ * - Configures H2 console access for development
+ *
+ * @author Restaurant Reservation Team
+ * @version 1.1
  */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    /**
-     * JWT token provider for token validation and user authentication.
-     */
+    /** Logger for this configuration */
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+
+    /** JWT token provider for token validation and user authentication */
     private final JwtTokenProvider jwtTokenProvider;
 
     /**
@@ -51,29 +65,31 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        logger.info("Configuring security filter chain");
+
         http
-            // Disable CSRF protection for API endpoints
-            .csrf().disable()
-            // Configure stateless session management
-            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
-            // Configure authorization rules
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
                 .requestMatchers(HttpMethod.GET, "/api/reservations/public/**").permitAll()
+                // Schedule endpoints
+                .requestMatchers(HttpMethod.GET, "/api/schedules/restaurant/**").permitAll()
                 // H2 console access (development only)
                 .requestMatchers("/h2-console/**").permitAll()
                 // Health check endpoint
-                .requestMatchers("/api/health").permitAll()
+                .requestMatchers("/api/health", "/api/health/details").permitAll()
+                // Swagger/OpenAPI endpoints
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 // All other endpoints require authentication
                 .anyRequest().authenticated()
             )
             // Add JWT authorization filter
-            .addFilterBefore(new JwtAuthorizationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
-        
-        // Enable h2-console frame options
-        http.headers().frameOptions().disable();
-        
+            .addFilterBefore(new JwtAuthorizationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
+            // Enable h2-console frame options
+            .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()));
+
+        logger.info("Security filter chain configured successfully");
         return http.build();
     }
 }

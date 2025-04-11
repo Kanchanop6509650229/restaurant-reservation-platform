@@ -4,9 +4,12 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -25,14 +28,18 @@ import io.jsonwebtoken.security.Keys;
  * - Extracting user information from tokens
  * - Validating token authenticity
  * - Creating Spring Security Authentication objects from tokens
- * 
+ *
  * The provider uses HMAC-SHA algorithm for token signing and validation.
- * 
+ * It handles token parsing, validation, and authentication creation in a secure manner.
+ *
  * @author Restaurant Reservation Team
- * @version 1.0
+ * @version 1.1
  */
 @Component
 public class JwtTokenProvider {
+
+    /** Logger for this provider */
+    private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
 
     /** Secret key used for JWT signing and validation */
     @Value("${jwt.secret}")
@@ -41,6 +48,14 @@ public class JwtTokenProvider {
     /** Token expiration time in milliseconds */
     @Value("${jwt.expiration}")
     private long jwtExpirationInMs;
+
+    /** Authorization header name */
+    @Value("${jwt.header:Authorization}")
+    private String tokenHeader;
+
+    /** Token prefix in Authorization header */
+    @Value("${jwt.prefix:Bearer }")
+    private String tokenPrefix;
 
     /**
      * Generates a signing key from the JWT secret.
@@ -58,16 +73,21 @@ public class JwtTokenProvider {
      * The user ID is stored in the token's subject claim.
      *
      * @param token The JWT token to extract the user ID from
-     * @return The user ID as a String
+     * @return The user ID as a String, or null if the token is invalid
      */
     public String getUserIdFromToken(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
 
-        return claims.getSubject();
+            return claims.getSubject();
+        } catch (JwtException | IllegalArgumentException e) {
+            logger.warn("Invalid JWT token: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -78,10 +98,31 @@ public class JwtTokenProvider {
      * @return true if the token is valid, false otherwise
      */
     public boolean validateToken(String token) {
+        if (token == null) {
+            logger.debug("Token is null");
+            return false;
+        }
+
         try {
-            Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token);
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            // Check if token is expired
+            Date expiration = claims.getExpiration();
+            if (expiration != null && expiration.before(new Date())) {
+                logger.debug("Token is expired");
+                return false;
+            }
+
             return true;
-        } catch (JwtException | IllegalArgumentException e) {
+        } catch (JwtException e) {
+            logger.debug("Invalid JWT token: {}", e.getMessage());
+            return false;
+        } catch (IllegalArgumentException e) {
+            logger.debug("JWT token compact of handler are invalid: {}", e.getMessage());
             return false;
         }
     }
@@ -92,26 +133,51 @@ public class JwtTokenProvider {
      * an Authentication object that can be used by Spring Security.
      *
      * @param token The JWT token to create the Authentication from
-     * @return An Authentication object containing the user's ID and authorities
+     * @return An Authentication object containing the user's ID and authorities, or null if the token is invalid
      */
     public Authentication getAuthentication(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
 
-        String userId = claims.getSubject();
+            String userId = claims.getSubject();
+            if (userId == null) {
+                logger.warn("JWT token does not contain a subject");
+                return null;
+            }
 
-        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+            List<SimpleGrantedAuthority> authorities = new ArrayList<>();
 
-        String roles = claims.get("roles", String.class);
-        if (roles != null && !roles.isEmpty()) {
-            authorities = Arrays.stream(roles.split(","))
-                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role.trim()))
-                    .collect(Collectors.toList());
+            String roles = claims.get("roles", String.class);
+            if (roles != null && !roles.isEmpty()) {
+                authorities = Arrays.stream(roles.split(","))
+                        .filter(role -> role != null && !role.trim().isEmpty())
+                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role.trim()))
+                        .collect(Collectors.toList());
+            }
+
+            logger.debug("Created authentication for user: {} with {} authorities", userId, authorities.size());
+            return new UsernamePasswordAuthenticationToken(userId, "", authorities);
+        } catch (JwtException | IllegalArgumentException e) {
+            logger.warn("Invalid JWT token: {}", e.getMessage());
+            return null;
         }
+    }
 
-        return new UsernamePasswordAuthenticationToken(userId, "", authorities);
+    /**
+     * Extracts the JWT token from an HTTP Authorization header value.
+     * The token should be in the format: "Bearer <token>"
+     *
+     * @param authorizationHeader The Authorization header value
+     * @return The JWT token if present and properly formatted, null otherwise
+     */
+    public String extractTokenFromHeader(String authorizationHeader) {
+        if (authorizationHeader != null && authorizationHeader.startsWith(tokenPrefix)) {
+            return authorizationHeader.substring(tokenPrefix.length());
+        }
+        return null;
     }
 }

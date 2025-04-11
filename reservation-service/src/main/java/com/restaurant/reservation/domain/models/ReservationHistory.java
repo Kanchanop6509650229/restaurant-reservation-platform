@@ -1,14 +1,26 @@
 package com.restaurant.reservation.domain.models;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * Entity class representing the history of changes made to a reservation.
  * This class tracks all significant events and modifications that occur
  * throughout the lifecycle of a reservation, providing an audit trail
  * for accountability and tracking purposes.
- * 
+ *
  * @author Restaurant Reservation Team
  * @version 1.0
  */
@@ -22,32 +34,37 @@ public class ReservationHistory {
     private String id;
 
     /** The reservation this history record belongs to */
+    @NotNull(message = "Reservation is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reservation_id", nullable = false)
     private Reservation reservation;
 
-    /** 
+    /**
      * The type of action performed on the reservation.
      * Possible values: CREATED, CONFIRMED, CANCELLED, MODIFIED, COMPLETED, NO_SHOW
      */
+    @NotBlank(message = "Action is required")
     @Column(nullable = false)
     private String action;
 
     /** The date and time when the action was performed */
+    @NotNull(message = "Timestamp is required")
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
-    /** 
+    /**
      * Additional details about the action performed.
      * Can include specific changes made, reasons for actions, or other relevant information
      */
+    @Size(max = 1000, message = "Details must be at most 1000 characters")
     @Column(length = 1000)
     private String details;
 
-    /** 
+    /**
      * The ID of the user who performed the action.
      * Can be a customer, staff member, or system user
      */
+    @Column(name = "performed_by")
     private String performedBy;
 
     /**
@@ -56,6 +73,15 @@ public class ReservationHistory {
      */
     public ReservationHistory() {
         this.timestamp = LocalDateTime.now();
+    }
+
+    /**
+     * Checks if this history record was created by the system.
+     *
+     * @return true if the action was performed by the system, false otherwise
+     */
+    public boolean isSystemAction() {
+        return "SYSTEM".equals(performedBy);
     }
 
     /**

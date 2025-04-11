@@ -1,20 +1,31 @@
 package com.restaurant.reservation.domain.models;
 
-import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * Entity class representing the reservation quota for a specific time slot at a restaurant.
  * This class manages the maximum number of reservations and capacity that can be
  * accommodated during a particular time slot on a given date, while also tracking
  * current usage and implementing threshold-based availability checks.
- * 
+ *
  * @author Restaurant Reservation Team
  * @version 1.0
  */
 @Entity
-@Table(name = "reservation_quotas", 
+@Table(name = "reservation_quotas",
        uniqueConstraints = @UniqueConstraint(columnNames = {"restaurant_id", "date", "time_slot"}))
 public class ReservationQuota {
 
@@ -24,18 +35,22 @@ public class ReservationQuota {
     private String id;
 
     /** ID of the restaurant this quota belongs to */
+    @NotBlank(message = "Restaurant ID is required")
     @Column(name = "restaurant_id", nullable = false)
     private String restaurantId;
 
     /** Date for which this quota is defined */
+    @NotNull(message = "Date is required")
     @Column(nullable = false)
     private LocalDate date;
 
     /** Time slot for which this quota is defined */
+    @NotNull(message = "Time slot is required")
     @Column(name = "time_slot", nullable = false)
     private LocalTime timeSlot;
 
     /** Maximum number of reservations allowed for this time slot */
+    @Min(value = 1, message = "Maximum reservations must be at least 1")
     @Column(nullable = false)
     private int maxReservations;
 
@@ -44,6 +59,7 @@ public class ReservationQuota {
     private int currentReservations;
 
     /** Maximum seating capacity for this time slot */
+    @Min(value = 1, message = "Maximum capacity must be at least 1")
     @Column(nullable = false)
     private int maxCapacity;
 
@@ -51,12 +67,14 @@ public class ReservationQuota {
     @Column(nullable = false)
     private int currentCapacity;
 
-    /** 
+    /**
      * Percentage threshold for capacity utilization.
      * When capacity reaches this percentage, the time slot is considered full.
      * Default is 100% but can be adjusted for operational flexibility.
      */
-    private int thresholdPercentage;
+    @Min(value = 1, message = "Threshold percentage must be at least 1")
+    @Column(nullable = false)
+    private int thresholdPercentage = 100;
 
     /**
      * Default constructor required by JPA.
@@ -73,7 +91,7 @@ public class ReservationQuota {
      * @param maxReservations Maximum number of reservations allowed
      * @param maxCapacity Maximum seating capacity
      */
-    public ReservationQuota(String restaurantId, LocalDate date, LocalTime timeSlot, 
+    public ReservationQuota(String restaurantId, LocalDate date, LocalTime timeSlot,
                             int maxReservations, int maxCapacity) {
         this.restaurantId = restaurantId;
         this.date = date;
@@ -93,8 +111,13 @@ public class ReservationQuota {
      * @return true if there is availability, false otherwise
      */
     public boolean hasAvailability() {
-        return currentReservations < maxReservations && 
-               (thresholdPercentage == 100 || 
+        // Prevent division by zero
+        if (maxCapacity == 0) {
+            return false;
+        }
+
+        return currentReservations < maxReservations &&
+               (thresholdPercentage == 100 ||
                 (currentCapacity * 100 / maxCapacity) < thresholdPercentage);
     }
 
@@ -105,7 +128,34 @@ public class ReservationQuota {
      * @return true if the party can be accommodated, false otherwise
      */
     public boolean canAccommodateParty(int partySize) {
+        if (partySize <= 0) {
+            return false;
+        }
         return (currentCapacity + partySize) <= maxCapacity;
+    }
+
+    /**
+     * Gets the current capacity utilization as a percentage.
+     *
+     * @return The capacity utilization percentage (0-100)
+     */
+    public int getCapacityUtilizationPercentage() {
+        if (maxCapacity == 0) {
+            return 100; // Prevent division by zero
+        }
+        return (currentCapacity * 100) / maxCapacity;
+    }
+
+    /**
+     * Gets a formatted string representation of the time slot.
+     *
+     * @return The formatted time slot (e.g., "7:00 PM")
+     */
+    public String getFormattedTimeSlot() {
+        if (timeSlot == null) {
+            return "";
+        }
+        return timeSlot.format(DateTimeFormatter.ofPattern("h:mm a"));
     }
 
     // Getters and setters with JavaDoc comments

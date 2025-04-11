@@ -2,15 +2,27 @@ package com.restaurant.reservation.dto;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Objects;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
  * Data Transfer Object (DTO) for restaurant schedule information.
  * This class is used to transfer schedule data between different layers of the application
  * and includes both basic schedule information and derived/formatted data for display purposes.
- * 
+ *
+ * Features:
+ * - Complete schedule details including operating hours and capacity
+ * - Date and time formatting for display
+ * - Support for custom hours and special events
+ * - Capacity tracking (total, available, booked)
+ * - Null fields are excluded from JSON serialization
+ *
  * @author Restaurant Reservation Team
- * @version 1.0
+ * @version 1.1
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ScheduleDTO {
 
     /** Unique identifier for the schedule */
@@ -20,6 +32,7 @@ public class ScheduleDTO {
     private String restaurantId;
 
     /** Date for which this schedule is defined */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate date;
 
     /** Day of the week (e.g., "Monday", "Tuesday") for easier display */
@@ -29,9 +42,11 @@ public class ScheduleDTO {
     private boolean closed;
 
     /** Opening time for the restaurant on this date */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     private LocalTime openTime;
 
     /** Closing time for the restaurant on this date */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     private LocalTime closeTime;
 
     /** Flag indicating if a custom opening time is set for this date */
@@ -55,7 +70,7 @@ public class ScheduleDTO {
     /** Number of tables already booked for this date */
     private int bookedTables;
 
-    /** 
+    /**
      * Formatted string representing operating hours (e.g., "10:00 AM - 10:00 PM")
      * Used for display purposes
      */
@@ -371,5 +386,41 @@ public class ScheduleDTO {
      */
     public void setFormattedCloseTime(String formattedCloseTime) {
         this.formattedCloseTime = formattedCloseTime;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ScheduleDTO that = (ScheduleDTO) o;
+        return closed == that.closed &&
+               customOpenTime == that.customOpenTime &&
+               customCloseTime == that.customCloseTime &&
+               totalCapacity == that.totalCapacity &&
+               Objects.equals(id, that.id) &&
+               Objects.equals(restaurantId, that.restaurantId) &&
+               Objects.equals(date, that.date) &&
+               Objects.equals(openTime, that.openTime) &&
+               Objects.equals(closeTime, that.closeTime);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, restaurantId, date, closed, openTime, closeTime,
+                          customOpenTime, customCloseTime, totalCapacity);
+    }
+
+    @Override
+    public String toString() {
+        return "ScheduleDTO{" +
+               "id='" + id + '\'' +
+               ", restaurantId='" + restaurantId + '\'' +
+               ", date=" + date +
+               ", dayOfWeek='" + dayOfWeek + '\'' +
+               ", closed=" + closed +
+               ", operatingHours='" + operatingHours + '\'' +
+               ", totalCapacity=" + totalCapacity +
+               ", availableCapacity=" + availableCapacity +
+               '}';
     }
 }

@@ -1,19 +1,32 @@
 package com.restaurant.reservation.domain.models;
 
-import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * Entity class representing a restaurant's daily schedule.
  * This class maps to the 'schedules' table in the database and contains
  * information about a restaurant's operating hours and capacity for a specific date.
- * 
+ *
  * @author Restaurant Reservation Team
  * @version 1.0
  */
 @Entity
-@Table(name = "schedules", 
+@Table(name = "schedules",
        uniqueConstraints = @UniqueConstraint(columnNames = {"restaurant_id", "date"}))
 public class Schedule {
 
@@ -23,42 +36,52 @@ public class Schedule {
     private String id;
 
     /** ID of the restaurant this schedule belongs to */
+    @NotBlank(message = "Restaurant ID is required")
     @Column(name = "restaurant_id", nullable = false)
     private String restaurantId;
 
     /** Date for which this schedule is defined */
+    @NotNull(message = "Date is required")
     @Column(nullable = false)
     private LocalDate date;
 
     /** Flag indicating if custom opening time is set for this date */
-    private boolean customOpenTime;
+    @Column(nullable = false)
+    private boolean customOpenTime = false;
 
     /** Custom opening time for this date (if customOpenTime is true) */
     private LocalTime openTime;
 
     /** Flag indicating if custom closing time is set for this date */
-    private boolean customCloseTime;
+    @Column(nullable = false)
+    private boolean customCloseTime = false;
 
     /** Custom closing time for this date (if customCloseTime is true) */
     private LocalTime closeTime;
 
     /** Flag indicating if the restaurant is closed on this date */
     @Column(nullable = false)
-    private boolean closed;
+    private boolean closed = false;
 
     /** Description of special hours or events for this date */
+    @Size(max = 500, message = "Special hours description must be at most 500 characters")
+    @Column(length = 500)
     private String specialHoursDescription;
 
     /** Total seating capacity of the restaurant for this date */
+    @Min(value = 0, message = "Total capacity cannot be negative")
     private int totalCapacity;
 
     /** Available seating capacity for this date */
+    @Min(value = 0, message = "Available capacity cannot be negative")
     private int availableCapacity;
 
     /** Number of seats already booked for this date */
+    @Min(value = 0, message = "Booked capacity cannot be negative")
     private int bookedCapacity;
 
     /** Number of tables already booked for this date */
+    @Min(value = 0, message = "Booked tables cannot be negative")
     private int bookedTables;
 
     /**
@@ -77,6 +100,51 @@ public class Schedule {
         this.restaurantId = restaurantId;
         this.date = date;
         this.closed = false;
+        this.totalCapacity = 0;
+        this.availableCapacity = 0;
+        this.bookedCapacity = 0;
+        this.bookedTables = 0;
+    }
+
+    /**
+     * Calculates the operating hours duration in minutes.
+     * Returns 0 if the restaurant is closed or if opening/closing times are not set.
+     *
+     * @return The duration of operating hours in minutes
+     */
+    public long getOperatingHoursDuration() {
+        if (closed || openTime == null || closeTime == null) {
+            return 0;
+        }
+        return ChronoUnit.MINUTES.between(openTime, closeTime);
+    }
+
+    /**
+     * Gets a formatted string representation of the operating hours.
+     * Returns "Closed" if the restaurant is closed.
+     *
+     * @return The formatted operating hours (e.g., "10:00 AM - 10:00 PM")
+     */
+    public String getFormattedOperatingHours() {
+        if (closed) {
+            return "Closed";
+        }
+
+        if (openTime == null || closeTime == null) {
+            return "Hours not set";
+        }
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("h:mm a");
+        return openTime.format(formatter) + " - " + closeTime.format(formatter);
+    }
+
+    /**
+     * Updates the available capacity based on booked capacity.
+     * This method ensures that available capacity is correctly calculated
+     * as the difference between total and booked capacity.
+     */
+    public void updateAvailableCapacity() {
+        this.availableCapacity = Math.max(0, this.totalCapacity - this.bookedCapacity);
     }
 
     // Getters and setters with JavaDoc comments

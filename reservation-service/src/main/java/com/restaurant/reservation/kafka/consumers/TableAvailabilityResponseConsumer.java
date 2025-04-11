@@ -14,10 +14,10 @@ import com.restaurant.reservation.service.TableResponseManager;
  * This class handles responses to table availability requests, processing the
  * results and completing the corresponding asynchronous requests through the
  * TableResponseManager.
- * 
+ *
  * The consumer ensures that table availability checks are properly completed
  * and their results are made available to the requesting components.
- * 
+ *
  * @author Restaurant Reservation Team
  * @version 1.0
  */
@@ -26,10 +26,10 @@ public class TableAvailabilityResponseConsumer {
 
     /** Logger instance for tracking table availability responses */
     private static final Logger logger = LoggerFactory.getLogger(TableAvailabilityResponseConsumer.class);
-    
+
     /** Manager for handling table availability responses */
     private final TableResponseManager tableResponseManager;
-    
+
     /**
      * Constructs a new TableAvailabilityResponseConsumer with the specified response manager.
      *
@@ -38,7 +38,7 @@ public class TableAvailabilityResponseConsumer {
     public TableAvailabilityResponseConsumer(TableResponseManager tableResponseManager) {
         this.tableResponseManager = tableResponseManager;
     }
-    
+
     /**
      * Consumes table availability response events from the Kafka topic.
      * This method processes responses to table availability requests,
@@ -53,14 +53,25 @@ public class TableAvailabilityResponseConsumer {
             containerFactory = "tableAvailabilityKafkaListenerContainerFactory"
     )
     public void consumeTableAvailabilityResponse(FindAvailableTableResponseEvent event) {
-        logger.info("Received find available table response: correlationId={}, tableId={}, success={}", 
-                event.getCorrelationId(), event.getTableId(), event.isSuccess());
-        
+        if (event == null) {
+            logger.warn("Received null table availability response event");
+            return;
+        }
+
+        logger.info("Received find available table response: correlationId={}, tableId={}, success={}, errorMessage={}",
+                event.getCorrelationId(),
+                event.getTableId(),
+                event.isSuccess(),
+                event.getErrorMessage() != null ? event.getErrorMessage() : "none");
+
         try {
             // Send the response to the TableResponseManager to complete the waiting CompletableFuture
             tableResponseManager.completeResponse(event);
+            logger.debug("Processed table availability response for correlationId={}",
+                    event.getCorrelationId());
         } catch (Exception e) {
-            logger.error("Error processing table availability response: {}", e.getMessage(), e);
+            logger.error("Error processing table availability response: correlationId={}, error={}",
+                    event.getCorrelationId(), e.getMessage(), e);
         }
     }
 }

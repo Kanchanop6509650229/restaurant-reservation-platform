@@ -11,10 +11,10 @@ import jakarta.validation.constraints.Size;
  * - Contact and location details
  * - Business configuration
  * - Input validation constraints
- * 
+ *
  * Used to validate and transfer restaurant creation data from the presentation layer
  * to the service layer.
- * 
+ *
  * @author Restaurant Reservation Team
  * @version 1.0
  */
@@ -68,8 +68,7 @@ public class RestaurantCreateRequest {
     @NotBlank(message = "Cuisine type is required")
     private String cuisineType;
 
-    /** ID of the restaurant owner (required) */
-    @NotBlank(message = "Owner ID is required")
+    /** ID of the restaurant owner (required, but set by controller) */
     private String ownerId;
 
     /** Total seating capacity of the restaurant */
@@ -335,7 +334,7 @@ public class RestaurantCreateRequest {
     public String getOwnerId() {
         return ownerId;
     }
-    
+
     /**
      * Sets the ID of the restaurant owner.
      *
