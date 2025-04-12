@@ -36,7 +36,7 @@ import jakarta.transaction.Transactional;
  * - Finding nearby restaurants
  * - Managing restaurant status and activation
  * - Validating restaurant data
- * 
+ *
  * @author Restaurant Reservation Team
  * @version 1.0
  */
@@ -156,8 +156,11 @@ public class RestaurantService {
      * Creates a new restaurant.
      * This method:
      * - Validates the creation request
-     * - Creates the restaurant entity
+     * - Creates the restaurant entity with initial capacity set to 0
      * - Sets up default operating hours
+     *
+     * Note: The restaurant's total capacity will be automatically updated
+     * when tables are added to the restaurant.
      *
      * @param createRequest The restaurant creation request
      * @return Created RestaurantDTO
@@ -179,7 +182,8 @@ public class RestaurantService {
         restaurant.setEmail(createRequest.getEmail());
         restaurant.setWebsite(createRequest.getWebsite());
         restaurant.setCuisineType(createRequest.getCuisineType());
-        restaurant.setTotalCapacity(createRequest.getTotalCapacity());
+        // Always set initial capacity to 0, it will be updated when tables are added
+        restaurant.setTotalCapacity(0);
         restaurant.setActive(true);
         restaurant.setOwnerId(createRequest.getOwnerId());
 

@@ -71,7 +71,11 @@ public class RestaurantCreateRequest {
     /** ID of the restaurant owner (required, but set by controller) */
     private String ownerId;
 
-    /** Total seating capacity of the restaurant */
+    /**
+     * Total seating capacity of the restaurant.
+     * Note: This value is not used during restaurant creation. The restaurant's
+     * total capacity is automatically calculated based on the tables added to the restaurant.
+     */
     private int totalCapacity;
 
     /**

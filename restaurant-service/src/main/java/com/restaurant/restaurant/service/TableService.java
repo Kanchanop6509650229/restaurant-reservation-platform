@@ -32,7 +32,7 @@ import jakarta.transaction.Transactional;
  * - Updating table status and availability
  * - Validating table configurations
  * - Managing table capacity and features
- * 
+ *
  * @author Restaurant Reservation Team
  * @version 1.0
  */
@@ -474,7 +474,12 @@ public class TableService {
 
     /**
      * Updates the total capacity of a restaurant.
-     * This method recalculates the total capacity based on all tables.
+     * This method recalculates the total capacity based on all available tables.
+     * The restaurant's totalCapacity is set to the sum of the capacities of all
+     * tables with status TABLE_AVAILABLE.
+     *
+     * This method is called automatically when tables are added, updated, or deleted,
+     * ensuring that the restaurant's capacity is always in sync with its tables.
      *
      * @param restaurant The restaurant to update
      */

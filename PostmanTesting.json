@@ -419,7 +419,7 @@
 			  ],
 			  "body": {
 				"mode": "raw",
-				"raw": "{\n  \"name\": \"{{restaurant_name}}\",\n  \"description\": \"A great place to eat\",\n  \"address\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zipCode\": \"10001\",\n  \"country\": \"USA\",\n  \"phoneNumber\": \"1234567890\",\n  \"email\": \"info@testrestaurant.com\",\n  \"website\": \"https://www.testrestaurant.com\",\n  \"latitude\": 40.7128,\n  \"longitude\": -74.0060,\n  \"cuisineType\": \"Italian\",\n  \"totalCapacity\": 50\n}"
+				"raw": "{\n  \"name\": \"{{restaurant_name}}\",\n  \"description\": \"A great place to eat\",\n  \"address\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zipCode\": \"10001\",\n  \"country\": \"USA\",\n  \"phoneNumber\": \"1234567890\",\n  \"email\": \"info@testrestaurant.com\",\n  \"website\": \"https://www.testrestaurant.com\",\n  \"latitude\": 40.7128,\n  \"longitude\": -74.0060,\n  \"cuisineType\": \"Italian\"\n}"
 			  },
 			  "url": {
 				"raw": "{{base_url_restaurant}}/api/restaurants",
