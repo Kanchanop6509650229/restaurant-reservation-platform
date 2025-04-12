@@ -217,7 +217,6 @@ This starts:
 
 | Endpoint | Method | Description | Auth Required |
 |----------|--------|-------------|---------------|
-| `/api/reservations/availability` | GET | Check table availability | No |
 | `/api/reservations` | POST | Create a reservation | Yes |
 | `/api/reservations/user` | GET | Get user's reservations | Yes |
 | `/api/reservations/restaurant/{restaurantId}` | GET | Get restaurant's reservations | Yes (Owner) |

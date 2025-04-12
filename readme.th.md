@@ -213,7 +213,6 @@ docker-compose up -d
 
 | Endpoint | วิธี | คำอธิบาย | ต้องการการยืนยันตัวตน |
 |----------|--------|-------------|---------------|
-| `/api/reservations/availability` | GET | ตรวจสอบความพร้อมใช้งานของโต๊ะ | ไม่ |
 | `/api/reservations` | POST | สร้างการจอง | ใช่ |
 | `/api/reservations/user` | GET | รับการจองของผู้ใช้ | ใช่ |
 | `/api/reservations/restaurant/{restaurantId}` | GET | รับการจองของร้านอาหาร | ใช่ (เจ้าของ) |
