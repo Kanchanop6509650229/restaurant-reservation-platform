@@ -16,6 +16,7 @@ import org.springframework.kafka.support.serializer.JsonDeserializer;
 
 import com.restaurant.common.events.reservation.FindAvailableTableResponseEvent;
 import com.restaurant.common.events.restaurant.ReservationTimeValidationResponseEvent;
+import com.restaurant.common.events.restaurant.RestaurantSearchResponseEvent;
 import com.restaurant.common.events.restaurant.RestaurantValidationResponseEvent;
 import com.restaurant.common.events.user.UserEvent;
 
@@ -240,6 +241,42 @@ public class KafkaConsumerConfig {
     public ConcurrentKafkaListenerContainerFactory<String, ReservationTimeValidationResponseEvent> reservationTimeValidationKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, ReservationTimeValidationResponseEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(reservationTimeValidationConsumerFactory());
+        return factory;
+    }
+
+    /**
+     * Creates a consumer factory for restaurant search events.
+     * Configures specific settings for handling restaurant search responses.
+     *
+     * @return Configured ConsumerFactory for RestaurantSearchResponseEvent messages
+     */
+    @Bean
+    public ConsumerFactory<String, RestaurantSearchResponseEvent> restaurantSearchConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId + "-restaurant-search");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+
+        JsonDeserializer<RestaurantSearchResponseEvent> deserializer = new JsonDeserializer<>(
+                RestaurantSearchResponseEvent.class);
+        deserializer.addTrustedPackages("com.restaurant.common.events");
+        deserializer.setUseTypeMapperForKey(true);
+
+        return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    }
+
+    /**
+     * Creates a container factory for restaurant search event listeners.
+     * Uses the restaurant search consumer factory for message consumption.
+     *
+     * @return Configured ConcurrentKafkaListenerContainerFactory for restaurant search events
+     */
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, RestaurantSearchResponseEvent> restaurantSearchKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, RestaurantSearchResponseEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(restaurantSearchConsumerFactory());
         return factory;
     }
 }

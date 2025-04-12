@@ -14,16 +14,18 @@ import org.springframework.stereotype.Component;
 import com.restaurant.common.constants.KafkaTopics;
 import com.restaurant.common.events.BaseEvent;
 import com.restaurant.common.events.restaurant.ReservationTimeValidationRequestEvent;
+import com.restaurant.common.events.restaurant.RestaurantSearchRequestEvent;
 import com.restaurant.common.events.restaurant.RestaurantValidationRequestEvent;
 
 /**
  * Kafka producer for restaurant-related events in the reservation service.
- * This class is responsible for publishing events related to restaurant validation
- * and reservation time validation to Kafka topics.
+ * This class is responsible for publishing events related to restaurant validation,
+ * reservation time validation, and restaurant search to Kafka topics.
  *
- * The producer handles two main types of events:
+ * The producer handles three main types of events:
  * 1. Restaurant validation requests - to verify restaurant existence
  * 2. Reservation time validation requests - to verify reservation times against restaurant hours
+ * 3. Restaurant search requests - to find available restaurants based on search criteria
  *
  * @author Restaurant Reservation Team
  * @version 1.0
@@ -131,6 +133,50 @@ public class RestaurantEventProducer {
             return true;
         } catch (Exception e) {
             logger.error("Error publishing reservation time validation request: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Publishes a request to search for available restaurants based on criteria.
+     * This event is sent to the restaurant search request topic and is used
+     * to find restaurants that match the specified criteria.
+     *
+     * @param event The restaurant search request event containing search criteria
+     * @return true if the event was successfully sent, false otherwise
+     */
+    public boolean publishRestaurantSearchRequest(RestaurantSearchRequestEvent event) {
+        if (event == null || event.getCorrelationId() == null) {
+            logger.error("Cannot publish null restaurant search request event or event with null correlation ID");
+            return false;
+        }
+
+        try {
+            logger.info("Publishing restaurant search request: correlationId={}, date={}, time={}, partySize={}",
+                    event.getCorrelationId(), event.getDate(), event.getTime(), event.getPartySize());
+
+            Message<?> message = MessageBuilder
+                    .withPayload(event)
+                    .setHeader(KafkaHeaders.TOPIC, KafkaTopics.RESTAURANT_SEARCH_REQUEST)
+                    .setHeader(KafkaHeaders.KEY, event.getCorrelationId())
+                    .build();
+
+            CompletableFuture<SendResult<String, BaseEvent>> future =
+                    kafkaTemplate.send(message);
+
+            future.whenComplete((result, ex) -> {
+                if (ex == null) {
+                    logger.debug("Restaurant search request sent successfully: correlationId={}, offset={}",
+                            event.getCorrelationId(), result.getRecordMetadata().offset());
+                } else {
+                    logger.error("Failed to send restaurant search request: correlationId={}, error={}",
+                            event.getCorrelationId(), ex.getMessage(), ex);
+                }
+            });
+
+            return true;
+        } catch (Exception e) {
+            logger.error("Error publishing restaurant search request: {}", e.getMessage(), e);
             return false;
         }
     }

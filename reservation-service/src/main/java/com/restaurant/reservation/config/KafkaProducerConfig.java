@@ -25,6 +25,7 @@ import com.restaurant.common.events.BaseEvent;
  * - Table assignment and status events
  * - Restaurant validation requests
  * - Reservation time validation requests
+ * - Restaurant search requests
  *
  * The configuration includes proper type mappings to ensure correct serialization
  * and deserialization of events across services.
@@ -73,7 +74,9 @@ public class KafkaProducerConfig {
                 "FindAvailableTableRequestEvent:com.restaurant.common.events.reservation.FindAvailableTableRequestEvent",
                 "RestaurantValidationRequestEvent:com.restaurant.common.events.restaurant.RestaurantValidationRequestEvent",
                 "RestaurantValidationResponseEvent:com.restaurant.common.events.restaurant.RestaurantValidationResponseEvent",
-                "ReservationTimeValidationRequestEvent:com.restaurant.common.events.restaurant.ReservationTimeValidationRequestEvent"
+                "ReservationTimeValidationRequestEvent:com.restaurant.common.events.restaurant.ReservationTimeValidationRequestEvent",
+                "RestaurantSearchRequestEvent:com.restaurant.common.events.restaurant.RestaurantSearchRequestEvent",
+                "RestaurantSearchResponseEvent:com.restaurant.common.events.restaurant.RestaurantSearchResponseEvent"
         ));
         return new DefaultKafkaProducerFactory<>(configProps);
     }

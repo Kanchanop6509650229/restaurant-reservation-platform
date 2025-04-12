@@ -75,6 +75,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/reservations/public/**").permitAll()
                 // Schedule endpoints
                 .requestMatchers(HttpMethod.GET, "/api/schedules/restaurant/**").permitAll()
+                // Restaurant search endpoint
+                .requestMatchers(HttpMethod.POST, "/api/restaurants/search").permitAll()
                 // H2 console access (development only)
                 .requestMatchers("/h2-console/**").permitAll()
                 // Health check endpoint
