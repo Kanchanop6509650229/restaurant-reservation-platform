@@ -737,6 +737,183 @@
 		"name": "3. Reservation Service",
 		"item": [
 		  {
+			"name": "3.0 Search Available Restaurants",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that restaurant search results are returned",
+					"pm.test(\"Restaurant search results are returned\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.be.an('array');",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  },
+			  {
+				"listen": "prerequest",
+				"script": {
+				  "exec": [
+					"// Generate a future date for search (3 days from now at 7:00 PM)",
+					"var futureDate = new Date();",
+					"futureDate.setDate(futureDate.getDate() + 3);",
+					"var searchDate = futureDate.toISOString().split('T')[0];",
+					"",
+					"// Store test data in environment",
+					"pm.environment.set(\"search_date\", searchDate);"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"date\": \"{{search_date}}\",\n  \"time\": \"19:00:00\",\n  \"partySize\": 4,\n  \"cuisineType\": \"Italian\"\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/restaurants/search",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "restaurants",
+				  "search"
+				]
+			  },
+			  "description": "Search for available restaurants based on criteria"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.0.1 Search Restaurant by ID",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that restaurant search results are returned",
+					"pm.test(\"Restaurant search by ID returns correct result\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.be.an('array');",
+					"    if (jsonData.data.length > 0) {",
+					"        pm.expect(jsonData.data[0].id).to.equal(\"f47ac10b-58cc-4372-a567-0e02b2c3d479\");",
+					"    }",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"restaurantId\": \"f47ac10b-58cc-4372-a567-0e02b2c3d479\"\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/restaurants/search",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "restaurants",
+				  "search"
+				]
+			  },
+			  "description": "Search for a restaurant by ID"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.0.2 Search Restaurant by Name",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that restaurant search results are returned",
+					"pm.test(\"Restaurant search by name returns correct results\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.be.an('array');",
+					"    if (jsonData.data.length > 0) {",
+					"        pm.expect(jsonData.data[0].name.toLowerCase()).to.include(\"restaurant\");",
+					"    }",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"restaurantName\": \"Restaurant\"\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/restaurants/search",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "restaurants",
+				  "search"
+				]
+			  },
+			  "description": "Search for restaurants by name"
+			},
+			"response": []
+		  },
+		  {
 			"name": "3.1 Create Reservation",
 			"event": [
 			  {
@@ -1174,73 +1351,6 @@
 				]
 			  },
 			  "description": "Cancel the confirmed reservation"
-			},
-			"response": []
-		  },
-		  {
-			"name": "3.8 Search Available Restaurants",
-			"event": [
-			  {
-				"listen": "test",
-				"script": {
-				  "exec": [
-					"// Parse the response body",
-					"var jsonData = pm.response.json();",
-					"",
-					"// Test status code",
-					"pm.test(\"Status code is 200\", function () {",
-					"    pm.response.to.have.status(200);",
-					"});",
-					"",
-					"// Test that restaurant search results are returned",
-					"pm.test(\"Restaurant search results are returned\", function () {",
-					"    pm.expect(jsonData.success).to.be.true;",
-					"    pm.expect(jsonData.data).to.be.an('array');",
-					"});"
-				  ],
-				  "type": "text/javascript"
-				}
-			  },
-			  {
-				"listen": "prerequest",
-				"script": {
-				  "exec": [
-					"// Generate a future date for search (3 days from now at 7:00 PM)",
-					"var futureDate = new Date();",
-					"futureDate.setDate(futureDate.getDate() + 3);",
-					"var searchDate = futureDate.toISOString().split('T')[0];",
-					"",
-					"// Store test data in environment",
-					"pm.environment.set(\"search_date\", searchDate);"
-				  ],
-				  "type": "text/javascript"
-				}
-			  }
-			],
-			"request": {
-			  "method": "POST",
-			  "header": [
-				{
-				  "key": "Content-Type",
-				  "value": "application/json"
-				}
-			  ],
-			  "body": {
-				"mode": "raw",
-				"raw": "{\n  \"date\": \"{{search_date}}\",\n  \"time\": \"19:00:00\",\n  \"partySize\": 4,\n  \"cuisineType\": \"Italian\"\n}"
-			  },
-			  "url": {
-				"raw": "{{base_url_reservation}}/api/restaurants/search",
-				"host": [
-				  "{{base_url_reservation}}"
-				],
-				"path": [
-				  "api",
-				  "restaurants",
-				  "search"
-				]
-			  },
-			  "description": "Search for available restaurants based on criteria"
 			},
 			"response": []
 		  }

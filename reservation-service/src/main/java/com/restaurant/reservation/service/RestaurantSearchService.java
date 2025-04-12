@@ -3,7 +3,6 @@ package com.restaurant.reservation.service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
@@ -48,8 +47,15 @@ public class RestaurantSearchService {
      * @return CompletableFuture containing a list of matching restaurants
      */
     public CompletableFuture<List<RestaurantDTO>> searchRestaurants(RestaurantSearchCriteriaDTO criteria) {
-        logger.info("Searching restaurants with criteria: date={}, time={}, partySize={}",
-                criteria.getDate(), criteria.getTime(), criteria.getPartySize());
+        // Log search criteria based on what's provided
+        if (criteria.getRestaurantId() != null) {
+            logger.info("Searching for restaurant by ID: {}", criteria.getRestaurantId());
+        } else if (criteria.getRestaurantName() != null) {
+            logger.info("Searching for restaurants by name: {}", criteria.getRestaurantName());
+        } else {
+            logger.info("Searching restaurants with criteria: date={}, time={}, partySize={}, cuisineType={}",
+                    criteria.getDate(), criteria.getTime(), criteria.getPartySize(), criteria.getCuisineType());
+        }
 
         // For testing/development, return mock data immediately
         CompletableFuture<List<RestaurantDTO>> future = new CompletableFuture<>();
@@ -72,10 +78,17 @@ public class RestaurantSearchService {
     private List<RestaurantDTO> createMockRestaurants(RestaurantSearchCriteriaDTO criteria) {
         List<RestaurantDTO> restaurants = new ArrayList<>();
 
+        // Create fixed IDs for consistent lookup
+        String[] fixedIds = {
+            "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+            "550e8400-e29b-41d4-a716-446655440000",
+            "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+        };
+
         // Create 3 mock restaurants
         for (int i = 1; i <= 3; i++) {
             RestaurantDTO restaurant = new RestaurantDTO();
-            restaurant.setId(UUID.randomUUID().toString());
+            restaurant.setId(fixedIds[i-1]);
             restaurant.setName("Restaurant " + i);
             restaurant.setDescription("A great place to eat with delicious food");
             restaurant.setAddress("123 Main St, City " + i);
@@ -90,6 +103,22 @@ public class RestaurantSearchService {
             restaurant.setActive(true);
 
             restaurants.add(restaurant);
+        }
+
+        // Filter by ID if provided
+        if (criteria.getRestaurantId() != null && !criteria.getRestaurantId().isEmpty()) {
+            String searchId = criteria.getRestaurantId();
+            return restaurants.stream()
+                    .filter(r -> r.getId().equals(searchId))
+                    .toList();
+        }
+
+        // Filter by name if provided
+        if (criteria.getRestaurantName() != null && !criteria.getRestaurantName().isEmpty()) {
+            String searchName = criteria.getRestaurantName().toLowerCase();
+            return restaurants.stream()
+                    .filter(r -> r.getName().toLowerCase().contains(searchName))
+                    .toList();
         }
 
         logger.info("Created {} mock restaurants for testing", restaurants.size());

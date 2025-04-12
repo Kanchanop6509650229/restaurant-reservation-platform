@@ -37,6 +37,7 @@ The Restaurant Reservation Platform enables:
 - Table management with real-time status updates
 - User authentication and profile management
 - Advanced reservation system with confirmation workflows
+- Restaurant search functionality based on reservation criteria
 - Queue management for walk-in customers
 - Event-driven architecture for real-time updates across services
 
@@ -225,6 +226,36 @@ This starts:
 | `/api/reservations/{id}/confirm` | POST | Confirm a reservation | Yes |
 | `/api/reservations/{id}/cancel` | POST | Cancel a reservation | Yes |
 
+#### Restaurant Search
+
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/restaurants/search` | POST | Search for available restaurants by ID, name, or criteria | No |
+
+**Search by ID Example:**
+```json
+{
+  "restaurantId": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+}
+```
+
+**Search by Name Example:**
+```json
+{
+  "restaurantName": "Restaurant"
+}
+```
+
+**Search by Criteria Example:**
+```json
+{
+  "date": "2025-04-15",
+  "time": "19:00:00",
+  "partySize": 4,
+  "cuisineType": "Italian"
+}
+```
+
 #### Schedule Management
 
 | Endpoint | Method | Description | Auth Required |
@@ -247,6 +278,8 @@ The following Kafka topics are used for inter-service communication:
 - `restaurant-update`: Restaurant information update events
 - `table-status`: Table status change events
 - `capacity-change`: Restaurant capacity change events
+- `restaurant-search-request`: Restaurant search request events
+- `restaurant-search-response`: Restaurant search response events
 
 ### Reservation Service Topics
 - `reservation-events`: General reservation events
@@ -256,13 +289,15 @@ The following Kafka topics are used for inter-service communication:
 
 ## Postman Collection
 
-A Postman collection file (`PostmanTesting.json`) is included for testing all available APIs. To use it:
+A Postman collection file (`PostmanTesting.json`) is included for testing all available APIs, including the restaurant search functionality.
+
+To use this collection:
 
 1. Import the collection into Postman
 2. Set up the environment variables:
-   - `baseUrlUser`: http://localhost:8081
-   - `baseUrlRestaurant`: http://localhost:8082
-   - `baseUrlReservation`: http://localhost:8083
+   - `base_url_user`: http://localhost:8081
+   - `base_url_restaurant`: http://localhost:8082
+   - `base_url_reservation`: http://localhost:8083
 
 ## Development
 
@@ -421,7 +456,7 @@ async function login(username, password) {
     },
     body: JSON.stringify({ username, password })
   });
-  
+
   const data = await response.json();
   if (data.success) {
     // Store token in localStorage or sessionStorage
@@ -435,13 +470,13 @@ async function login(username, password) {
 // Making authenticated requests
 async function fetchRestaurants() {
   const token = localStorage.getItem('token');
-  
+
   const response = await fetch('http://localhost:8082/api/restaurants', {
     headers: {
       'Authorization': `Bearer ${token}`
     }
   });
-  
+
   return await response.json();
 }
 ```
@@ -454,22 +489,22 @@ func login(username: String, password: String, completion: @escaping (Bool, Stri
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-    
+
     let body: [String: Any] = ["username": username, "password": password]
     request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-    
+
     URLSession.shared.dataTask(with: request) { data, response, error in
         guard let data = data, error == nil else {
             completion(false, nil)
             return
         }
-        
+
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let success = json["success"] as? Bool,
            success,
            let data = json["data"] as? [String: Any],
            let token = data["token"] as? String {
-            
+
             // Store token securely
             KeychainManager.save(token, forKey: "authToken")
             completion(true, token)

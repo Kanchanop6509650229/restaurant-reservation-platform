@@ -3,9 +3,7 @@ package com.restaurant.reservation.dto;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 
 /**
  * Data Transfer Object for restaurant search criteria.
@@ -17,18 +15,19 @@ import jakarta.validation.constraints.NotNull;
  */
 public class RestaurantSearchCriteriaDTO {
 
+    /** Restaurant ID for direct lookup */
+    private String restaurantId;
+
+    /** Restaurant name for name-based search */
+    private String restaurantName;
+
     /** Date for the reservation */
-    @NotNull(message = "Reservation date is required")
-    @Future(message = "Reservation date must be in the future")
     private LocalDate date;
 
     /** Time for the reservation */
-    @NotNull(message = "Reservation time is required")
     private LocalTime time;
 
     /** Number of people in the party */
-    @NotNull(message = "Party size is required")
-    @Min(value = 1, message = "Party size must be at least 1")
     private Integer partySize;
 
     /** Type of cuisine (optional filter) */
@@ -51,6 +50,42 @@ public class RestaurantSearchCriteriaDTO {
      * Default constructor.
      */
     public RestaurantSearchCriteriaDTO() {
+    }
+
+    /**
+     * Gets the restaurant ID for direct lookup.
+     *
+     * @return The restaurant ID
+     */
+    public String getRestaurantId() {
+        return restaurantId;
+    }
+
+    /**
+     * Sets the restaurant ID for direct lookup.
+     *
+     * @param restaurantId The restaurant ID to set
+     */
+    public void setRestaurantId(String restaurantId) {
+        this.restaurantId = restaurantId;
+    }
+
+    /**
+     * Gets the restaurant name for name-based search.
+     *
+     * @return The restaurant name
+     */
+    public String getRestaurantName() {
+        return restaurantName;
+    }
+
+    /**
+     * Sets the restaurant name for name-based search.
+     *
+     * @param restaurantName The restaurant name to set
+     */
+    public void setRestaurantName(String restaurantName) {
+        this.restaurantName = restaurantName;
     }
 
     /**
