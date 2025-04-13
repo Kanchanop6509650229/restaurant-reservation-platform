@@ -196,46 +196,46 @@ The service exposes the following API endpoints:
 
 ### Health Endpoints
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|--------------|
-| GET | `/api/health` | Basic health check | No |
-| GET | `/api/health/details` | Detailed health information | No |
+| Method | Endpoint | Description | Auth Required | Connected Services |
+|--------|----------|-------------|--------------|-------------------|
+| GET | `/api/health` | Basic health check | No | None (Internal) |
+| GET | `/api/health/details` | Detailed health information | No | None (Internal) |
 
 ### Reservation Management
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|--------------|
-| GET | `/api/reservations/user` | Get current user's reservations | Yes |
-| GET | `/api/reservations/restaurant/{restaurantId}` | Get restaurant's reservations | Yes (Admin/Owner) |
-| GET | `/api/reservations/{id}` | Get specific reservation | Yes |
-| POST | `/api/reservations` | Create new reservation | Yes |
-| PUT | `/api/reservations/{id}` | Update reservation | Yes |
-| POST | `/api/reservations/{id}/confirm` | Confirm reservation | Yes |
-| POST | `/api/reservations/{id}/cancel` | Cancel reservation | Yes |
-| POST | `/api/reservations/{id}/menu-items` | Add menu items to reservation | Yes |
+| Method | Endpoint | Description | Auth Required | Connected Services |
+|--------|----------|-------------|--------------|-------------------|
+| GET | `/api/reservations/user` | Get current user's reservations | Yes | User Service |
+| GET | `/api/reservations/restaurant/{restaurantId}` | Get restaurant's reservations | Yes (Admin/Owner) | Restaurant Service |
+| GET | `/api/reservations/{id}` | Get specific reservation | Yes | None (Internal) |
+| POST | `/api/reservations` | Create new reservation | Yes | Restaurant Service, Table Service |
+| PUT | `/api/reservations/{id}` | Update reservation | Yes | Restaurant Service, Table Service |
+| POST | `/api/reservations/{id}/confirm` | Confirm reservation | Yes | Restaurant Service, Table Service |
+| POST | `/api/reservations/{id}/cancel` | Cancel reservation | Yes | Restaurant Service, Table Service |
+| POST | `/api/reservations/{id}/menu-items` | Add menu items to reservation | Yes | Kitchen Service |
 
 ### Menu Management
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|--------------|
-| GET | `/api/menus/restaurants/{restaurantId}/categories` | Get restaurant menu categories | No |
-| GET | `/api/menus/categories/{categoryId}` | Get specific menu category | No |
-| GET | `/api/menus/restaurants/{restaurantId}/items` | Get all menu items for a restaurant | No |
-| GET | `/api/menus/items/{itemId}` | Get specific menu item | No |
-| GET | `/api/menus/restaurants/{restaurantId}/search` | Search menu items | No |
+| Method | Endpoint | Description | Auth Required | Connected Services |
+|--------|----------|-------------|--------------|-------------------|
+| GET | `/api/menus/restaurants/{restaurantId}/categories` | Get restaurant menu categories | No | Kitchen Service |
+| GET | `/api/menus/categories/{categoryId}` | Get specific menu category | No | Kitchen Service |
+| GET | `/api/menus/restaurants/{restaurantId}/items` | Get all menu items for a restaurant | No | Kitchen Service |
+| GET | `/api/menus/items/{itemId}` | Get specific menu item | No | Kitchen Service |
+| GET | `/api/menus/restaurants/{restaurantId}/search` | Search menu items | No | Kitchen Service |
 
 ### Restaurant Search
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|--------------|
-| POST | `/api/restaurants/search` | Search for available restaurants | No |
+| Method | Endpoint | Description | Auth Required | Connected Services |
+|--------|----------|-------------|--------------|-------------------|
+| POST | `/api/restaurants/search` | Search for available restaurants | No | Restaurant Service |
 
 ### Schedule Management
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|--------------|
-| GET | `/api/schedules/restaurant/{restaurantId}` | Get restaurant schedule | No |
-| PUT | `/api/schedules/restaurant/{restaurantId}/date/{date}` | Update schedule for a date | Yes (Admin/Owner) |
+| Method | Endpoint | Description | Auth Required | Connected Services |
+|--------|----------|-------------|--------------|-------------------|
+| GET | `/api/schedules/restaurant/{restaurantId}` | Get restaurant schedule | No | Restaurant Service |
+| PUT | `/api/schedules/restaurant/{restaurantId}/date/{date}` | Update schedule for a date | Yes (Admin/Owner) | Restaurant Service |
 
 ## Authentication
 
