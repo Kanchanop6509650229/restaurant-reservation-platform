@@ -1353,6 +1353,238 @@
 			  "description": "Cancel the confirmed reservation"
 			},
 			"response": []
+		  },
+		  {
+			"name": "3.8.1 Get Restaurant Menu Categories",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that menu categories are returned",
+					"pm.test(\"Menu categories are returned\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.be.an('array');",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [],
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/menus/restaurants/{{restaurant_id}}/categories",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "menus",
+				  "restaurants",
+				  "{{restaurant_id}}",
+				  "categories"
+				]
+			  },
+			  "description": "Get all menu categories with their items for a specific restaurant"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.8.2 Get Menu Category",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that menu category is returned",
+					"pm.test(\"Menu category is returned\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data).to.have.property('name');",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [],
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/menus/categories/{{category_id}}",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "menus",
+				  "categories",
+				  "{{category_id}}"
+				]
+			  },
+			  "description": "Get a specific menu category with its items"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.8.3 Get Restaurant Menu Items",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that menu items are returned",
+					"pm.test(\"Menu items are returned\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.be.an('array');",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [],
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/menus/restaurants/{{restaurant_id}}/items",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "menus",
+				  "restaurants",
+				  "{{restaurant_id}}",
+				  "items"
+				]
+			  },
+			  "description": "Get all menu items for a specific restaurant"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.8.4 Get Menu Item",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that menu item is returned",
+					"pm.test(\"Menu item is returned\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data).to.have.property('name');",
+					"    pm.expect(jsonData.data).to.have.property('price');",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [],
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/menus/items/{{menu_item_id}}",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "menus",
+				  "items",
+				  "{{menu_item_id}}"
+				]
+			  },
+			  "description": "Get a specific menu item"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.8.5 Search Menu Items",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that menu items are returned",
+					"pm.test(\"Menu items search results are returned\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.be.an('array');",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [],
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/menus/restaurants/{{restaurant_id}}/search?query=pasta",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "menus",
+				  "restaurants",
+				  "{{restaurant_id}}",
+				  "search"
+				],
+				"query": [
+				  {
+					"key": "query",
+					"value": "pasta"
+				  }
+				]
+			  },
+			  "description": "Search for menu items by name or description"
+			},
+			"response": []
 		  }
 		],
 		"description": "Endpoints for reservation management and scheduling",

@@ -25,7 +25,7 @@ spring.kafka.consumer.properties.spring.json.trusted.packages=*
 jwt.secret=your_jwt_secret_key
 jwt.expiration=86400000
 jwt.header=Authorization
-jwt.prefix=Bearer 
+jwt.prefix=Bearer
 
 # Logging levels
 logging.level.org.springframework=INFO
@@ -39,3 +39,12 @@ reservation.default-session-length-minutes=120
 reservation.min-advance-booking-minutes=60
 reservation.max-party-size=20
 reservation.confirmation-expiration-minutes=15
+
+# Swagger/OpenAPI Configuration
+springdoc.api-docs.path=/v3/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.operationsSorter=method
+springdoc.swagger-ui.tagsSorter=alpha
+springdoc.swagger-ui.tryItOutEnabled=true
+springdoc.swagger-ui.filter=true
+springdoc.swagger-ui.syntaxHighlight.activated=true

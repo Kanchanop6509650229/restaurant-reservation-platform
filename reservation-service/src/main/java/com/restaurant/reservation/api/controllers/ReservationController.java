@@ -25,6 +25,14 @@ import com.restaurant.reservation.dto.ReservationUpdateRequest;
 import com.restaurant.reservation.security.CurrentUser;
 import com.restaurant.reservation.service.ReservationService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 /**
@@ -37,6 +45,8 @@ import jakarta.validation.Valid;
  */
 @RestController
 @RequestMapping("/api/reservations")
+@Tag(name = "Reservation Management", description = "APIs for managing restaurant reservations")
+@SecurityRequirement(name = "bearer-jwt")
 public class ReservationController {
 
     /** Logger for this controller */
@@ -64,9 +74,22 @@ public class ReservationController {
      */
     @GetMapping("/user")
     @PreAuthorize("isAuthenticated()")
+    @Operation(
+        summary = "Get user's reservations",
+        description = "Retrieves a paginated list of reservations for the currently authenticated user"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Reservations retrieved successfully",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Page.class))
+        ),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - User not authenticated"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - User not authorized")
+    })
     public ResponseEntity<ResponseDTO<Page<ReservationDTO>>> getReservationsByUser(
-            @CurrentUser String userId,
-            @PageableDefault(size = 10) Pageable pageable) {
+            @Parameter(hidden = true) @CurrentUser String userId,
+            @Parameter(description = "Pagination parameters") @PageableDefault(size = 10) Pageable pageable) {
         logger.info("Fetching reservations for user: {}", userId);
         Page<ReservationDTO> reservations = reservationService.getReservationsByUserId(userId, pageable);
         logger.debug("Found {} reservations for user {}", reservations.getTotalElements(), userId);

@@ -131,6 +131,21 @@ docker-compose up -d
 
 ## API อ้างอิง
 
+### เอกสาร API ด้วย Swagger UI
+
+ทุกเซอร์วิสมีเอกสาร API แบบโต้ตอบโดยใช้ Swagger UI:
+
+- **User Service Swagger UI**: http://localhost:8081/swagger-ui.html
+- **Restaurant Service Swagger UI**: http://localhost:8082/swagger-ui.html
+- **Reservation Service Swagger UI**: http://localhost:8083/swagger-ui.html
+
+Swagger UI มอบอินเตอร์เฟซที่เป็นมิตรกับผู้ใช้สำหรับการสำรวจและทดสอบ API endpoints ซึ่งรวมถึง:
+- คำอธิบาย endpoint โดยละเอียด
+- พารามิเตอร์ของคำขอและรูปแบบ
+- รูปแบบการตอบกลับและรหัสสถานะ
+- ข้อกำหนดการยืนยันตัวตน
+- ความสามารถในการทดสอบแบบโต้ตอบ
+
 ### User Service (Port 8081)
 
 #### การยืนยันตัวตน
@@ -221,6 +236,16 @@ docker-compose up -d
 | `/api/reservations/{id}/confirm` | POST | ยืนยันการจอง | ใช่ |
 | `/api/reservations/{id}/cancel` | POST | ยกเลิกการจอง | ใช่ |
 
+#### การจัดการเมนู
+
+| Endpoint | วิธี | คำอธิบาย | ต้องการการยืนยันตัวตน |
+|----------|--------|-------------|---------------|
+| `/api/menus/restaurants/{restaurantId}/categories` | GET | รับหมวดหมู่เมนูทั้งหมดพร้อมรายการอาหาร | ไม่ |
+| `/api/menus/categories/{categoryId}` | GET | รับหมวดหมู่เมนูพร้อมรายการอาหาร | ไม่ |
+| `/api/menus/restaurants/{restaurantId}/items` | GET | รับรายการอาหารทั้งหมดของร้านอาหาร | ไม่ |
+| `/api/menus/items/{itemId}` | GET | รับรายการอาหารตาม ID | ไม่ |
+| `/api/menus/restaurants/{restaurantId}/search` | GET | ค้นหารายการอาหารตามชื่อ/คำอธิบาย | ไม่ |
+
 #### การจัดการตารางเวลา
 
 | Endpoint | วิธี | คำอธิบาย | ต้องการการยืนยันตัวตน |
@@ -249,6 +274,9 @@ Kafka topics ต่อไปนี้ใช้สำหรับการสื�
 - `reservation-create`: เหตุการณ์การสร้างการจอง
 - `reservation-update`: เหตุการณ์การอัปเดตการจอง
 - `reservation-cancel`: เหตุการณ์การยกเลิกการจอง
+- `menu-item-events`: เหตุการณ์การอัปเดตรายการอาหาร
+- `menu-category-events`: เหตุการณ์การอัปเดตหมวดหมู่เมนู
+- `kitchen-events`: เหตุการณ์ทั่วไปที่เกี่ยวข้องกับครัว
 
 ## Postman Collection
 
@@ -417,7 +445,7 @@ async function login(username, password) {
     },
     body: JSON.stringify({ username, password })
   });
-  
+
   const data = await response.json();
   if (data.success) {
     // เก็บโทเค็นใน localStorage หรือ sessionStorage
@@ -431,13 +459,13 @@ async function login(username, password) {
 // การทำคำขอที่ต้องยืนยันตัวตน
 async function fetchRestaurants() {
   const token = localStorage.getItem('token');
-  
+
   const response = await fetch('http://localhost:8082/api/restaurants', {
     headers: {
       'Authorization': `Bearer ${token}`
     }
   });
-  
+
   return await response.json();
 }
 ```
@@ -450,22 +478,22 @@ func login(username: String, password: String, completion: @escaping (Bool, Stri
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-    
+
     let body: [String: Any] = ["username": username, "password": password]
     request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-    
+
     URLSession.shared.dataTask(with: request) { data, response, error in
         guard let data = data, error == nil else {
             completion(false, nil)
             return
         }
-        
+
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let success = json["success"] as? Bool,
            success,
            let data = json["data"] as? [String: Any],
            let token = data["token"] as? String {
-            
+
             // เก็บโทเค็นอย่างปลอดภัย
             KeychainManager.save(token, forKey: "authToken")
             completion(true, token)

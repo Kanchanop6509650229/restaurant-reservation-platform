@@ -5,7 +5,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <!-- Maven model version -->
     <modelVersion>4.0.0</modelVersion>
-    
+
     <!-- Parent POM configuration -->
     <!-- Inherits common configurations and dependencies from the parent project -->
     <parent>
@@ -14,14 +14,14 @@
         <version>0.0.1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
-    
+
     <!-- Module identification -->
     <!-- Defines the unique identifier and version for the Reservation Service module -->
     <artifactId>reservation-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>reservation-service</name>
     <description>Reservation Service for Restaurant Reservation Platform</description>
-    
+
     <!-- Dependencies section -->
     <!-- Lists all required libraries and frameworks for the Reservation Service -->
     <dependencies>
@@ -31,7 +31,7 @@
             <groupId>com.restaurant</groupId>
             <artifactId>common</artifactId>
         </dependency>
-        
+
         <!-- Spring Boot Starters -->
         <!-- Core Spring Boot dependencies for building web applications -->
         <dependency>
@@ -53,7 +53,7 @@
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
-        
+
         <!-- Security Dependencies -->
         <!-- Spring Security for authentication and authorization -->
         <dependency>
@@ -78,7 +78,14 @@
             <version>0.11.5</version>
             <scope>runtime</scope>
         </dependency>
-        
+
+        <!-- SpringDoc OpenAPI for Swagger documentation -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+
         <!-- Database -->
         <!-- H2 in-memory database for development and testing -->
         <dependency>
@@ -92,7 +99,7 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
-        
+
         <!-- Testing -->
         <!-- Spring Boot test support -->
         <dependency>
@@ -113,7 +120,7 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    
+
     <!-- Build configuration -->
     <!-- Defines how the project should be built and packaged -->
     <build>

@@ -77,6 +77,16 @@ public class KafkaTopics {
     /** Topic for all notification-related events */
     public static final String NOTIFICATION_EVENTS = "notification-events";
 
+    // Kitchen Service Topics
+    /** Topic for all kitchen-related events */
+    public static final String KITCHEN_EVENTS = "kitchen-events";
+
+    /** Topic for menu item updates */
+    public static final String MENU_ITEM_EVENTS = "menu-item-events";
+
+    /** Topic for menu category updates */
+    public static final String MENU_CATEGORY_EVENTS = "menu-category-events";
+
     /**
      * Private constructor to prevent instantiation of this utility class.
      */

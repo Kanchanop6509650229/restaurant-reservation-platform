@@ -116,6 +116,10 @@ public class Reservation {
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Set<ReservationHistory> history = new HashSet<>();
 
+    /** Set of menu items selected for this reservation */
+    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Set<ReservationMenuItem> menuItems = new HashSet<>();
+
     /** Date and time when the reservation was created */
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -174,6 +178,35 @@ public class Reservation {
     public void addHistoryRecord(ReservationHistory record) {
         history.add(record);
         record.setReservation(this);
+    }
+
+    /**
+     * Adds a menu item to the reservation.
+     *
+     * @param menuItem The menu item to add
+     */
+    public void addMenuItem(ReservationMenuItem menuItem) {
+        menuItems.add(menuItem);
+        menuItem.setReservation(this);
+    }
+
+    /**
+     * Removes a menu item from the reservation.
+     *
+     * @param menuItem The menu item to remove
+     */
+    public void removeMenuItem(ReservationMenuItem menuItem) {
+        menuItems.remove(menuItem);
+        menuItem.setReservation(null);
+    }
+
+    /**
+     * Gets the menu items selected for this reservation.
+     *
+     * @return The set of menu items
+     */
+    public Set<ReservationMenuItem> getMenuItems() {
+        return menuItems;
     }
 
     /**

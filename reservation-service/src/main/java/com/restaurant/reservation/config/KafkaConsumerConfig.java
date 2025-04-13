@@ -14,6 +14,7 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 
+import com.restaurant.common.events.kitchen.MenuItemEvent;
 import com.restaurant.common.events.reservation.FindAvailableTableResponseEvent;
 import com.restaurant.common.events.restaurant.ReservationTimeValidationResponseEvent;
 import com.restaurant.common.events.restaurant.RestaurantSearchResponseEvent;
@@ -277,6 +278,41 @@ public class KafkaConsumerConfig {
     public ConcurrentKafkaListenerContainerFactory<String, RestaurantSearchResponseEvent> restaurantSearchKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, RestaurantSearchResponseEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(restaurantSearchConsumerFactory());
+        return factory;
+    }
+
+    /**
+     * Creates a consumer factory for menu item events.
+     * Configures specific settings for handling menu item events from the kitchen service.
+     *
+     * @return Configured ConsumerFactory for MenuItemEvent messages
+     */
+    @Bean
+    public ConsumerFactory<String, MenuItemEvent> menuItemConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId + "-menu-item");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+
+        JsonDeserializer<MenuItemEvent> deserializer = new JsonDeserializer<>(MenuItemEvent.class);
+        deserializer.addTrustedPackages("com.restaurant.common.events");
+        deserializer.setUseTypeMapperForKey(true);
+
+        return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    }
+
+    /**
+     * Creates a container factory for menu item event listeners.
+     * Uses the menu item consumer factory for message consumption.
+     *
+     * @return Configured ConcurrentKafkaListenerContainerFactory for menu item events
+     */
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, MenuItemEvent> menuItemKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, MenuItemEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(menuItemConsumerFactory());
         return factory;
     }
 }

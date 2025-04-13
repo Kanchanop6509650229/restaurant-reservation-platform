@@ -136,6 +136,21 @@ This starts:
 
 ## API Reference
 
+### API Documentation with Swagger UI
+
+All services provide interactive API documentation using Swagger UI:
+
+- **User Service Swagger UI**: http://localhost:8081/swagger-ui.html
+- **Restaurant Service Swagger UI**: http://localhost:8082/swagger-ui.html
+- **Reservation Service Swagger UI**: http://localhost:8083/swagger-ui.html
+
+Swagger UI provides a user-friendly interface to explore and test the API endpoints, including:
+- Detailed endpoint descriptions
+- Request parameters and schemas
+- Response formats and status codes
+- Authentication requirements
+- Interactive testing capabilities
+
 ### User Service (Port 8081)
 
 #### Authentication
@@ -226,6 +241,16 @@ This starts:
 | `/api/reservations/{id}/confirm` | POST | Confirm a reservation | Yes |
 | `/api/reservations/{id}/cancel` | POST | Cancel a reservation | Yes |
 
+#### Menu Management
+
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/menus/restaurants/{restaurantId}/categories` | GET | Get all menu categories with items | No |
+| `/api/menus/categories/{categoryId}` | GET | Get menu category with items | No |
+| `/api/menus/restaurants/{restaurantId}/items` | GET | Get all menu items for a restaurant | No |
+| `/api/menus/items/{itemId}` | GET | Get menu item by ID | No |
+| `/api/menus/restaurants/{restaurantId}/search` | GET | Search menu items by name/description | No |
+
 #### Restaurant Search
 
 | Endpoint | Method | Description | Auth Required |
@@ -286,6 +311,9 @@ The following Kafka topics are used for inter-service communication:
 - `reservation-create`: Reservation creation events
 - `reservation-update`: Reservation update events
 - `reservation-cancel`: Reservation cancellation events
+- `menu-item-events`: Menu item update events
+- `menu-category-events`: Menu category update events
+- `kitchen-events`: General kitchen-related events
 
 ## Postman Collection
 
