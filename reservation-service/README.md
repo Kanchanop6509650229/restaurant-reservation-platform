@@ -1,4 +1,4 @@
-[**English**](./readme.md) | [ภาษาไทย](./readme.th.md)
+[**English**](./README.md) | [ภาษาไทย](./README.th.md)
 
 ---
 
