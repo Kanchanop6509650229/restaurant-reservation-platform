@@ -1,7 +1,10 @@
 package com.restaurant.reservation.dto;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -64,6 +67,10 @@ public class ReservationCreateRequest {
 
     /** Flag indicating if reminders should be enabled (defaults to true) */
     private boolean remindersEnabled = true;
+
+    /** List of menu items to be included in the reservation (optional) */
+    @Valid
+    private List<MenuItemSelectionDTO> menuItems = new ArrayList<>();
 
     /**
      * Gets the ID of the restaurant where the reservation should be made.
@@ -225,5 +232,34 @@ public class ReservationCreateRequest {
      */
     public void setRemindersEnabled(boolean remindersEnabled) {
         this.remindersEnabled = remindersEnabled;
+    }
+
+    /**
+     * Gets the list of menu items to be included in the reservation.
+     *
+     * @return The list of menu items
+     */
+    public List<MenuItemSelectionDTO> getMenuItems() {
+        return menuItems;
+    }
+
+    /**
+     * Sets the list of menu items to be included in the reservation.
+     *
+     * @param menuItems The list of menu items to set
+     */
+    public void setMenuItems(List<MenuItemSelectionDTO> menuItems) {
+        this.menuItems = menuItems != null ? menuItems : new ArrayList<>();
+    }
+
+    /**
+     * Adds a menu item to the reservation.
+     *
+     * @param menuItem The menu item to add
+     */
+    public void addMenuItem(MenuItemSelectionDTO menuItem) {
+        if (menuItem != null) {
+            this.menuItems.add(menuItem);
+        }
     }
 }

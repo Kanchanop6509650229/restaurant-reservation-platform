@@ -61,6 +61,12 @@ public class KafkaTopics {
     /** Topic for restaurant validation responses */
     public static final String RESTAURANT_VALIDATION_RESPONSE = "restaurant-validation-response";
 
+    /** Topic for restaurant ownership validation requests */
+    public static final String RESTAURANT_OWNERSHIP_REQUEST = "restaurant-ownership-request";
+
+    /** Topic for restaurant ownership validation responses */
+    public static final String RESTAURANT_OWNERSHIP_RESPONSE = "restaurant-ownership-response";
+
     /** Topic for reservation time validation requests */
     public static final String RESERVATION_TIME_VALIDATION_REQUEST = "reservation-time-validation-request";
 

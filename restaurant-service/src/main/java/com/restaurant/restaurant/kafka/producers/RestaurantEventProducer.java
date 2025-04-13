@@ -9,6 +9,7 @@ import com.restaurant.common.events.reservation.FindAvailableTableResponseEvent;
 import com.restaurant.common.events.restaurant.CapacityChangedEvent;
 import com.restaurant.common.events.restaurant.OperatingHoursChangedEvent;
 import com.restaurant.common.events.restaurant.ReservationTimeValidationResponseEvent;
+import com.restaurant.common.events.restaurant.RestaurantOwnershipResponseEvent;
 import com.restaurant.common.events.restaurant.RestaurantUpdatedEvent;
 import com.restaurant.common.events.restaurant.RestaurantValidationResponseEvent;
 import com.restaurant.common.events.restaurant.TableStatusChangedEvent;
@@ -20,10 +21,10 @@ import com.restaurant.common.events.restaurant.TableStatusChangedEvent;
  * - Capacity and operating hours changes
  * - Table status updates and availability
  * - Reservation time validation responses
- * 
+ *
  * Events are published to specific Kafka topics for asynchronous processing
  * by other services in the system.
- * 
+ *
  * @author Restaurant Reservation Team
  * @version 1.0
  */
@@ -114,5 +115,15 @@ public class RestaurantEventProducer {
      */
     public void publishReservationTimeValidationResponse(ReservationTimeValidationResponseEvent event) {
         kafkaTemplate.send(KafkaTopics.RESERVATION_TIME_VALIDATION_RESPONSE, event.getCorrelationId(), event);
+    }
+
+    /**
+     * Publishes a response event for restaurant ownership validation.
+     * Used to confirm if a user is the owner of a restaurant.
+     *
+     * @param event The restaurant ownership response event
+     */
+    public void publishRestaurantOwnershipResponse(RestaurantOwnershipResponseEvent event) {
+        kafkaTemplate.send(KafkaTopics.RESTAURANT_OWNERSHIP_RESPONSE, event.getCorrelationId(), event);
     }
 }

@@ -84,6 +84,9 @@ public class ReservationDTO {
     /** List of history records tracking changes to the reservation */
     private List<HistoryRecord> historyRecords = new ArrayList<>();
 
+    /** List of menu items included in the reservation */
+    private List<ReservationMenuItemDTO> menuItems = new ArrayList<>();
+
     /**
      * Nested class representing a history record for the reservation.
      * Tracks changes and actions performed on the reservation.
@@ -494,6 +497,24 @@ public class ReservationDTO {
      */
     public void setHistoryRecords(List<HistoryRecord> historyRecords) {
         this.historyRecords = historyRecords;
+    }
+
+    /**
+     * Gets the list of menu items included in the reservation.
+     *
+     * @return The list of menu items
+     */
+    public List<ReservationMenuItemDTO> getMenuItems() {
+        return menuItems;
+    }
+
+    /**
+     * Sets the list of menu items included in the reservation.
+     *
+     * @param menuItems The menu items to set
+     */
+    public void setMenuItems(List<ReservationMenuItemDTO> menuItems) {
+        this.menuItems = menuItems != null ? menuItems : new ArrayList<>();
     }
 
     @Override

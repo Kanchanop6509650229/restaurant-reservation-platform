@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.restaurant.common.dto.ResponseDTO;
 import com.restaurant.common.exceptions.EntityNotFoundException;
+import com.restaurant.reservation.dto.ReservationAddMenuItemsRequest;
 import com.restaurant.reservation.dto.ReservationCreateRequest;
 import com.restaurant.reservation.dto.ReservationDTO;
 import com.restaurant.reservation.dto.ReservationUpdateRequest;
@@ -139,16 +140,29 @@ public class ReservationController {
     /**
      * Creates a new reservation.
      * Requires user authentication and valid reservation data.
+     * Optionally allows adding menu items to the reservation.
      *
-     * @param createRequest The reservation creation request containing reservation details
+     * @param createRequest The reservation creation request containing reservation details and optional menu items
      * @param userId The ID of the currently authenticated user
      * @return ResponseEntity containing the created reservation with HTTP 201 status
      */
     @PostMapping
     @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Create a new reservation", description = "Creates a new reservation with optional menu items")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Reservation created successfully",
+                content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = ReservationDTO.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid input or business validation failed",
+                content = @Content),
+        @ApiResponse(responseCode = "401", description = "Unauthorized",
+                content = @Content),
+        @ApiResponse(responseCode = "403", description = "Forbidden",
+                content = @Content)
+    })
     public ResponseEntity<ResponseDTO<ReservationDTO>> createReservation(
             @Valid @RequestBody ReservationCreateRequest createRequest,
-            @CurrentUser String userId) {
+            @Parameter(hidden = true) @CurrentUser String userId) {
         logger.info("Creating reservation for user: {}, restaurant: {}, party size: {}",
                 userId, createRequest.getRestaurantId(), createRequest.getPartySize());
 
@@ -169,6 +183,7 @@ public class ReservationController {
     /**
      * Confirms a pending reservation.
      * Requires user authentication.
+     * Only the user who created the reservation can confirm it.
      *
      * @param id The ID of the reservation to confirm
      * @param userId The ID of the currently authenticated user
@@ -176,6 +191,20 @@ public class ReservationController {
      */
     @PostMapping("/{id}/confirm")
     @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Confirm a reservation", description = "Confirms a pending reservation. Only the user who created the reservation can confirm it.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Reservation confirmed successfully",
+                content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = ReservationDTO.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request or business validation failed",
+                content = @Content),
+        @ApiResponse(responseCode = "401", description = "Unauthorized",
+                content = @Content),
+        @ApiResponse(responseCode = "403", description = "Forbidden - User is not the creator of the reservation",
+                content = @Content),
+        @ApiResponse(responseCode = "404", description = "Reservation not found",
+                content = @Content)
+    })
     public ResponseEntity<ResponseDTO<ReservationDTO>> confirmReservation(
             @PathVariable String id,
             @CurrentUser String userId) {
@@ -199,6 +228,7 @@ public class ReservationController {
     /**
      * Cancels an existing reservation.
      * Requires user authentication and a cancellation reason.
+     * Only the user who created the reservation or the restaurant owner can cancel it.
      *
      * @param id The ID of the reservation to cancel
      * @param reason The reason for cancellation
@@ -207,6 +237,20 @@ public class ReservationController {
      */
     @PostMapping("/{id}/cancel")
     @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Cancel a reservation", description = "Cancels an existing reservation. Only the user who created the reservation or the restaurant owner can cancel it.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Reservation cancelled successfully",
+                content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = ReservationDTO.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request or business validation failed",
+                content = @Content),
+        @ApiResponse(responseCode = "401", description = "Unauthorized",
+                content = @Content),
+        @ApiResponse(responseCode = "403", description = "Forbidden - User is neither the creator nor the restaurant owner",
+                content = @Content),
+        @ApiResponse(responseCode = "404", description = "Reservation not found",
+                content = @Content)
+    })
     public ResponseEntity<ResponseDTO<ReservationDTO>> cancelReservation(
             @PathVariable String id,
             @RequestParam String reason,
@@ -231,6 +275,7 @@ public class ReservationController {
     /**
      * Updates an existing reservation.
      * Requires user authentication and valid update data.
+     * Only the user who created the reservation can update it.
      *
      * @param id The ID of the reservation to update
      * @param updateRequest The reservation update request containing new details
@@ -239,6 +284,20 @@ public class ReservationController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Update a reservation", description = "Updates an existing reservation. Only the user who created the reservation can update it.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Reservation updated successfully",
+                content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = ReservationDTO.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request or business validation failed",
+                content = @Content),
+        @ApiResponse(responseCode = "401", description = "Unauthorized",
+                content = @Content),
+        @ApiResponse(responseCode = "403", description = "Forbidden - User is not the creator of the reservation",
+                content = @Content),
+        @ApiResponse(responseCode = "404", description = "Reservation not found",
+                content = @Content)
+    })
     public ResponseEntity<ResponseDTO<ReservationDTO>> updateReservation(
             @PathVariable String id,
             @Valid @RequestBody ReservationUpdateRequest updateRequest,
@@ -257,6 +316,54 @@ public class ReservationController {
             logger.error("Failed to update reservation: {}, error: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ResponseDTO.error("Failed to update reservation: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Adds menu items to an existing reservation.
+     * Requires user authentication and valid menu item data.
+     * Only the user who created the reservation can add menu items to it.
+     * Menu items can only be added to reservations in PENDING or CONFIRMED status.
+     *
+     * @param id The ID of the reservation to add menu items to
+     * @param addMenuItemsRequest The request containing menu items to add
+     * @param userId The ID of the currently authenticated user
+     * @return ResponseEntity containing the updated reservation
+     */
+    @PostMapping("/{id}/menu-items")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Add menu items to a reservation", description = "Adds menu items to an existing reservation. Only the user who created the reservation can add menu items.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Menu items added successfully",
+                content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = ReservationDTO.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request or business validation failed",
+                content = @Content),
+        @ApiResponse(responseCode = "401", description = "Unauthorized",
+                content = @Content),
+        @ApiResponse(responseCode = "403", description = "Forbidden - User is not the creator of the reservation",
+                content = @Content),
+        @ApiResponse(responseCode = "404", description = "Reservation not found",
+                content = @Content)
+    })
+    public ResponseEntity<ResponseDTO<ReservationDTO>> addMenuItemsToReservation(
+            @PathVariable String id,
+            @Valid @RequestBody ReservationAddMenuItemsRequest addMenuItemsRequest,
+            @CurrentUser String userId) {
+        logger.info("Adding menu items to reservation: {}, user: {}", id, userId);
+
+        try {
+            ReservationDTO reservation = reservationService.addMenuItemsToReservation(id, addMenuItemsRequest, userId);
+            logger.info("Successfully added menu items to reservation: {}", id);
+            return ResponseEntity.ok(ResponseDTO.success(reservation, "Menu items added to reservation successfully"));
+        } catch (EntityNotFoundException e) {
+            logger.warn("Reservation not found for adding menu items: {}", id);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResponseDTO.error("Reservation not found with ID: " + id));
+        } catch (Exception e) {
+            logger.error("Failed to add menu items to reservation: {}, error: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ResponseDTO.error("Failed to add menu items to reservation: " + e.getMessage()));
         }
     }
 }

@@ -24,13 +24,20 @@ import com.restaurant.common.events.reservation.ReservationCreatedEvent;
 import com.restaurant.common.events.reservation.ReservationModifiedEvent;
 import com.restaurant.common.exceptions.EntityNotFoundException;
 import com.restaurant.common.exceptions.ValidationException;
+import com.restaurant.reservation.domain.models.MenuItem;
 import com.restaurant.reservation.domain.models.Reservation;
 import com.restaurant.reservation.domain.models.ReservationHistory;
+import com.restaurant.reservation.domain.models.ReservationMenuItem;
 import com.restaurant.reservation.domain.models.ReservationQuota;
+import com.restaurant.reservation.domain.repositories.MenuItemRepository;
+import com.restaurant.reservation.domain.repositories.ReservationMenuItemRepository;
 import com.restaurant.reservation.domain.repositories.ReservationQuotaRepository;
 import com.restaurant.reservation.domain.repositories.ReservationRepository;
+import com.restaurant.reservation.dto.MenuItemSelectionDTO;
+import com.restaurant.reservation.dto.ReservationAddMenuItemsRequest;
 import com.restaurant.reservation.dto.ReservationCreateRequest;
 import com.restaurant.reservation.dto.ReservationDTO;
+import com.restaurant.reservation.dto.ReservationMenuItemDTO;
 import com.restaurant.reservation.dto.ReservationUpdateRequest;
 import com.restaurant.reservation.exception.RestaurantCapacityException;
 import com.restaurant.reservation.kafka.producers.ReservationEventProducer;
@@ -56,6 +63,12 @@ public class ReservationService {
     /** Repository for managing reservation quota data */
     private final ReservationQuotaRepository quotaRepository;
 
+    /** Repository for managing menu items */
+    private final MenuItemRepository menuItemRepository;
+
+    /** Repository for managing reservation menu items */
+    private final ReservationMenuItemRepository reservationMenuItemRepository;
+
     /** Service for managing table availability */
     private final TableAvailabilityService tableAvailabilityService;
 
@@ -64,6 +77,9 @@ public class ReservationService {
 
     /** Service for validating restaurant-related operations */
     private final RestaurantValidationService restaurantValidationService;
+
+    /** Service for validating restaurant ownership */
+    private final RestaurantOwnershipService restaurantOwnershipService;
 
     /** Time in minutes before a reservation expires if not confirmed */
     @Value("${reservation.confirmation-expiration-minutes:15}")
@@ -90,20 +106,29 @@ public class ReservationService {
      *
      * @param reservationRepository Repository for reservation data
      * @param quotaRepository Repository for reservation quota data
+     * @param menuItemRepository Repository for menu items
+     * @param reservationMenuItemRepository Repository for reservation menu items
      * @param tableAvailabilityService Service for managing table availability
      * @param eventProducer Producer for reservation events
      * @param restaurantValidationService Service for restaurant validation
+     * @param restaurantOwnershipService Service for validating restaurant ownership
      */
     public ReservationService(ReservationRepository reservationRepository,
             ReservationQuotaRepository quotaRepository,
+            MenuItemRepository menuItemRepository,
+            ReservationMenuItemRepository reservationMenuItemRepository,
             TableAvailabilityService tableAvailabilityService,
             ReservationEventProducer eventProducer,
-            RestaurantValidationService restaurantValidationService) {
+            RestaurantValidationService restaurantValidationService,
+            RestaurantOwnershipService restaurantOwnershipService) {
         this.reservationRepository = reservationRepository;
         this.quotaRepository = quotaRepository;
+        this.menuItemRepository = menuItemRepository;
+        this.reservationMenuItemRepository = reservationMenuItemRepository;
         this.tableAvailabilityService = tableAvailabilityService;
         this.eventProducer = eventProducer;
         this.restaurantValidationService = restaurantValidationService;
+        this.restaurantOwnershipService = restaurantOwnershipService;
     }
 
     /**
@@ -213,6 +238,11 @@ public class ReservationService {
         // Save final state
         reservation = reservationRepository.save(reservation);
 
+        // Process menu items if any
+        if (createRequest.getMenuItems() != null && !createRequest.getMenuItems().isEmpty()) {
+            processMenuItems(reservation, createRequest.getMenuItems());
+        }
+
         // Update reservation quota
         updateReservationQuota(reservation, true);
 
@@ -242,6 +272,12 @@ public class ReservationService {
     public ReservationDTO confirmReservation(String id, String userId) {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Reservation", id));
+
+        // Check if the user is the one who created the reservation
+        if (!reservation.getUserId().equals(userId)) {
+            throw new ValidationException("userId",
+                    "Only the user who created the reservation can confirm it");
+        }
 
         // Check if reservation is still in PENDING status
         if (!reservation.getStatus().equals(StatusCodes.RESERVATION_PENDING)) {
@@ -300,6 +336,15 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Reservation", id));
 
+        // Check if the user is the one who created the reservation or the restaurant owner
+        boolean isCreator = reservation.getUserId().equals(userId);
+        boolean isRestaurantOwner = restaurantOwnershipService.isUserRestaurantOwner(reservation.getRestaurantId(), userId);
+
+        if (!isCreator && !isRestaurantOwner) {
+            throw new ValidationException("userId",
+                    "Only the user who created the reservation or the restaurant owner can cancel it");
+        }
+
         // Check if reservation can be cancelled
         if (reservation.getStatus().equals(StatusCodes.RESERVATION_CANCELLED) ||
                 reservation.getStatus().equals(StatusCodes.RESERVATION_COMPLETED) ||
@@ -356,6 +401,12 @@ public class ReservationService {
     public ReservationDTO updateReservation(String id, ReservationUpdateRequest updateRequest, String userId) {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Reservation", id));
+
+        // Check if the user is the one who created the reservation
+        if (!reservation.getUserId().equals(userId)) {
+            throw new ValidationException("userId",
+                    "Only the user who created the reservation can update it");
+        }
 
         // Check if reservation can be updated
         if (!reservation.getStatus().equals(StatusCodes.RESERVATION_PENDING) &&
@@ -477,7 +528,7 @@ public class ReservationService {
                 updatedReservation.getId(),
                 updatedReservation.getRestaurantId(),
                 updatedReservation.getUserId(),
-                timeChanged ? oldReservationTime.toString() : null,
+                (timeChanged && oldReservationTime != null) ? oldReservationTime.toString() : null,
                 timeChanged ? updatedReservation.getReservationTime().toString() : null,
                 partySizeChanged ? oldPartySize : 0,
                 partySizeChanged ? updatedReservation.getPartySize() : 0));
@@ -843,6 +894,97 @@ public class ReservationService {
     }
 
     /**
+     * Adds menu items to an existing reservation.
+     * Validates that the reservation is in a valid state for adding menu items.
+     *
+     * @param id The ID of the reservation to add menu items to
+     * @param addMenuItemsRequest The request containing menu items to add
+     * @param userId The ID of the user adding the menu items
+     * @return Updated ReservationDTO object
+     * @throws EntityNotFoundException if the reservation is not found
+     * @throws ValidationException if the reservation cannot have menu items added
+     */
+    @Transactional
+    public ReservationDTO addMenuItemsToReservation(String id, ReservationAddMenuItemsRequest addMenuItemsRequest, String userId) {
+        Reservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Reservation", id));
+
+        // Check if the user is the one who created the reservation
+        if (!reservation.getUserId().equals(userId)) {
+            throw new ValidationException("userId",
+                    "Only the user who created the reservation can add menu items");
+        }
+
+        // Check if reservation is in a valid state for adding menu items
+        if (!reservation.getStatus().equals(StatusCodes.RESERVATION_PENDING) &&
+                !reservation.getStatus().equals(StatusCodes.RESERVATION_CONFIRMED)) {
+            throw new ValidationException("status",
+                    "Cannot add menu items to reservation in " + reservation.getStatus() + " status");
+        }
+
+        // Process menu items
+        if (addMenuItemsRequest.getMenuItems() != null && !addMenuItemsRequest.getMenuItems().isEmpty()) {
+            processMenuItems(reservation, addMenuItemsRequest.getMenuItems());
+        } else {
+            throw new ValidationException("menuItems", "At least one menu item must be provided");
+        }
+
+        // Create history record
+        ReservationHistory history = new ReservationHistory(
+                reservation, "MENU_ITEMS_ADDED", "Menu items added to reservation", userId);
+        reservation.addHistoryRecord(history);
+
+        // Save reservation
+        Reservation updatedReservation = reservationRepository.save(reservation);
+
+        return convertToDTO(updatedReservation);
+    }
+
+    /**
+     * Processes menu items for a reservation.
+     * Creates ReservationMenuItem entities for each selected menu item.
+     *
+     * @param reservation The reservation to add menu items to
+     * @param menuItems The list of menu items to add
+     * @throws EntityNotFoundException if a menu item is not found
+     */
+    @Transactional
+    private void processMenuItems(Reservation reservation, List<MenuItemSelectionDTO> menuItems) {
+        logger.info("Processing {} menu items for reservation: {}", menuItems.size(), reservation.getId());
+
+        for (MenuItemSelectionDTO itemSelection : menuItems) {
+            // Find the menu item
+            MenuItem menuItem = menuItemRepository.findById(itemSelection.getMenuItemId())
+                    .orElseThrow(() -> new EntityNotFoundException("MenuItem", itemSelection.getMenuItemId()));
+
+            // Check if the menu item is active and available
+            if (!menuItem.isActive() || !menuItem.isAvailable()) {
+                logger.warn("Menu item {} is not active or available", menuItem.getId());
+                continue;
+            }
+
+            // Check if the menu item belongs to the restaurant
+            if (!menuItem.getRestaurantId().equals(reservation.getRestaurantId())) {
+                logger.warn("Menu item {} does not belong to restaurant {}",
+                        menuItem.getId(), reservation.getRestaurantId());
+                continue;
+            }
+
+            // Create a new reservation menu item
+            ReservationMenuItem reservationMenuItem = new ReservationMenuItem(
+                    reservation,
+                    menuItem,
+                    itemSelection.getQuantity(),
+                    itemSelection.getSpecialInstructions(),
+                    menuItem.getPrice());
+
+            // Save the reservation menu item
+            reservationMenuItemRepository.save(reservationMenuItem);
+            logger.debug("Added menu item {} to reservation {}", menuItem.getId(), reservation.getId());
+        }
+    }
+
+    /**
      * Converts a Reservation entity to a ReservationDTO.
      * Maps all relevant fields from the entity to the DTO.
      *
@@ -877,6 +1019,34 @@ public class ReservationService {
                     .collect(Collectors.toList()));
         }
 
+        // Include menu items if any
+        if (reservation.getMenuItems() != null && !reservation.getMenuItems().isEmpty()) {
+            List<ReservationMenuItemDTO> menuItemDTOs = reservation.getMenuItems().stream()
+                    .map(this::convertMenuItemToDTO)
+                    .collect(Collectors.toList());
+            dto.setMenuItems(menuItemDTOs);
+        }
+
+        return dto;
+    }
+
+    /**
+     * Converts a ReservationMenuItem entity to a ReservationMenuItemDTO.
+     *
+     * @param menuItem The reservation menu item entity to convert
+     * @return A new ReservationMenuItemDTO object
+     */
+    private ReservationMenuItemDTO convertMenuItemToDTO(ReservationMenuItem menuItem) {
+        ReservationMenuItemDTO dto = new ReservationMenuItemDTO();
+        dto.setId(menuItem.getId());
+        dto.setReservationId(menuItem.getReservation().getId());
+        dto.setMenuItemId(menuItem.getMenuItem().getId());
+        dto.setMenuItemName(menuItem.getMenuItem().getName());
+        dto.setQuantity(menuItem.getQuantity());
+        dto.setSpecialInstructions(menuItem.getSpecialInstructions());
+        dto.setPrice(menuItem.getPrice());
+        dto.setCreatedAt(menuItem.getCreatedAt());
+        dto.setUpdatedAt(menuItem.getUpdatedAt());
         return dto;
     }
 }

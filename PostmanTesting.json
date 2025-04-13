@@ -914,7 +914,7 @@
 			"response": []
 		  },
 		  {
-			"name": "3.1 Create Reservation",
+			"name": "3.1 Create Reservation Without Menu",
 			"event": [
 			  {
 				"listen": "test",
@@ -934,6 +934,13 @@
 					"    pm.expect(jsonData.data).to.have.property('id');",
 					"    pm.expect(jsonData.data.restaurantId).to.eql(pm.environment.get(\"restaurant_id\"));",
 					"    pm.expect(jsonData.data.status).to.eql(\"PENDING\");",
+					"});",
+					"",
+					"// Test that no menu items are present",
+					"pm.test(\"No menu items in reservation\", function () {",
+					"    pm.expect(jsonData.data).to.have.property('menuItems');",
+					"    pm.expect(jsonData.data.menuItems).to.be.an('array');",
+					"    pm.expect(jsonData.data.menuItems.length).to.eql(0);",
 					"});",
 					"",
 					"// Save reservation ID to environment",
@@ -957,8 +964,13 @@
 					"// Format as ISO string",
 					"var reservationTime = futureDate.toISOString().split('.')[0];",
 					"",
+					"// Set a sample menu item ID for testing",
+					"// In a real scenario, this would be retrieved from a previous API call",
+					"var menuItemId = \"00000000-0000-0000-0000-000000000001\";",
+					"",
 					"// Store test data in environment",
-					"pm.environment.set(\"reservation_time\", reservationTime);"
+					"pm.environment.set(\"reservation_time\", reservationTime);",
+					"pm.environment.set(\"menu_item_id\", menuItemId);"
 				  ],
 				  "type": "text/javascript"
 				}
@@ -990,7 +1002,105 @@
 				  "reservations"
 				]
 			  },
-			  "description": "Create a new reservation for the test restaurant"
+			  "description": "Create a new reservation without menu items for the test restaurant"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.1.1 Create Reservation With Menu",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 201\", function () {",
+					"    pm.response.to.have.status(201);",
+					"});",
+					"",
+					"// Test that reservation was created",
+					"pm.test(\"Reservation created successfully\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data.restaurantId).to.eql(pm.environment.get(\"restaurant_id\"));",
+					"    pm.expect(jsonData.data.status).to.eql(\"PENDING\");",
+					"});",
+					"",
+					"// Test that menu items were added to the reservation",
+					"pm.test(\"Menu items added to reservation\", function () {",
+					"    pm.expect(jsonData.data).to.have.property('menuItems');",
+					"    pm.expect(jsonData.data.menuItems).to.be.an('array');",
+					"    pm.expect(jsonData.data.menuItems.length).to.be.at.least(1);",
+					"    if (jsonData.data.menuItems.length > 0) {",
+					"        pm.expect(jsonData.data.menuItems[0]).to.have.property('menuItemId');",
+					"        pm.expect(jsonData.data.menuItems[0]).to.have.property('quantity');",
+					"        pm.expect(jsonData.data.menuItems[0].quantity).to.eql(2);",
+					"    }",
+					"});",
+					"",
+					"// Save reservation ID to environment",
+					"if (jsonData.data && jsonData.data.id) {",
+					"    pm.environment.set(\"reservation_with_menu_id\", jsonData.data.id);",
+					"    console.log(\"Reservation with menu ID saved to environment: \" + jsonData.data.id);",
+					"}"
+				  ],
+				  "type": "text/javascript"
+				}
+			  },
+			  {
+				"listen": "prerequest",
+				"script": {
+				  "exec": [
+					"// Generate a future date for reservation (7 days from now at 8:00 PM)",
+					"var futureDate = new Date();",
+					"futureDate.setDate(futureDate.getDate() + 7);",
+					"futureDate.setHours(20, 0, 0, 0);",
+					"",
+					"// Format as ISO string",
+					"var reservationTime = futureDate.toISOString().split('.')[0];",
+					"",
+					"// Set a sample menu item ID for testing",
+					"// In a real scenario, this would be retrieved from a previous API call",
+					"var menuItemId = \"00000000-0000-0000-0000-000000000001\";",
+					"",
+					"// Store test data in environment",
+					"pm.environment.set(\"reservation_time_with_menu\", reservationTime);",
+					"pm.environment.set(\"menu_item_id\", menuItemId);"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				},
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"restaurantId\": \"{{restaurant_id}}\",\n  \"reservationTime\": \"{{reservation_time_with_menu}}\",\n  \"partySize\": 3,\n  \"durationMinutes\": 90,\n  \"customerName\": \"Jane Smith\",\n  \"customerPhone\": \"9876543210\",\n  \"customerEmail\": \"jane@example.com\",\n  \"specialRequests\": \"Quiet table please\",\n  \"remindersEnabled\": true,\n  \"menuItems\": [\n    {\n      \"menuItemId\": \"{{menu_item_id}}\",\n      \"quantity\": 2,\n      \"specialInstructions\": \"No onions please\"\n    }\n  ]\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/reservations",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "reservations"
+				]
+			  },
+			  "description": "Create a new reservation with menu items for the test restaurant"
 			},
 			"response": []
 		  },
@@ -1014,15 +1124,29 @@
 					"    pm.expect(jsonData.success).to.be.true;",
 					"    pm.expect(jsonData.data).to.have.property('content');",
 					"    pm.expect(jsonData.data.content).to.be.an('array');",
-					"    pm.expect(jsonData.data.content.length).to.be.at.least(1);",
-					"    ",
-					"    // Find our created reservation",
+					"    pm.expect(jsonData.data.content.length).to.be.at.least(2); // At least 2 reservations (with and without menu)",
+					"});",
+					"",
+					"// Find our created reservation without menu",
+					"pm.test(\"Reservation without menu is found\", function () {",
 					"    var foundReservation = jsonData.data.content.find(function(reservation) {",
 					"        return reservation.id === pm.environment.get(\"reservation_id\");",
 					"    });",
 					"    ",
 					"    pm.expect(foundReservation).to.not.be.undefined;",
 					"    pm.expect(foundReservation.restaurantId).to.eql(pm.environment.get(\"restaurant_id\"));",
+					"    pm.expect(foundReservation.menuItems.length).to.eql(0);",
+					"});",
+					"",
+					"// Find our created reservation with menu",
+					"pm.test(\"Reservation with menu is found\", function () {",
+					"    var foundReservation = jsonData.data.content.find(function(reservation) {",
+					"        return reservation.id === pm.environment.get(\"reservation_with_menu_id\");",
+					"    });",
+					"    ",
+					"    pm.expect(foundReservation).to.not.be.undefined;",
+					"    pm.expect(foundReservation.restaurantId).to.eql(pm.environment.get(\"restaurant_id\"));",
+					"    pm.expect(foundReservation.menuItems.length).to.be.at.least(1);",
 					"});"
 				  ],
 				  "type": "text/javascript"
@@ -1053,7 +1177,7 @@
 			"response": []
 		  },
 		  {
-			"name": "3.3 Get Reservation By ID",
+			"name": "3.3.1 Get Reservation Without Menu",
 			"event": [
 			  {
 				"listen": "test",
@@ -1103,6 +1227,68 @@
 			"response": []
 		  },
 		  {
+			"name": "3.3.2 Get Reservation With Menu",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that reservation data is correct",
+					"pm.test(\"Reservation data is correct\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data.id).to.eql(pm.environment.get(\"reservation_with_menu_id\"));",
+					"    pm.expect(jsonData.data.restaurantId).to.eql(pm.environment.get(\"restaurant_id\"));",
+					"});",
+					"",
+					"// Test that menu items are present",
+					"pm.test(\"Menu items are present in reservation\", function () {",
+					"    pm.expect(jsonData.data).to.have.property('menuItems');",
+					"    pm.expect(jsonData.data.menuItems).to.be.an('array');",
+					"    pm.expect(jsonData.data.menuItems.length).to.be.at.least(1);",
+					"    if (jsonData.data.menuItems.length > 0) {",
+					"        pm.expect(jsonData.data.menuItems[0]).to.have.property('menuItemId');",
+					"        pm.expect(jsonData.data.menuItems[0]).to.have.property('quantity');",
+					"        pm.expect(jsonData.data.menuItems[0].quantity).to.eql(2);",
+					"    }",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				}
+			  ],
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/reservations/{{reservation_with_menu_id}}",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "reservations",
+				  "{{reservation_with_menu_id}}"
+				]
+			  },
+			  "description": "Get details of the reservation with menu items"
+			},
+			"response": []
+		  },
+		  {
 			"name": "3.4 Confirm Reservation",
 			"event": [
 			  {
@@ -1123,6 +1309,12 @@
 					"    pm.expect(jsonData.data).to.have.property('id');",
 					"    pm.expect(jsonData.data.id).to.eql(pm.environment.get(\"reservation_id\"));",
 					"    pm.expect(jsonData.data.status).to.eql(\"CONFIRMED\");",
+					"});",
+					"",
+					"// Verify that the user ID in the response matches the authenticated user",
+					"pm.test(\"Reservation was created by the authenticated user\", function () {",
+					"    pm.expect(jsonData.data).to.have.property('userId');",
+					"    pm.expect(jsonData.data.userId).to.eql(pm.environment.get(\"user_id\"));",
 					"});"
 				  ],
 				  "type": "text/javascript"
@@ -1150,6 +1342,242 @@
 				]
 			  },
 			  "description": "Confirm the pending reservation"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.4.1 Attempt Confirm Reservation by Unauthorized User",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code - should be 400 Bad Request",
+					"pm.test(\"Status code is 400\", function () {",
+					"    pm.response.to.have.status(400);",
+					"});",
+					"",
+					"// Test that error message indicates unauthorized access",
+					"pm.test(\"Error message indicates unauthorized access\", function () {",
+					"    pm.expect(jsonData.success).to.be.false;",
+					"    pm.expect(jsonData.message).to.include('Only the user who created the reservation');",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  },
+			  {
+				"listen": "prerequest",
+				"script": {
+				  "exec": [
+					"// Store the original auth token",
+					"pm.environment.set(\"original_auth_token\", pm.environment.get(\"auth_token\"));",
+					"",
+					"// Set a different user's auth token (in a real scenario)",
+					"// For this test, we'll just use a fake token to simulate a different user",
+					"pm.environment.set(\"auth_token\", \"different_user_token\");"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				}
+			  ],
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/reservations/{{reservation_id}}/confirm",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "reservations",
+				  "{{reservation_id}}",
+				  "confirm"
+				]
+			  },
+			  "description": "Attempt to confirm a reservation by a user who didn't create it"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.4.3 Add Menu Items to Reservation",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Test that menu items were added successfully",
+					"pm.test(\"Menu items added successfully\", function () {",
+					"    pm.expect(jsonData.success).to.be.true;",
+					"    pm.expect(jsonData.data).to.have.property('id');",
+					"    pm.expect(jsonData.data.id).to.eql(pm.environment.get(\"reservation_id\"));",
+					"    pm.expect(jsonData.data).to.have.property('menuItems');",
+					"    pm.expect(jsonData.data.menuItems).to.be.an('array').that.is.not.empty;",
+					"});",
+					"",
+					"// Test that the menu items have the correct properties",
+					"pm.test(\"Menu items have correct properties\", function () {",
+					"    const menuItems = jsonData.data.menuItems;",
+					"    menuItems.forEach(function(item) {",
+					"        pm.expect(item).to.have.property('menuItemId');",
+					"        pm.expect(item).to.have.property('menuItemName');",
+					"        pm.expect(item).to.have.property('quantity');",
+					"        pm.expect(item).to.have.property('price');",
+					"    });",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				},
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"menuItems\": [\n    {\n      \"menuItemId\": \"menu-item-1\",\n      \"quantity\": 2,\n      \"specialInstructions\": \"Extra spicy\"\n    },\n    {\n      \"menuItemId\": \"menu-item-2\",\n      \"quantity\": 1,\n      \"specialInstructions\": \"No onions\"\n    }\n  ]\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/reservations/{{reservation_id}}/menu-items",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "reservations",
+				  "{{reservation_id}}",
+				  "menu-items"
+				]
+			  },
+			  "description": "Add menu items to an existing reservation"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.4.4 Attempt Add Menu Items by Unauthorized User",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code - should be 400 Bad Request",
+					"pm.test(\"Status code is 400\", function () {",
+					"    pm.response.to.have.status(400);",
+					"});",
+					"",
+					"// Test that error message indicates unauthorized access",
+					"pm.test(\"Error message indicates unauthorized access\", function () {",
+					"    pm.expect(jsonData.success).to.be.false;",
+					"    pm.expect(jsonData.message).to.include('Only the user who created the reservation');",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  },
+			  {
+				"listen": "prerequest",
+				"script": {
+				  "exec": [
+					"// Store the original auth token",
+					"pm.environment.set(\"original_auth_token\", pm.environment.get(\"auth_token\"));",
+					"",
+					"// Set a different user's auth token (in a real scenario)",
+					"// For this test, we'll just use a fake token to simulate a different user",
+					"pm.environment.set(\"auth_token\", \"different_user_token\");"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				},
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"menuItems\": [\n    {\n      \"menuItemId\": \"menu-item-3\",\n      \"quantity\": 1,\n      \"specialInstructions\": \"Attempted by unauthorized user\"\n    }\n  ]\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/reservations/{{reservation_id}}/menu-items",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "reservations",
+				  "{{reservation_id}}",
+				  "menu-items"
+				]
+			  },
+			  "description": "Attempt to add menu items to a reservation by a user who didn't create it"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.4.5 Restore Original Auth Token",
+			"event": [
+			  {
+				"listen": "prerequest",
+				"script": {
+				  "exec": [
+					"// Restore the original auth token",
+					"pm.environment.set(\"auth_token\", pm.environment.get(\"original_auth_token\"));"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [],
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/health",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "health"
+				]
+			  },
+			  "description": "Restore the original auth token"
 			},
 			"response": []
 		  },
@@ -1209,6 +1637,107 @@
 				]
 			  },
 			  "description": "Update the reservation details"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.5.1 Attempt Update Reservation by Unauthorized User",
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "exec": [
+					"// Parse the response body",
+					"var jsonData = pm.response.json();",
+					"",
+					"// Test status code - should be 400 Bad Request",
+					"pm.test(\"Status code is 400\", function () {",
+					"    pm.response.to.have.status(400);",
+					"});",
+					"",
+					"// Test that error message indicates unauthorized access",
+					"pm.test(\"Error message indicates unauthorized access\", function () {",
+					"    pm.expect(jsonData.success).to.be.false;",
+					"    pm.expect(jsonData.message).to.include('Only the user who created the reservation');",
+					"});"
+				  ],
+				  "type": "text/javascript"
+				}
+			  },
+			  {
+				"listen": "prerequest",
+				"script": {
+				  "exec": [
+					"// Store the original auth token",
+					"pm.environment.set(\"original_auth_token\", pm.environment.get(\"auth_token\"));",
+					"",
+					"// Set a different user's auth token (in a real scenario)",
+					"// For this test, we'll just use a fake token to simulate a different user",
+					"pm.environment.set(\"auth_token\", \"different_user_token\");"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "PUT",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{auth_token}}"
+				},
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n  \"partySize\": 6,\n  \"specialRequests\": \"Attempted update by unauthorized user\"\n}"
+			  },
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/reservations/{{reservation_id}}",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "reservations",
+				  "{{reservation_id}}"
+				]
+			  },
+			  "description": "Attempt to update a reservation by a user who didn't create it"
+			},
+			"response": []
+		  },
+		  {
+			"name": "3.5.2 Restore Original Auth Token",
+			"event": [
+			  {
+				"listen": "prerequest",
+				"script": {
+				  "exec": [
+					"// Restore the original auth token",
+					"pm.environment.set(\"auth_token\", pm.environment.get(\"original_auth_token\"));"
+				  ],
+				  "type": "text/javascript"
+				}
+			  }
+			],
+			"request": {
+			  "method": "GET",
+			  "header": [],
+			  "url": {
+				"raw": "{{base_url_reservation}}/api/health",
+				"host": [
+				  "{{base_url_reservation}}"
+				],
+				"path": [
+				  "api",
+				  "health"
+				]
+			  },
+			  "description": "Restore the original auth token"
 			},
 			"response": []
 		  },
@@ -1318,6 +1847,18 @@
 					"    pm.expect(jsonData.data.id).to.eql(pm.environment.get(\"reservation_id\"));",
 					"    pm.expect(jsonData.data.status).to.eql(\"CANCELLED\");",
 					"    pm.expect(jsonData.data.cancellationReason).to.eql(\"Changed plans\");",
+					"});",
+					"",
+					"// Verify that the user ID in the response matches either the authenticated user or the restaurant owner",
+					"pm.test(\"Reservation was cancelled by an authorized user\", function () {",
+					"    pm.expect(jsonData.data).to.have.property('userId');",
+					"    ",
+					"    // Check if the user is the creator of the reservation",
+					"    const isCreator = jsonData.data.userId === pm.environment.get(\"user_id\");",
+					"    ",
+					"    // In a real test, we would also check if the user is the restaurant owner",
+					"    // For this test, we'll just verify the creator since that's what we're using",
+					"    pm.expect(isCreator).to.be.true;",
 					"});"
 				  ],
 				  "type": "text/javascript"

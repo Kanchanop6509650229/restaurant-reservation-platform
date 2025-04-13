@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import com.restaurant.common.constants.KafkaTopics;
 import com.restaurant.common.events.BaseEvent;
 import com.restaurant.common.events.restaurant.ReservationTimeValidationRequestEvent;
+import com.restaurant.common.events.restaurant.RestaurantOwnershipRequestEvent;
 import com.restaurant.common.events.restaurant.RestaurantSearchRequestEvent;
 import com.restaurant.common.events.restaurant.RestaurantValidationRequestEvent;
 
@@ -177,6 +178,50 @@ public class RestaurantEventProducer {
             return true;
         } catch (Exception e) {
             logger.error("Error publishing restaurant search request: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Publishes a request to validate if a user is the owner of a restaurant.
+     * This event is sent to the restaurant ownership validation request topic and is used
+     * to verify if a user has ownership rights for a specific restaurant.
+     *
+     * @param event The restaurant ownership request event containing user and restaurant details
+     * @return true if the event was successfully sent, false otherwise
+     */
+    public boolean publishRestaurantOwnershipRequest(RestaurantOwnershipRequestEvent event) {
+        if (event == null || event.getCorrelationId() == null || event.getRestaurantId() == null || event.getUserId() == null) {
+            logger.error("Cannot publish null restaurant ownership request event or event with null IDs");
+            return false;
+        }
+
+        try {
+            logger.info("Publishing restaurant ownership request: correlationId={}, restaurantId={}, userId={}",
+                    event.getCorrelationId(), event.getRestaurantId(), event.getUserId());
+
+            Message<?> message = MessageBuilder
+                    .withPayload(event)
+                    .setHeader(KafkaHeaders.TOPIC, KafkaTopics.RESTAURANT_OWNERSHIP_REQUEST)
+                    .setHeader(KafkaHeaders.KEY, event.getCorrelationId())
+                    .build();
+
+            CompletableFuture<SendResult<String, BaseEvent>> future =
+                    kafkaTemplate.send(message);
+
+            future.whenComplete((result, ex) -> {
+                if (ex == null) {
+                    logger.debug("Restaurant ownership request sent successfully: correlationId={}, offset={}",
+                            event.getCorrelationId(), result.getRecordMetadata().offset());
+                } else {
+                    logger.error("Failed to send restaurant ownership request: correlationId={}, error={}",
+                            event.getCorrelationId(), ex.getMessage(), ex);
+                }
+            });
+
+            return true;
+        } catch (Exception e) {
+            logger.error("Error publishing restaurant ownership request: {}", e.getMessage(), e);
             return false;
         }
     }

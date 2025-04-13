@@ -233,13 +233,14 @@ Swagger UI provides a user-friendly interface to explore and test the API endpoi
 
 | Endpoint | Method | Description | Auth Required |
 |----------|--------|-------------|---------------|
-| `/api/reservations` | POST | Create a reservation | Yes |
+| `/api/reservations` | POST | Create a reservation with optional menu items | Yes |
 | `/api/reservations/user` | GET | Get user's reservations | Yes |
 | `/api/reservations/restaurant/{restaurantId}` | GET | Get restaurant's reservations | Yes (Owner) |
 | `/api/reservations/{id}` | GET | Get reservation by ID | Yes |
-| `/api/reservations/{id}` | PUT | Update a reservation | Yes |
-| `/api/reservations/{id}/confirm` | POST | Confirm a reservation | Yes |
-| `/api/reservations/{id}/cancel` | POST | Cancel a reservation | Yes |
+| `/api/reservations/{id}` | PUT | Update a reservation (only the user who created the reservation) | Yes |
+| `/api/reservations/{id}/confirm` | POST | Confirm a reservation (only the user who created the reservation) | Yes |
+| `/api/reservations/{id}/cancel` | POST | Cancel a reservation (only the user who created the reservation or the restaurant owner) | Yes |
+| `/api/reservations/{id}/menu-items` | POST | Add menu items to a reservation (only the user who created the reservation) | Yes |
 
 #### Menu Management
 

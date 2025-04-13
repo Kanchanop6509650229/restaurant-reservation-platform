@@ -228,13 +228,14 @@ Swagger UI มอบอินเตอร์เฟซที่เป็นมิ
 
 | Endpoint | วิธี | คำอธิบาย | ต้องการการยืนยันตัวตน |
 |----------|--------|-------------|---------------|
-| `/api/reservations` | POST | สร้างการจอง | ใช่ |
+| `/api/reservations` | POST | สร้างการจองพร้อมรายการอาหาร (ไม่บังคับ) | ใช่ |
 | `/api/reservations/user` | GET | รับการจองของผู้ใช้ | ใช่ |
 | `/api/reservations/restaurant/{restaurantId}` | GET | รับการจองของร้านอาหาร | ใช่ (เจ้าของ) |
 | `/api/reservations/{id}` | GET | รับการจองตาม ID | ใช่ |
-| `/api/reservations/{id}` | PUT | อัปเดตการจอง | ใช่ |
-| `/api/reservations/{id}/confirm` | POST | ยืนยันการจอง | ใช่ |
-| `/api/reservations/{id}/cancel` | POST | ยกเลิกการจอง | ใช่ |
+| `/api/reservations/{id}` | PUT | อัปเดตการจอง (เฉพาะผู้ใช้ที่สร้างการจองเท่านั้น) | ใช่ |
+| `/api/reservations/{id}/confirm` | POST | ยืนยันการจอง (เฉพาะผู้ใช้ที่สร้างการจองเท่านั้น) | ใช่ |
+| `/api/reservations/{id}/cancel` | POST | ยกเลิกการจอง (เฉพาะผู้ใช้ที่สร้างการจองหรือเจ้าของร้านอาหาร) | ใช่ |
+| `/api/reservations/{id}/menu-items` | POST | เพิ่มรายการอาหารในการจอง (เฉพาะผู้ใช้ที่สร้างการจองเท่านั้น) | ใช่ |
 
 #### การจัดการเมนู
 
