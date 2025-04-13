@@ -1,3 +1,7 @@
+[**English**](./readme.md) | [ภาษาไทย](./readme.th.md)
+
+---
+
 # Reservation Service
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
