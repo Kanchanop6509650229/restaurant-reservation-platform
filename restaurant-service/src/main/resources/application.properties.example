@@ -37,3 +37,12 @@ jwt.prefix=Bearer
 restaurant.image.uploadPath=/opt/restaurant-platform/uploads/restaurant-images
 restaurant.default.open-time=10:00
 restaurant.default.close-time=22:00
+
+# Swagger/OpenAPI Configuration
+springdoc.api-docs.path=/v3/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.operationsSorter=method
+springdoc.swagger-ui.tagsSorter=alpha
+springdoc.swagger-ui.tryItOutEnabled=true
+springdoc.swagger-ui.filter=true
+springdoc.swagger-ui.syntaxHighlight.activated=true

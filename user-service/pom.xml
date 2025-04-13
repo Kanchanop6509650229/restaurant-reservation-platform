@@ -8,19 +8,19 @@
         <version>0.0.1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
-    
+
     <artifactId>user-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>user-service</name>
     <description>User Service for Restaurant Reservation Platform</description>
-    
+
     <dependencies>
         <!-- Common module dependency -->
         <dependency>
             <groupId>com.restaurant</groupId>
             <artifactId>common</artifactId>
         </dependency>
-        
+
         <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -42,7 +42,7 @@
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
-        
+
         <!-- Database -->
         <dependency>
             <groupId>com.h2database</groupId>
@@ -54,7 +54,7 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
-        
+
         <!-- JWT Token -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -79,7 +79,7 @@
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
 		</dependency>
-        
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -96,8 +96,15 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- SpringDoc OpenAPI for Swagger documentation -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.2.0</version>
+        </dependency>
     </dependencies>
-    
+
     <build>
         <plugins>
             <plugin>
@@ -107,7 +114,7 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
-                    <parameters>true</parameters> 
+                    <parameters>true</parameters>
                 </configuration>
             </plugin>
             <plugin>

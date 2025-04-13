@@ -19,10 +19,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * - Role-based authorization
  * - Public and protected endpoint configuration
  * - Stateless session management
- * 
+ *
  * The configuration uses Spring Security to secure the application
  * and implements JWT token validation for authentication.
- * 
+ *
  * @author Restaurant Reservation Team
  * @version 1.0
  */
@@ -30,7 +30,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
-    
+
     /** Provider for JWT token operations */
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -79,14 +79,18 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/restaurants/public/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/restaurants/*/tables/public/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/restaurants/*/operating-hours/public/**").permitAll()
+                // Swagger/OpenAPI endpoints
+                .requestMatchers("/v3/api-docs/**").permitAll()
+                .requestMatchers("/swagger-ui/**").permitAll()
+                .requestMatchers("/swagger-ui.html").permitAll()
                 // All other endpoints require authentication
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class);
-        
+
         // Enable h2-console for development
         http.headers().frameOptions().disable();
-        
+
         return http.build();
     }
 }
