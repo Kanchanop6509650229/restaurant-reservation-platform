@@ -107,23 +107,34 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
         restaurantOwner -> webApp "Manages restaurant profile, menus, and reservation settings through" "HTTPS"
         restaurantStaff -> webApp "Manages daily reservations and table assignments through" "HTTPS"
         systemUser -> apiClient "Sends API requests through for automation and integration" "JSON/HTTPS"
-        apiUser -> reservationService "Sends requests directly to for custom integrations" "JSON/HTTPS"
+        apiUser -> reservationService "Sends reservation booking and management requests directly to" "JSON/HTTPS"
+        apiUser -> restaurantService "Sends restaurant profile and menu management requests directly to" "JSON/HTTPS"
+        apiUser -> userService "Sends user authentication and profile management requests directly to" "JSON/HTTPS"
 
         // Container relationships with more detail
-        webApp -> apiGateway "Makes API calls to for all reservation operations" "JSON/HTTPS"
-        mobileApp -> apiGateway "Makes API calls to for all reservation operations" "JSON/HTTPS"
-        apiClient -> apiGateway "Sends requests to for automated workflows" "JSON/HTTPS"
+        webApp -> apiGateway "Makes API calls for restaurant browsing, reservation booking, and user management to" "JSON/HTTPS"
+        mobileApp -> apiGateway "Makes API calls for restaurant browsing, reservation booking, and user management to" "JSON/HTTPS"
+        apiClient -> apiGateway "Sends automated reservation, restaurant, and user management requests to" "JSON/HTTPS"
 
-        apiGateway -> reservationService "Routes reservation-related requests to" "JSON/HTTPS"
-        apiGateway -> restaurantService "Routes restaurant profile requests to" "JSON/HTTPS"
-        apiGateway -> userService "Routes user authentication and profile requests to" "JSON/HTTPS"
-        apiGateway -> notificationService "Routes notification requests to" "JSON/HTTPS"
-        apiGateway -> paymentService "Routes payment processing requests to" "JSON/HTTPS"
+        apiGateway -> reservationService "Routes table booking, availability checking, and reservation management requests to" "JSON/HTTPS"
+        apiGateway -> restaurantService "Routes restaurant profile, menu management, and location data requests to" "JSON/HTTPS"
+        apiGateway -> userService "Routes user registration, authentication, and profile management requests to" "JSON/HTTPS"
+        apiGateway -> notificationService "Routes email, SMS, and in-app notification delivery requests to" "JSON/HTTPS"
+        apiGateway -> paymentService "Routes payment processing, refund, and invoice generation requests to" "JSON/HTTPS"
 
         // Component relationships within Reservation Service with more detail
         // External API User relationships to components
-        apiUser -> reservationController "Sends reservation CRUD requests to" "JSON/HTTPS"
-        apiUser -> scheduleController "Sends schedule management requests to" "JSON/HTTPS"
+        // Reservation Service component relationships
+        apiUser -> reservationController "Sends reservation creation, modification, and cancellation requests to" "JSON/HTTPS"
+        apiUser -> scheduleController "Sends availability checking and schedule management requests to" "JSON/HTTPS"
+
+        // Restaurant Service component relationships
+        apiUser -> restaurantController "Sends restaurant profile creation and update requests to" "JSON/HTTPS"
+        apiUser -> menuController "Sends menu and menu item management requests to" "JSON/HTTPS"
+
+        // User Service component relationships
+        apiUser -> userController "Sends user profile management requests to" "JSON/HTTPS"
+        apiUser -> authController "Sends authentication and authorization requests to" "JSON/HTTPS"
 
         // Controller relationships with more detail
         reservationController -> reservationServiceComponent "Uses for reservation business logic" "Java Method Calls"
@@ -208,10 +219,18 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
         userEntity -> roleEntity "Has many" "JPA @ManyToMany"
         roleEntity -> userEntity "Belongs to many" "JPA @ManyToMany mappedBy"
 
-        // API Gateway relationships with services
-        apiGateway -> restaurantController "Routes restaurant requests to" "HTTP/REST"
-        apiGateway -> userController "Routes user requests to" "HTTP/REST"
-        apiGateway -> authController "Routes authentication requests to" "HTTP/REST"
+        // API Gateway relationships with specific controllers
+        // Reservation Service controller routing
+        apiGateway -> reservationController "Routes reservation booking and management requests to" "HTTP/REST"
+        apiGateway -> scheduleController "Routes availability checking and schedule management requests to" "HTTP/REST"
+
+        // Restaurant Service controller routing
+        apiGateway -> restaurantController "Routes restaurant profile creation and update requests to" "HTTP/REST"
+        apiGateway -> menuController "Routes menu and menu item management requests to" "HTTP/REST"
+
+        // User Service controller routing
+        apiGateway -> userController "Routes user profile management requests to" "HTTP/REST"
+        apiGateway -> authController "Routes login, registration, and token validation requests to" "HTTP/REST"
     }
 
     views {
@@ -292,22 +311,28 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
             description "This diagram shows the sequence of interactions when creating a new reservation."
         }
 
-        dynamic reservationPlatform "APIClientRequest" "Shows the process of an API client sending a request to the API gateway" {
-            systemUser -> apiClient "Initiates API request"
-            apiClient -> apiGateway "Sends HTTP request"
-            apiGateway -> reservationService "Routes request to appropriate service"
-            reservationService -> apiGateway "Returns response"
-            apiGateway -> apiClient "Returns HTTP response"
-            apiClient -> systemUser "Presents result"
+        dynamic reservationPlatform "APIClientRequest" "Shows the process of an API client sending a reservation request to the API gateway" {
+            systemUser -> apiClient "Initiates reservation booking request"
+            apiClient -> apiGateway "Sends reservation HTTP request"
+            apiGateway -> reservationService "Routes reservation booking request to"
+            reservationService -> apiGateway "Returns reservation confirmation response"
+            apiGateway -> apiClient "Returns HTTP response with reservation details"
+            apiClient -> systemUser "Presents reservation confirmation result"
             autoLayout
-            description "This diagram shows the sequence of interactions when an API client sends a request to the API gateway."
+            description "This diagram shows the sequence of interactions when an API client sends a reservation booking request to the API gateway."
         }
 
-        dynamic reservationPlatform "ComponentAPIRequest" "Shows the process of an external API user sending a request directly to a component" {
-            apiUser -> reservationService "Sends reservation request"
-            reservationService -> apiUser "Returns response"
+        dynamic reservationPlatform "DirectServiceRequest" "Shows the process of an external API user sending requests directly to services" {
+            apiUser -> reservationService "Sends reservation creation request directly to"
+            reservationService -> apiUser "Returns reservation confirmation response"
+
+            apiUser -> restaurantService "Sends restaurant profile update request directly to"
+            restaurantService -> apiUser "Returns restaurant profile update confirmation"
+
+            apiUser -> userService "Sends authentication request directly to"
+            userService -> apiUser "Returns authentication token response"
             autoLayout
-            description "This diagram shows the sequence of interactions when an external API user sends a request directly to components within the Reservation Service."
+            description "This diagram shows the sequence of interactions when an external API user sends requests directly to specific services, bypassing the API Gateway."
         }
 
         dynamic restaurantService "RestaurantCreation" "Shows the process of creating a new restaurant" {
