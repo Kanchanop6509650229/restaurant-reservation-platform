@@ -5,15 +5,12 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
         customer = person "Customer" "A person who wants to make a restaurant reservation"
         restaurantOwner = person "Restaurant Owner" "A person who manages restaurant information and reservations"
         restaurantStaff = person "Restaurant Staff" "Restaurant employees who handle reservations"
-        systemUser = person "System User" "A user or system that interacts with the API directly"
-        apiUser = person "API User" "A user that sends requests directly to service components"
 
         // Software Systems
         reservationPlatform = softwareSystem "Restaurant Reservation Platform" "Allows customers to find restaurants and make reservations" {
             // Client tier
             webApp = container "Web Application" "Provides reservation functionality to customers via web browser" "React"
             mobileApp = container "Mobile Application" "Provides reservation functionality to customers on mobile devices" "React Native"
-            apiClient = container "API Client" "Sends direct requests to service REST APIs for automation and integration" "Node.js/Python" "User"
 
             // Each service exposes its own REST API endpoints
             // No API Gateway is used in this architecture
@@ -104,10 +101,6 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
         customer -> mobileApp "Uses to browse restaurants and make reservations on mobile devices" "HTTPS"
         restaurantOwner -> webApp "Manages restaurant profile, menus, and reservation settings through" "HTTPS"
         restaurantStaff -> webApp "Manages daily reservations and table assignments through" "HTTPS"
-        systemUser -> apiClient "Sends API requests through for automation and integration" "JSON/HTTPS"
-        apiUser -> reservationService "Sends reservation booking and management requests directly to" "JSON/HTTPS"
-        apiUser -> restaurantService "Sends restaurant profile and menu management requests directly to" "JSON/HTTPS"
-        apiUser -> userService "Sends user authentication and profile management requests directly to" "JSON/HTTPS"
 
         // Container relationships with more detail - direct REST API calls
         webApp -> reservationService "Makes API calls for table booking, availability checking, and reservation management to" "JSON/HTTPS"
@@ -118,23 +111,7 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
         mobileApp -> restaurantService "Makes API calls for restaurant browsing, menu viewing, and location data to" "JSON/HTTPS"
         mobileApp -> userService "Makes API calls for user registration, authentication, and profile management to" "JSON/HTTPS"
 
-        apiClient -> reservationService "Sends automated reservation management requests to" "JSON/HTTPS"
-        apiClient -> restaurantService "Sends automated restaurant profile and menu management requests to" "JSON/HTTPS"
-        apiClient -> userService "Sends automated user management requests to" "JSON/HTTPS"
-
         // Component relationships within Reservation Service with more detail
-        // External API User relationships to components
-        // Reservation Service component relationships
-        apiUser -> reservationController "Sends reservation creation, modification, and cancellation requests to" "JSON/HTTPS"
-        apiUser -> scheduleController "Sends availability checking and schedule management requests to" "JSON/HTTPS"
-
-        // Restaurant Service component relationships
-        apiUser -> restaurantController "Sends restaurant profile creation and update requests to" "JSON/HTTPS"
-        apiUser -> menuController "Sends menu and menu item management requests to" "JSON/HTTPS"
-
-        // User Service component relationships
-        apiUser -> userController "Sends user profile management requests to" "JSON/HTTPS"
-        apiUser -> authController "Sends authentication and authorization requests to" "JSON/HTTPS"
 
         // Controller relationships with more detail
         reservationController -> reservationServiceComponent "Uses for reservation business logic" "Java Method Calls"
@@ -243,9 +220,6 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
 
         container reservationPlatform "AllServices" {
             include *
-            exclude systemUser
-            exclude apiClient
-            exclude apiUser
             autoLayout
             description "Container diagram showing all services and their connections in the Restaurant Reservation Platform, excluding System User to API Client relationship and API User."
         }
@@ -333,28 +307,6 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
             reservationServiceComponent -> eventProducer "publishReservationCreatedEvent()"
             autoLayout
             description "This diagram shows the sequence of interactions when creating a new reservation."
-        }
-
-        dynamic reservationPlatform "APIClientRequest" "Shows the process of an API client sending a reservation request directly to the Reservation Service" {
-            systemUser -> apiClient "Initiates reservation booking request"
-            apiClient -> reservationService "Sends reservation HTTP request directly to"
-            reservationService -> apiClient "Returns reservation confirmation response"
-            apiClient -> systemUser "Presents reservation confirmation result"
-            autoLayout
-            description "This diagram shows the sequence of interactions when an API client sends a reservation booking request directly to the Reservation Service REST API."
-        }
-
-        dynamic reservationPlatform "DirectServiceRequest" "Shows the process of an external API user sending requests directly to services" {
-            apiUser -> reservationService "Sends reservation creation request directly to"
-            reservationService -> apiUser "Returns reservation confirmation response"
-
-            apiUser -> restaurantService "Sends restaurant profile update request directly to"
-            restaurantService -> apiUser "Returns restaurant profile update confirmation"
-
-            apiUser -> userService "Sends authentication request directly to"
-            userService -> apiUser "Returns authentication token response"
-            autoLayout
-            description "This diagram shows the sequence of interactions when an external API user sends requests directly to specific services, bypassing the API Gateway."
         }
 
         dynamic restaurantService "RestaurantCreation" "Shows the process of creating a new restaurant" {
