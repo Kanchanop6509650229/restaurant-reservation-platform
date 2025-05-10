@@ -13,10 +13,10 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
             // Client tier
             webApp = container "Web Application" "Provides reservation functionality to customers via web browser" "React"
             mobileApp = container "Mobile Application" "Provides reservation functionality to customers on mobile devices" "React Native"
-            apiClient = container "API Client" "Sends direct requests to the API gateway for automation and integration" "Node.js/Python" "User"
+            apiClient = container "API Client" "Sends direct requests to service REST APIs for automation and integration" "Node.js/Python" "User"
 
-            // API Gateway
-            apiGateway = container "API Gateway" "Routes requests to appropriate microservices" "Spring Cloud Gateway"
+            // Each service exposes its own REST API endpoints
+            // No API Gateway is used in this architecture
 
             // Microservices
             reservationService = container "Reservation Service" "Handles all aspects of restaurant reservations" "Spring Boot, Java 17" {
@@ -111,16 +111,20 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
         apiUser -> restaurantService "Sends restaurant profile and menu management requests directly to" "JSON/HTTPS"
         apiUser -> userService "Sends user authentication and profile management requests directly to" "JSON/HTTPS"
 
-        // Container relationships with more detail
-        webApp -> apiGateway "Makes API calls for restaurant browsing, reservation booking, and user management to" "JSON/HTTPS"
-        mobileApp -> apiGateway "Makes API calls for restaurant browsing, reservation booking, and user management to" "JSON/HTTPS"
-        apiClient -> apiGateway "Sends automated reservation, restaurant, and user management requests to" "JSON/HTTPS"
+        // Container relationships with more detail - direct REST API calls
+        webApp -> reservationService "Makes API calls for table booking, availability checking, and reservation management to" "JSON/HTTPS"
+        webApp -> restaurantService "Makes API calls for restaurant browsing, menu viewing, and location data to" "JSON/HTTPS"
+        webApp -> userService "Makes API calls for user registration, authentication, and profile management to" "JSON/HTTPS"
 
-        apiGateway -> reservationService "Routes table booking, availability checking, and reservation management requests to" "JSON/HTTPS"
-        apiGateway -> restaurantService "Routes restaurant profile, menu management, and location data requests to" "JSON/HTTPS"
-        apiGateway -> userService "Routes user registration, authentication, and profile management requests to" "JSON/HTTPS"
-        apiGateway -> notificationService "Routes email, SMS, and in-app notification delivery requests to" "JSON/HTTPS"
-        apiGateway -> paymentService "Routes payment processing, refund, and invoice generation requests to" "JSON/HTTPS"
+        mobileApp -> reservationService "Makes API calls for table booking, availability checking, and reservation management to" "JSON/HTTPS"
+        mobileApp -> restaurantService "Makes API calls for restaurant browsing, menu viewing, and location data to" "JSON/HTTPS"
+        mobileApp -> userService "Makes API calls for user registration, authentication, and profile management to" "JSON/HTTPS"
+
+        apiClient -> reservationService "Sends automated reservation management requests to" "JSON/HTTPS"
+        apiClient -> restaurantService "Sends automated restaurant profile and menu management requests to" "JSON/HTTPS"
+        apiClient -> userService "Sends automated user management requests to" "JSON/HTTPS"
+        apiClient -> notificationService "Sends notification delivery requests to" "JSON/HTTPS"
+        apiClient -> paymentService "Sends payment processing requests to" "JSON/HTTPS"
 
         // Component relationships within Reservation Service with more detail
         // External API User relationships to components
@@ -219,18 +223,25 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
         userEntity -> roleEntity "Has many" "JPA @ManyToMany"
         roleEntity -> userEntity "Belongs to many" "JPA @ManyToMany mappedBy"
 
-        // API Gateway relationships with specific controllers
-        // Reservation Service controller routing
-        apiGateway -> reservationController "Routes reservation booking and management requests to" "HTTP/REST"
-        apiGateway -> scheduleController "Routes availability checking and schedule management requests to" "HTTP/REST"
+        // Direct client-to-controller relationships
+        // Clients directly access REST controllers in each service
 
-        // Restaurant Service controller routing
-        apiGateway -> restaurantController "Routes restaurant profile creation and update requests to" "HTTP/REST"
-        apiGateway -> menuController "Routes menu and menu item management requests to" "HTTP/REST"
+        webApp -> reservationController "Makes reservation booking and management requests to" "HTTP/REST"
+        webApp -> scheduleController "Makes availability checking and schedule management requests to" "HTTP/REST"
+        mobileApp -> reservationController "Makes reservation booking and management requests to" "HTTP/REST"
+        mobileApp -> scheduleController "Makes availability checking and schedule management requests to" "HTTP/REST"
 
-        // User Service controller routing
-        apiGateway -> userController "Routes user profile management requests to" "HTTP/REST"
-        apiGateway -> authController "Routes login, registration, and token validation requests to" "HTTP/REST"
+        // Web and Mobile App to Restaurant Service controllers
+        webApp -> restaurantController "Makes restaurant profile and menu viewing requests to" "HTTP/REST"
+        webApp -> menuController "Makes menu item browsing requests to" "HTTP/REST"
+        mobileApp -> restaurantController "Makes restaurant profile and menu viewing requests to" "HTTP/REST"
+        mobileApp -> menuController "Makes menu item browsing requests to" "HTTP/REST"
+
+        // Web and Mobile App to User Service controllers
+        webApp -> userController "Makes user profile management requests to" "HTTP/REST"
+        webApp -> authController "Makes login, registration, and token validation requests to" "HTTP/REST"
+        mobileApp -> userController "Makes user profile management requests to" "HTTP/REST"
+        mobileApp -> authController "Makes login, registration, and token validation requests to" "HTTP/REST"
     }
 
     views {
@@ -242,7 +253,8 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
 
         container reservationPlatform "ReservationServiceFocus" {
             include reservationService
-            include apiGateway
+            include webApp
+            include mobileApp
             include apiClient
             include kafka
             include reservationDB
@@ -254,7 +266,8 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
 
         container reservationPlatform "RestaurantServiceFocus" {
             include restaurantService
-            include apiGateway
+            include webApp
+            include mobileApp
             include apiClient
             include kafka
             include restaurantDB
@@ -266,7 +279,8 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
 
         container reservationPlatform "UserServiceFocus" {
             include userService
-            include apiGateway
+            include webApp
+            include mobileApp
             include apiClient
             include kafka
             include userDB
@@ -311,15 +325,13 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
             description "This diagram shows the sequence of interactions when creating a new reservation."
         }
 
-        dynamic reservationPlatform "APIClientRequest" "Shows the process of an API client sending a reservation request to the API gateway" {
+        dynamic reservationPlatform "APIClientRequest" "Shows the process of an API client sending a reservation request directly to the Reservation Service" {
             systemUser -> apiClient "Initiates reservation booking request"
-            apiClient -> apiGateway "Sends reservation HTTP request"
-            apiGateway -> reservationService "Routes reservation booking request to"
-            reservationService -> apiGateway "Returns reservation confirmation response"
-            apiGateway -> apiClient "Returns HTTP response with reservation details"
+            apiClient -> reservationService "Sends reservation HTTP request directly to"
+            reservationService -> apiClient "Returns reservation confirmation response"
             apiClient -> systemUser "Presents reservation confirmation result"
             autoLayout
-            description "This diagram shows the sequence of interactions when an API client sends a reservation booking request to the API gateway."
+            description "This diagram shows the sequence of interactions when an API client sends a reservation booking request directly to the Reservation Service REST API."
         }
 
         dynamic reservationPlatform "DirectServiceRequest" "Shows the process of an external API user sending requests directly to services" {
