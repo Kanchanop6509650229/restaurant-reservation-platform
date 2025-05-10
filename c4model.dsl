@@ -254,39 +254,43 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
             include reservationService
             include webApp
             include mobileApp
-            include apiClient
+            include customer
+            include restaurantStaff
             include kafka
             include reservationDB
             include zookeeper
             include kafdrop
             autoLayout
-            description "Container diagram focusing only on the Reservation Service and its direct connections."
+            description "Container diagram focusing only on the Reservation Service and its direct connections with actual users."
         }
 
         container reservationPlatform "RestaurantServiceFocus" {
             include restaurantService
             include webApp
             include mobileApp
-            include apiClient
+            include customer
+            include restaurantOwner
             include kafka
             include restaurantDB
             include zookeeper
             include kafdrop
             autoLayout
-            description "Container diagram focusing only on the Restaurant Service and its direct connections."
+            description "Container diagram focusing only on the Restaurant Service and its direct connections with actual users."
         }
 
         container reservationPlatform "UserServiceFocus" {
             include userService
             include webApp
             include mobileApp
-            include apiClient
+            include customer
+            include restaurantOwner
+            include restaurantStaff
             include kafka
             include userDB
             include zookeeper
             include kafdrop
             autoLayout
-            description "Container diagram focusing only on the User Service and its direct connections."
+            description "Container diagram focusing only on the User Service and its direct connections with actual users."
         }
 
         component reservationService "ReservationServiceComponents" {
