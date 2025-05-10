@@ -295,20 +295,27 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
 
         component reservationService "ReservationServiceComponents" {
             include *
+            include customer
+            include restaurantStaff
             autoLayout
-            description "The component diagram for the Reservation Service."
+            description "The component diagram for the Reservation Service showing interactions with actual users."
         }
 
         component restaurantService "RestaurantServiceComponents" {
             include *
+            include customer
+            include restaurantOwner
             autoLayout
-            description "The component diagram for the Restaurant Service."
+            description "The component diagram for the Restaurant Service showing interactions with actual users."
         }
 
         component userService "UserServiceComponents" {
             include *
+            include customer
+            include restaurantOwner
+            include restaurantStaff
             autoLayout
-            description "The component diagram for the User Service."
+            description "The component diagram for the User Service showing interactions with actual users."
         }
 
         dynamic reservationService "ReservationCreation" "Shows the process of creating a new reservation" {
