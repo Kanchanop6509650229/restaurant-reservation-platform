@@ -87,8 +87,6 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
                 userEventProducer = component "User Event Producer" "Publishes user domain events" "Spring Kafka"
                 userEventConsumer = component "User Event Consumer" "Consumes events from other services" "Spring Kafka"
             }
-            notificationService = container "Notification Service" "Sends notifications to users" "Spring Boot"
-            paymentService = container "Payment Service" "Processes payments" "Spring Boot"
 
             // Message broker and supporting infrastructure
             zookeeper = container "Zookeeper" "Coordinates Kafka cluster" "Apache Zookeeper" "Infrastructure"
@@ -123,8 +121,6 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
         apiClient -> reservationService "Sends automated reservation management requests to" "JSON/HTTPS"
         apiClient -> restaurantService "Sends automated restaurant profile and menu management requests to" "JSON/HTTPS"
         apiClient -> userService "Sends automated user management requests to" "JSON/HTTPS"
-        apiClient -> notificationService "Sends notification delivery requests to" "JSON/HTTPS"
-        apiClient -> paymentService "Sends payment processing requests to" "JSON/HTTPS"
 
         // Component relationships within Reservation Service with more detail
         // External API User relationships to components
@@ -183,12 +179,6 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
         // User Service Kafka relationships
         userEventProducer -> kafka "Publishes user events to" "JSON/Kafka Protocol"
         kafka -> userEventConsumer "Delivers user events to" "JSON/Kafka Protocol"
-
-        // Other services Kafka relationships
-        notificationService -> kafka "Publishes notification events to" "JSON/Kafka Protocol"
-        paymentService -> kafka "Publishes payment events to" "JSON/Kafka Protocol"
-        kafka -> notificationService "Delivers relevant events to" "JSON/Kafka Protocol"
-        kafka -> paymentService "Delivers relevant events to" "JSON/Kafka Protocol"
 
         // Restaurant Service internal component relationships
         restaurantController -> restaurantServiceComponent "Uses for restaurant operations" "Java Method Calls"
@@ -249,6 +239,15 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
             include *
             autoLayout
             description "The system context diagram for the Restaurant Reservation Platform."
+        }
+
+        container reservationPlatform "AllServices" {
+            include *
+            exclude systemUser
+            exclude apiClient
+            exclude apiUser
+            autoLayout
+            description "Container diagram showing all services and their connections in the Restaurant Reservation Platform, excluding System User to API Client relationship and API User."
         }
 
         container reservationPlatform "ReservationServiceFocus" {

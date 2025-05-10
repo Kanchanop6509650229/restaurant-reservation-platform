@@ -65,6 +65,7 @@ build/
 
 # VS Code
 .vscode/
+.history/
 
 # Spring Boot
 .springBeans
