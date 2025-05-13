@@ -154,10 +154,11 @@ public class TableAvailabilityService {
                     reservation.getId()
                 );
 
-                logger.info("Table assigned to reservation: tableId={}, reservationId={}",
-                        tableId, reservation.getId());
+                logger.info("Table assigned to reservation: tableId={}, reservationId={}, partySize={}",
+                        tableId, reservation.getId(), reservation.getPartySize());
             } else {
-                logger.warn("No suitable table found for reservation: {}", reservation.getId());
+                logger.warn("No suitable table found for reservation: {}, partySize={}, time={}",
+                        reservation.getId(), reservation.getPartySize(), reservation.getReservationTime());
             }
         } catch (Exception e) {
             logger.error("Error finding and assigning table: {}", e.getMessage(), e);

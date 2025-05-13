@@ -7,12 +7,12 @@ import com.restaurant.common.exceptions.BaseException;
  * Exception thrown when a restaurant cannot accommodate a reservation request
  * due to capacity constraints. This includes cases where the restaurant is fully booked,
  * the party size is too large, or no suitable tables are available.
- * 
+ *
  * @author Restaurant Reservation Team
  * @version 1.0
  */
 public class RestaurantCapacityException extends BaseException {
-    
+
     /**
      * Creates a new RestaurantCapacityException with the specified message.
      *
@@ -21,7 +21,7 @@ public class RestaurantCapacityException extends BaseException {
     public RestaurantCapacityException(String message) {
         super(message, ErrorCodes.RESTAURANT_FULLY_BOOKED);
     }
-    
+
     /**
      * Creates an exception indicating that the restaurant is fully booked
      * for a specific date and time.
@@ -35,7 +35,7 @@ public class RestaurantCapacityException extends BaseException {
             String.format("The restaurant is fully booked at %s on %s. Please select a different date or time.", time, date)
         );
     }
-    
+
     /**
      * Creates an exception indicating that the requested party size
      * exceeds the restaurant's maximum capacity.
@@ -49,7 +49,7 @@ public class RestaurantCapacityException extends BaseException {
             String.format("Cannot accommodate a party of %d people. The maximum party size is %d.", partySize, maxCapacity)
         );
     }
-    
+
     /**
      * Creates an exception indicating that no suitable tables are available
      * for the requested party size.
@@ -59,7 +59,9 @@ public class RestaurantCapacityException extends BaseException {
      */
     public static RestaurantCapacityException noSuitableTables(int partySize) {
         return new RestaurantCapacityException(
-            String.format("No suitable tables available for a party of %d. Please select a different time or modify your party size.", partySize)
+            String.format("No suitable tables available for a party of %d. The restaurant may not have tables large enough " +
+                    "to accommodate this party size, or all suitable tables are already reserved. " +
+                    "Please select a different time, modify your party size, or contact the restaurant directly for assistance.", partySize)
         );
     }
 }

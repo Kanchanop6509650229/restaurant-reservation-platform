@@ -519,8 +519,25 @@ public class ReservationService {
             // Reassign table if needed
             if (updatedReservation.getTableId() != null) {
                 tableAvailabilityService.releaseTable(updatedReservation);
+                // Clear the table ID to ensure a new table is assigned
+                updatedReservation.setTableId(null);
+                updatedReservation = reservationRepository.save(updatedReservation);
             }
+
+            // Find and assign a new table
             tableAvailabilityService.findAndAssignTable(updatedReservation);
+
+            // Reload the reservation to get the latest state with the new table assignment
+            updatedReservation = reservationRepository.findById(updatedReservation.getId()).orElse(updatedReservation);
+
+            // If no table was assigned after update, throw an exception
+            if (updatedReservation.getTableId() == null) {
+                if (partySizeChanged) {
+                    throw RestaurantCapacityException.noSuitableTables(updatedReservation.getPartySize());
+                } else {
+                    throw new ValidationException("reservationTime", "No tables available at the selected time");
+                }
+            }
         }
 
         // Publish event
@@ -654,10 +671,14 @@ public class ReservationService {
             throw RestaurantCapacityException.noAvailability(formattedDate, formattedTime);
         }
 
+        // Check if the party size can be accommodated in the quota
+        // This is a preliminary check - actual table assignment happens later
         if (!quota.canAccommodateParty(partySize)) {
             logger.debug("Cannot accommodate party of {} for restaurant {} on {} at {}, current capacity: {}/{}",
                     partySize, restaurantId, date, time, quota.getCurrentCapacity(), quota.getMaxCapacity());
 
+            // For quota checks, we only verify if there's enough total capacity
+            // The actual table assignment (finding a table of appropriate size) happens later
             throw RestaurantCapacityException.noSuitableTables(partySize);
         }
 
