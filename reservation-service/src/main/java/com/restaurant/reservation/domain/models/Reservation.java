@@ -1,9 +1,13 @@
 package com.restaurant.reservation.domain.models;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.restaurant.common.constants.StatusCodes;
 
@@ -65,8 +69,12 @@ public class Reservation {
     @Column(nullable = false)
     private String restaurantId;
 
-    /** ID of the table assigned to the reservation */
+    /** ID of the primary table assigned to the reservation (for backward compatibility) */
     private String tableId;
+
+    /** Comma-separated list of table IDs assigned to the reservation (supports combined tables) */
+    @Column(name = "table_ids")
+    private String combinedTableIds;
 
     /** Date and time of the reservation */
     @NotNull(message = "Reservation time is required")
@@ -370,21 +378,104 @@ public class Reservation {
     }
 
     /**
-     * Gets the ID of the table assigned to the reservation.
+     * Gets the ID of the primary table assigned to the reservation.
+     * For combined tables, this returns the first table ID.
      *
-     * @return The table ID
+     * @return The primary table ID
      */
     public String getTableId() {
         return tableId;
     }
 
     /**
-     * Sets the ID of the table assigned to the reservation.
+     * Sets the ID of the primary table assigned to the reservation.
+     * This also updates the combinedTableIds field for consistency.
      *
      * @param tableId The table ID to set
      */
     public void setTableId(String tableId) {
         this.tableId = tableId;
+        if (tableId == null) {
+            this.combinedTableIds = null;
+        } else if (this.combinedTableIds == null || this.combinedTableIds.isEmpty()) {
+            this.combinedTableIds = tableId;
+        } else {
+            // Update the first table ID in the combined list
+            String[] tableIds = this.combinedTableIds.split(",");
+            if (tableIds.length > 0) {
+                tableIds[0] = tableId;
+                this.combinedTableIds = String.join(",", tableIds);
+            } else {
+                this.combinedTableIds = tableId;
+            }
+        }
+    }
+
+    /**
+     * Gets the comma-separated list of table IDs assigned to the reservation.
+     *
+     * @return The comma-separated list of table IDs
+     */
+    public String getCombinedTableIds() {
+        return combinedTableIds;
+    }
+
+    /**
+     * Sets the comma-separated list of table IDs assigned to the reservation.
+     * This also updates the tableId field with the first entry for backward compatibility.
+     *
+     * @param combinedTableIds The comma-separated list of table IDs to set
+     */
+    public void setCombinedTableIds(String combinedTableIds) {
+        this.combinedTableIds = combinedTableIds;
+        if (combinedTableIds == null || combinedTableIds.isEmpty()) {
+            this.tableId = null;
+        } else {
+            String[] tableIds = combinedTableIds.split(",");
+            if (tableIds.length > 0) {
+                this.tableId = tableIds[0].trim();
+            }
+        }
+    }
+
+    /**
+     * Gets the list of table IDs assigned to the reservation.
+     *
+     * @return The list of table IDs
+     */
+    public List<String> getTableIds() {
+        if (combinedTableIds == null || combinedTableIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return Arrays.stream(combinedTableIds.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Sets the list of table IDs assigned to the reservation.
+     * This also updates the tableId and combinedTableIds fields for consistency.
+     *
+     * @param tableIds The list of table IDs to set
+     */
+    public void setTableIds(List<String> tableIds) {
+        if (tableIds == null || tableIds.isEmpty()) {
+            this.tableId = null;
+            this.combinedTableIds = null;
+        } else {
+            this.tableId = tableIds.get(0);
+            this.combinedTableIds = String.join(",", tableIds);
+        }
+    }
+
+    /**
+     * Checks if this reservation has combined tables.
+     *
+     * @return true if multiple tables are assigned, false otherwise
+     */
+    public boolean hasCombinedTables() {
+        return combinedTableIds != null && combinedTableIds.contains(",");
     }
 
     /**

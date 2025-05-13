@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -516,12 +517,14 @@ public class ReservationService {
             // Add to new quota
             updateReservationQuota(updatedReservation, true);
 
-            // Store the original table ID before attempting to find a new one
-            String originalTableId = updatedReservation.getTableId();
+            // Check if this is a combined table reservation or a single table reservation
+            boolean hasCombinedTables = updatedReservation.hasCombinedTables();
+            String originalTableIds = hasCombinedTables ?
+                    updatedReservation.getCombinedTableIds() : updatedReservation.getTableId();
 
-            if (originalTableId != null) {
+            if (originalTableIds != null) {
                 // Create a temporary copy of the reservation to check if a new table can be found
-                // without releasing the original table
+                // without releasing the original table(s)
                 Reservation tempReservation = new Reservation();
                 tempReservation.setId(updatedReservation.getId());
                 tempReservation.setRestaurantId(updatedReservation.getRestaurantId());
@@ -530,41 +533,67 @@ public class ReservationService {
                 tempReservation.setDurationMinutes(updatedReservation.getDurationMinutes());
                 tempReservation.setStatus(updatedReservation.getStatus());
 
-                // Try to find a suitable table without releasing the original one
-                String newTableId = null;
+                // Try to find a suitable table without releasing the original one(s)
+                String newTableIdResult = null;
                 try {
-                    newTableId = tableAvailabilityService.findSuitableTableForReservation(tempReservation);
+                    newTableIdResult = tableAvailabilityService.findSuitableTableForReservation(tempReservation);
                 } catch (Exception e) {
                     logger.error("Error finding suitable table for updated reservation: {}", e.getMessage(), e);
                 }
 
-                if (newTableId != null) {
-                    // A suitable table was found, now we can safely release the original table
-                    logger.info("Found suitable table {} for updated reservation {}, releasing original table {}",
-                            newTableId, updatedReservation.getId(), originalTableId);
+                if (newTableIdResult != null) {
+                    // A suitable table or combination was found, now we can safely release the original table(s)
+                    logger.info("Found suitable table(s) {} for updated reservation {}, releasing original table(s) {}",
+                            newTableIdResult, updatedReservation.getId(), originalTableIds);
 
-                    // Release the original table
+                    // Release the original table(s) in a transaction
                     tableAvailabilityService.releaseTable(updatedReservation);
 
-                    // Assign the new table
-                    updatedReservation.setTableId(newTableId);
-                    updatedReservation = reservationRepository.save(updatedReservation);
+                    // Assign the new table(s)
+                    if (newTableIdResult.contains(",")) {
+                        // This is a combined table result
+                        List<String> tableIds = Arrays.stream(newTableIdResult.split(","))
+                                .map(String::trim)
+                                .filter(s -> !s.isEmpty())
+                                .collect(Collectors.toList());
 
-                    // Publish table status changed event for the new table
-                    tableAvailabilityService.publishTableStatusEvent(
-                        newTableId,
-                        updatedReservation.getRestaurantId(),
-                        tableAvailabilityService.getTableStatus(newTableId),
-                        StatusCodes.TABLE_RESERVED,
-                        updatedReservation.getId()
-                    );
+                        updatedReservation.setTableIds(tableIds);
+                        updatedReservation = reservationRepository.save(updatedReservation);
 
-                    logger.info("Successfully reassigned table for reservation {}: old table {}, new table {}",
-                            updatedReservation.getId(), originalTableId, newTableId);
+                        // Publish table status changed events for all tables
+                        for (String tableId : tableIds) {
+                            tableAvailabilityService.publishTableStatusEvent(
+                                tableId,
+                                updatedReservation.getRestaurantId(),
+                                tableAvailabilityService.getTableStatus(tableId),
+                                StatusCodes.TABLE_RESERVED,
+                                updatedReservation.getId()
+                            );
+                        }
+
+                        logger.info("Successfully reassigned combined tables for reservation {}: old tables {}, new tables {}",
+                                updatedReservation.getId(), originalTableIds, newTableIdResult);
+                    } else {
+                        // This is a single table result
+                        updatedReservation.setTableId(newTableIdResult);
+                        updatedReservation = reservationRepository.save(updatedReservation);
+
+                        // Publish table status changed event for the new table
+                        tableAvailabilityService.publishTableStatusEvent(
+                            newTableIdResult,
+                            updatedReservation.getRestaurantId(),
+                            tableAvailabilityService.getTableStatus(newTableIdResult),
+                            StatusCodes.TABLE_RESERVED,
+                            updatedReservation.getId()
+                        );
+
+                        logger.info("Successfully reassigned table for reservation {}: old table(s) {}, new table {}",
+                                updatedReservation.getId(), originalTableIds, newTableIdResult);
+                    }
                 } else {
-                    // No suitable table found, keep the original table and throw an exception
-                    logger.warn("No suitable table found for updated reservation {}, keeping original table {}",
-                            updatedReservation.getId(), originalTableId);
+                    // No suitable table found, keep the original table(s) and throw an exception
+                    logger.warn("No suitable table found for updated reservation {}, keeping original table(s) {}",
+                            updatedReservation.getId(), originalTableIds);
 
                     if (partySizeChanged) {
                         throw RestaurantCapacityException.noSuitableTablesForUpdate(updatedReservation.getPartySize());
@@ -580,7 +609,7 @@ public class ReservationService {
                 updatedReservation = reservationRepository.findById(updatedReservation.getId()).orElse(updatedReservation);
 
                 // If no table was assigned after update, throw an exception
-                if (updatedReservation.getTableId() == null) {
+                if (updatedReservation.getTableId() == null && !updatedReservation.hasCombinedTables()) {
                     if (partySizeChanged) {
                         throw RestaurantCapacityException.noSuitableTables(updatedReservation.getPartySize());
                     } else {
@@ -633,8 +662,8 @@ public class ReservationService {
             // Update quota
             updateReservationQuota(reservation, false);
 
-            // Release assigned table if any
-            if (reservation.getTableId() != null) {
+            // Release assigned table(s) if any
+            if (reservation.getTableId() != null || reservation.hasCombinedTables()) {
                 tableAvailabilityService.releaseTable(reservation);
             }
 
@@ -666,8 +695,8 @@ public class ReservationService {
                 // Save reservation
                 reservationRepository.save(reservation);
 
-                // Release table
-                if (reservation.getTableId() != null) {
+                // Release table(s)
+                if (reservation.getTableId() != null || reservation.hasCombinedTables()) {
                     tableAvailabilityService.releaseTable(reservation);
                 }
             }

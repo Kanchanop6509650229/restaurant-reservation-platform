@@ -1,11 +1,15 @@
 package com.restaurant.reservation.service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,29 +137,57 @@ public class TableAvailabilityService {
             logger.info("Finding suitable table for reservation {}, party size {}, time {}",
                     reservation.getId(), reservation.getPartySize(), reservation.getReservationTime());
 
-            String tableId = findSuitableTableAsync(
+            String tableIdResult = findSuitableTableAsync(
                     reservation.getId(),
                     reservation.getRestaurantId(),
                     reservation.getReservationTime(),
                     reservation.getEndTime(),
                     reservation.getPartySize());
 
-            if (tableId != null) {
-                // Assign table to reservation
-                reservation.setTableId(tableId);
-                reservationRepository.save(reservation);
+            if (tableIdResult != null) {
+                // Check if this is a combined table result (contains commas)
+                if (tableIdResult.contains(",")) {
+                    // This is a combined table result
+                    List<String> tableIds = Arrays.stream(tableIdResult.split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .collect(Collectors.toList());
 
-                // Publish table status changed event via Kafka
-                publishTableStatusEvent(
-                    tableId,
-                    reservation.getRestaurantId(),
-                    getTableStatus(tableId),
-                    StatusCodes.TABLE_RESERVED,
-                    reservation.getId()
-                );
+                    // Assign tables to reservation
+                    reservation.setTableIds(tableIds);
+                    reservationRepository.save(reservation);
 
-                logger.info("Table assigned to reservation: tableId={}, reservationId={}, partySize={}",
-                        tableId, reservation.getId(), reservation.getPartySize());
+                    // Publish table status changed events for all tables
+                    for (String tableId : tableIds) {
+                        publishTableStatusEvent(
+                            tableId,
+                            reservation.getRestaurantId(),
+                            getTableStatus(tableId),
+                            StatusCodes.TABLE_RESERVED,
+                            reservation.getId()
+                        );
+                    }
+
+                    logger.info("Combined tables assigned to reservation: tableIds={}, reservationId={}, partySize={}",
+                            tableIdResult, reservation.getId(), reservation.getPartySize());
+                } else {
+                    // This is a single table result
+                    // Assign table to reservation
+                    reservation.setTableId(tableIdResult);
+                    reservationRepository.save(reservation);
+
+                    // Publish table status changed event via Kafka
+                    publishTableStatusEvent(
+                        tableIdResult,
+                        reservation.getRestaurantId(),
+                        getTableStatus(tableIdResult),
+                        StatusCodes.TABLE_RESERVED,
+                        reservation.getId()
+                    );
+
+                    logger.info("Table assigned to reservation: tableId={}, reservationId={}, partySize={}",
+                            tableIdResult, reservation.getId(), reservation.getPartySize());
+                }
             } else {
                 logger.warn("No suitable table found for reservation: {}, partySize={}, time={}",
                         reservation.getId(), reservation.getPartySize(), reservation.getReservationTime());
@@ -166,53 +198,79 @@ public class TableAvailabilityService {
     }
 
     /**
-     * Releases a table assigned to a reservation.
+     * Releases tables assigned to a reservation.
      * This method:
-     * 1. Checks if the reservation has an assigned table
-     * 2. Updates the table status to available
-     * 3. Removes the table assignment from the reservation
-     * 4. Updates the cache and publishes status change event
+     * 1. Checks if the reservation has assigned tables
+     * 2. Updates the table status to available for all assigned tables
+     * 3. Removes the table assignments from the reservation
+     * 4. Updates the cache and publishes status change events
      *
-     * @param reservation the reservation whose table should be released
+     * @param reservation the reservation whose tables should be released
      * @throws IllegalArgumentException if the reservation is null
      */
     @Transactional
     public void releaseTable(Reservation reservation) {
         if (reservation == null) {
-            logger.error("Cannot release table from null reservation");
+            logger.error("Cannot release tables from null reservation");
             throw new IllegalArgumentException("Reservation cannot be null");
         }
 
-        // Skip if no table assigned
-        if (reservation.getTableId() == null) {
-            logger.debug("No table to release for reservation {}", reservation.getId());
-            return;
-        }
-
-        String tableId = reservation.getTableId();
         String restaurantId = reservation.getRestaurantId();
 
-        logger.info("Releasing table {} for reservation {}", tableId, reservation.getId());
+        // Check if this is a combined table reservation
+        if (reservation.hasCombinedTables()) {
+            List<String> tableIds = reservation.getTableIds();
+            if (tableIds.isEmpty()) {
+                logger.debug("No tables to release for reservation {}", reservation.getId());
+                return;
+            }
 
-        // Publish table status changed event via Kafka
-        publishTableStatusEvent(
-            tableId,
-            restaurantId,
-            getTableStatus(tableId),
-            StatusCodes.TABLE_AVAILABLE,
-            null
-        );
+            logger.info("Releasing combined tables {} for reservation {}",
+                    reservation.getCombinedTableIds(), reservation.getId());
 
-        // Update reservation to remove table assignment
-        reservation.setTableId(null);
-        reservationRepository.save(reservation);
+            // Update table status to available for all tables
+            for (String tableId : tableIds) {
+                publishTableStatusEvent(
+                    tableId,
+                    restaurantId,
+                    getTableStatus(tableId),
+                    StatusCodes.TABLE_AVAILABLE,
+                    null
+                );
+            }
 
-        // Clear table assignment
-        reservation.setTableId(null);
-        reservationRepository.save(reservation);
+            // Remove table assignments from reservation
+            reservation.setTableIds(null);
+            reservationRepository.save(reservation);
 
-        logger.info("Table released: tableId={}, reservationId={}",
-                tableId, reservation.getId());
+            logger.info("Combined tables released from reservation: tableIds={}, reservationId={}",
+                    String.join(",", tableIds), reservation.getId());
+        } else {
+            // Single table reservation
+            String tableId = reservation.getTableId();
+            if (tableId == null) {
+                logger.debug("No table to release for reservation {}", reservation.getId());
+                return;
+            }
+
+            logger.info("Releasing table {} for reservation {}", tableId, reservation.getId());
+
+            // Publish table status changed event via Kafka
+            publishTableStatusEvent(
+                tableId,
+                restaurantId,
+                getTableStatus(tableId),
+                StatusCodes.TABLE_AVAILABLE,
+                null
+            );
+
+            // Remove table assignment from reservation
+            reservation.setTableId(null);
+            reservationRepository.save(reservation);
+
+            logger.info("Table released: tableId={}, reservationId={}",
+                    tableId, reservation.getId());
+        }
     }
 
     /**
@@ -269,8 +327,17 @@ public class TableAvailabilityService {
                     correlationId, requestTimeoutSeconds, TimeUnit.SECONDS);
 
             if (response != null && response.isSuccess()) {
-                logger.info("Found suitable table {} for reservation {}", response.getTableId(), reservationId);
-                return response.getTableId();
+                // Check if this is a combined table result (contains multiple table IDs)
+                if (response.getTableIds() != null && response.getTableIds().size() > 1) {
+                    // For combined tables, return the comma-separated list of table IDs
+                    String tableIds = String.join(",", response.getTableIds());
+                    logger.info("Found combined tables {} for reservation {}", tableIds, reservationId);
+                    return tableIds;
+                } else {
+                    // For a single table, return the table ID
+                    logger.info("Found suitable table {} for reservation {}", response.getTableId(), reservationId);
+                    return response.getTableId();
+                }
             } else {
                 String errorMsg = response != null ? response.getErrorMessage() : "No response received";
                 logger.warn("Failed to find suitable table via Kafka: {}", errorMsg);
@@ -407,12 +474,13 @@ public class TableAvailabilityService {
      * 2. Processes the response to find available tables
      * 3. Checks table capacity and current status
      * 4. Verifies no conflicting reservations exist
+     * 5. Supports combining tables with 'combinable' property for larger party sizes
      *
      * @param restaurantId ID of the restaurant
      * @param startTime start time of the reservation
      * @param endTime end time of the reservation
      * @param partySize size of the party
-     * @return ID of the suitable table, or null if none found
+     * @return ID of the suitable table, or comma-separated list of table IDs if combined, or null if none found
      */
     private String findSuitableTableViaRest(String restaurantId, LocalDateTime startTime,
                                     LocalDateTime endTime, int partySize) {
@@ -428,7 +496,7 @@ public class TableAvailabilityService {
 
             // Call REST API to get available tables
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    restaurantServiceUrl + "/api/restaurants/" + restaurantId + "/tables/available",
+                    restaurantServiceUrl + "/api/restaurants/" + restaurantId + "/tables/public",
                     HttpMethod.GET,
                     HttpEntity.EMPTY,
                     new ParameterizedTypeReference<Map<String, Object>>() {});
@@ -446,18 +514,8 @@ public class TableAvailabilityService {
                 return null;
             }
 
-            Object dataObj = responseBody.get("data");
-
-            if (!(dataObj instanceof Map)) {
-                logger.warn("Invalid data format in REST API response");
-                return null;
-            }
-
             @SuppressWarnings("unchecked")
-            Map<String, Object> data = (Map<String, Object>) dataObj;
-
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> tables = (List<Map<String, Object>>) data.get("tables");
+            List<Map<String, Object>> tables = (List<Map<String, Object>>) responseBody.get("data");
 
             if (tables == null || tables.isEmpty()) {
                 logger.info("No tables found in REST API response");
@@ -466,14 +524,64 @@ public class TableAvailabilityService {
 
             logger.info("Found {} tables via REST API, checking for suitable match", tables.size());
 
-            // Check for conflicting reservations
-            for (Map<String, Object> table : tables) {
+            // First, try to find a single table that can accommodate the party
+            String singleTableId = findSingleTableViaRest(tables, restaurantId, startTime, endTime, partySize);
+            if (singleTableId != null) {
+                logger.info("Found single suitable table via REST API: {}", singleTableId);
+                return singleTableId;
+            }
+
+            // If no single table is found, try to find a combination of tables
+            logger.info("No single table found for party size {}, trying to find combination of tables", partySize);
+
+            // First, try with combinable tables only
+            List<String> combinedTableIds = findCombinableTablesViaRest(tables, restaurantId, startTime, endTime, partySize, true);
+
+            // If no combination of combinable tables is found, try with all tables
+            if (combinedTableIds.isEmpty()) {
+                logger.info("No combination of combinable tables found, trying with all tables");
+                combinedTableIds = findCombinableTablesViaRest(tables, restaurantId, startTime, endTime, partySize, false);
+            }
+
+            if (!combinedTableIds.isEmpty()) {
+                String result = String.join(",", combinedTableIds);
+                logger.info("Found combination of tables for party size {}: {}", partySize, result);
+                return result;
+            }
+
+            logger.info("No suitable table or combination found via REST API");
+            return null;
+        } catch (HttpClientErrorException | ResourceAccessException e) {
+            logger.error("Error finding suitable table via REST: {}", e.getMessage());
+            return null;
+        } catch (Exception e) {
+            logger.error("Unexpected error finding suitable table via REST: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Finds a single table that can accommodate the given party size.
+     *
+     * @param tables List of available tables from the REST API
+     * @param restaurantId ID of the restaurant
+     * @param startTime start time of the reservation
+     * @param endTime end time of the reservation
+     * @param partySize size of the party
+     * @return ID of the suitable table, or null if none found
+     */
+    private String findSingleTableViaRest(List<Map<String, Object>> tables, String restaurantId,
+                                         LocalDateTime startTime, LocalDateTime endTime, int partySize) {
+        // Filter and sort tables by capacity (ascending) to find the smallest suitable table
+        List<Map<String, Object>> suitableTables = tables.stream()
+            .filter(table -> {
+                // Extract table data
                 String tableId = (String) table.get("id");
                 Object capacityObj = table.get("capacity");
 
                 if (tableId == null || capacityObj == null) {
                     logger.warn("Invalid table data in REST API response: {}", table);
-                    continue;
+                    return false;
                 }
 
                 int capacity;
@@ -483,45 +591,141 @@ public class TableAvailabilityService {
                     capacity = ((Number) capacityObj).intValue();
                 } else {
                     logger.warn("Invalid capacity format in table data: {}", capacityObj);
-                    continue;
+                    return false;
                 }
 
-                // Skip tables that are too small
+                // Check if table is large enough
                 if (capacity < partySize) {
-                    logger.debug("Table {} capacity {} is too small for party size {}",
-                            tableId, capacity, partySize);
-                    continue;
+                    return false;
                 }
 
-                // Check if the table is available from the cache first
+                // Check if table is available in cache
                 String cachedStatus = tableStatusCacheService.getTableStatus(tableId);
                 if (cachedStatus != null && !cachedStatus.equals(StatusCodes.TABLE_AVAILABLE)) {
-                    logger.debug("Table {} is not available according to cache: {}",
-                            tableId, cachedStatus);
-                    continue;
+                    return false;
                 }
 
-                // Check if this table has conflicting reservations
+                // Check for conflicting reservations
                 List<Reservation> conflicts = reservationRepository.findConflictingReservations(
                         restaurantId, tableId, startTime, endTime);
 
-                if (conflicts.isEmpty()) {
-                    logger.info("Found suitable table via REST API: {}", tableId);
-                    return tableId;
-                } else {
-                    logger.debug("Table {} has {} conflicting reservations",
-                            tableId, conflicts.size());
-                }
-            }
+                return conflicts.isEmpty();
+            })
+            .sorted((t1, t2) -> {
+                int capacity1 = ((Number) t1.get("capacity")).intValue();
+                int capacity2 = ((Number) t2.get("capacity")).intValue();
+                return Integer.compare(capacity1, capacity2);
+            })
+            .collect(Collectors.toList());
 
-            logger.info("No suitable table found via REST API");
-            return null;
-        } catch (HttpClientErrorException | ResourceAccessException e) {
-            logger.error("Error finding suitable table via REST: {}", e.getMessage());
-            return null;
-        } catch (Exception e) {
-            logger.error("Unexpected error finding suitable table via REST: {}", e.getMessage(), e);
-            return null;
+        if (!suitableTables.isEmpty()) {
+            Map<String, Object> selectedTable = suitableTables.get(0);
+            return (String) selectedTable.get("id");
+        }
+
+        return null;
+    }
+
+    /**
+     * Finds a combination of tables that can accommodate the given party size.
+     *
+     * @param tables List of available tables from the REST API
+     * @param restaurantId ID of the restaurant
+     * @param startTime start time of the reservation
+     * @param endTime end time of the reservation
+     * @param partySize size of the party
+     * @param combinableOnly Whether to consider only tables with combinable=true
+     * @return List of table IDs that can be combined, or empty list if no combination is found
+     */
+    private List<String> findCombinableTablesViaRest(List<Map<String, Object>> tables, String restaurantId,
+                                                   LocalDateTime startTime, LocalDateTime endTime,
+                                                   int partySize, boolean combinableOnly) {
+        // Filter tables based on availability and combinable flag
+        List<Map<String, Object>> eligibleTables = tables.stream()
+            .filter(table -> {
+                String tableId = (String) table.get("id");
+
+                // Skip tables with invalid data
+                if (tableId == null) {
+                    return false;
+                }
+
+                // Check combinable flag if needed
+                if (combinableOnly) {
+                    Object combinableObj = table.get("combinable");
+                    if (!(combinableObj instanceof Boolean) || !((Boolean) combinableObj)) {
+                        return false;
+                    }
+                }
+
+                // Check if table is available in cache
+                String cachedStatus = tableStatusCacheService.getTableStatus(tableId);
+                if (cachedStatus != null && !cachedStatus.equals(StatusCodes.TABLE_AVAILABLE)) {
+                    return false;
+                }
+
+                // Check for conflicting reservations
+                List<Reservation> conflicts = reservationRepository.findConflictingReservations(
+                        restaurantId, tableId, startTime, endTime);
+
+                return conflicts.isEmpty();
+            })
+            .collect(Collectors.toList());
+
+        if (eligibleTables.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Sort tables by capacity (descending) to minimize the number of tables needed
+        eligibleTables.sort((t1, t2) -> {
+            int capacity1 = getTableCapacity(t1);
+            int capacity2 = getTableCapacity(t2);
+            return Integer.compare(capacity2, capacity1);
+        });
+
+        List<Map<String, Object>> selectedTables = new ArrayList<>();
+        int totalCapacity = 0;
+
+        // Select tables until we have enough capacity
+        for (Map<String, Object> table : eligibleTables) {
+            selectedTables.add(table);
+            totalCapacity += getTableCapacity(table);
+
+            if (totalCapacity >= partySize) {
+                break;
+            }
+        }
+
+        // If we couldn't get enough capacity, return empty list
+        if (totalCapacity < partySize) {
+            return Collections.emptyList();
+        }
+
+        // Extract table IDs from selected tables
+        return selectedTables.stream()
+            .map(table -> (String) table.get("id"))
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Helper method to safely extract table capacity from a table data map.
+     *
+     * @param table Map containing table data
+     * @return The table capacity, or 0 if not available
+     */
+    private int getTableCapacity(Map<String, Object> table) {
+        Object capacityObj = table.get("capacity");
+
+        if (capacityObj == null) {
+            return 0;
+        }
+
+        if (capacityObj instanceof Integer) {
+            return (Integer) capacityObj;
+        } else if (capacityObj instanceof Number) {
+            return ((Number) capacityObj).intValue();
+        } else {
+            return 0;
         }
     }
 }
