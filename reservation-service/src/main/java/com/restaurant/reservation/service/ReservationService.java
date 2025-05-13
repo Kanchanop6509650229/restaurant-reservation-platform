@@ -457,8 +457,8 @@ public class ReservationService {
             partySizeChanged = true;
         }
 
-        // Update other fields if provided
-        if (updateRequest.getDurationMinutes() > 0) {
+        // Update duration if provided, otherwise keep the existing value
+        if (updateRequest.getDurationMinutes() != null) {
             reservation.setDurationMinutes(updateRequest.getDurationMinutes());
         }
 

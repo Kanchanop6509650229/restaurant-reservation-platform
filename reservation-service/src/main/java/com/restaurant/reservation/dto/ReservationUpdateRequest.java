@@ -31,10 +31,13 @@ public class ReservationUpdateRequest {
     @jakarta.validation.constraints.Max(value = 100, message = "Party size cannot exceed 100 people")
     private int partySize;
 
-    /** New duration of the reservation in minutes (optional) */
+    /**
+     * New duration of the reservation in minutes (optional)
+     * Validation only applies when a value is provided
+     */
     @Min(value = 15, message = "Duration must be at least 15 minutes")
     @jakarta.validation.constraints.Max(value = 480, message = "Duration cannot exceed 8 hours (480 minutes)")
-    private int durationMinutes;
+    private Integer durationMinutes;
 
     /** New name of the customer (optional) */
     @Size(min = 2, max = 100, message = "Customer name must be between 2 and 100 characters")
@@ -96,9 +99,9 @@ public class ReservationUpdateRequest {
     /**
      * Gets the new duration of the reservation in minutes.
      *
-     * @return The new duration in minutes
+     * @return The new duration in minutes, or null if not specified
      */
-    public int getDurationMinutes() {
+    public Integer getDurationMinutes() {
         return durationMinutes;
     }
 
@@ -107,7 +110,7 @@ public class ReservationUpdateRequest {
      *
      * @param durationMinutes The new duration to set (must be at least 15 minutes and no more than 8 hours)
      */
-    public void setDurationMinutes(int durationMinutes) {
+    public void setDurationMinutes(Integer durationMinutes) {
         this.durationMinutes = durationMinutes;
     }
 
