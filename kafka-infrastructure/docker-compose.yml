@@ -3,7 +3,7 @@
 # Author: Restaurant Team
 # Version: 1.0
 
-version: '3.8'
+version: "3.8"
 
 services:
   # Zookeeper service
@@ -13,17 +13,17 @@ services:
     container_name: zookeeper
     restart: always
     ports:
-      - "2181:2181"  # Standard Zookeeper port
+      - "2182:2181" # Using alternative port 2182 to avoid conflicts
     environment:
-      ZOO_MY_ID: 1  # Unique ID for this Zookeeper instance
-      ZOO_SERVERS: server.1=zookeeper:2888:3888;2181  # Cluster configuration
+      ZOO_MY_ID: 1 # Unique ID for this Zookeeper instance
+      ZOO_SERVERS: server.1=zookeeper:2888:3888;2181 # Cluster configuration
     volumes:
-      - zookeeper-data:/data  # Persistent storage for Zookeeper data
-      - zookeeper-log:/datalog  # Persistent storage for Zookeeper logs
+      - zookeeper-data:/data # Persistent storage for Zookeeper data
+      - zookeeper-log:/datalog # Persistent storage for Zookeeper logs
     networks:
       - restaurant-platform-network
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]  # Check if Zookeeper is listening
+      test: ["CMD", "nc", "-z", "localhost", "2181"] # Check if Zookeeper is listening
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,28 +36,34 @@ services:
     restart: always
     depends_on:
       zookeeper:
-        condition: service_healthy  # Wait for Zookeeper to be healthy
+        condition: service_healthy # Wait for Zookeeper to be healthy
     ports:
-      - "9092:9092"  # Internal Docker network port
-      - "29092:29092"  # External host machine port
+      - "9092:9092" # Internal Docker network port
+      - "29092:29092" # External host machine port
     environment:
-      KAFKA_BROKER_ID: 1  # Unique ID for this Kafka broker
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181  # Zookeeper connection string
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092  # Listener configuration
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT  # Security protocol mapping
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT  # Internal broker communication
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1  # Replication factor for offset topic
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0  # Consumer group rebalance delay
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1  # Minimum in-sync replicas for transactions
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1  # Replication factor for transaction logs
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"  # Enable automatic topic creation
+      KAFKA_BROKER_ID: 1 # Unique ID for this Kafka broker
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181 # Zookeeper connection string (internal container port)
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092 # Listener configuration
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT # Security protocol mapping
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT # Internal broker communication
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1 # Replication factor for offset topic
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0 # Consumer group rebalance delay
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1 # Minimum in-sync replicas for transactions
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1 # Replication factor for transaction logs
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" # Enable automatic topic creation
     volumes:
-      - kafka-data:/var/lib/kafka/data  # Persistent storage for Kafka data
-      - ${PWD}/config/kafka:/etc/kafka/custom-config  # Custom Kafka configuration
+      - kafka-data:/var/lib/kafka/data # Persistent storage for Kafka data
+      - ${PWD}/config/kafka:/etc/kafka/custom-config # Custom Kafka configuration
     networks:
       - restaurant-platform-network
     healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]  # Check if Kafka is operational
+      test: [
+          "CMD",
+          "kafka-topics",
+          "--bootstrap-server",
+          "localhost:9092",
+          "--list",
+        ] # Check if Kafka is operational
       interval: 30s
       timeout: 10s
       retries: 5
@@ -69,14 +75,14 @@ services:
     container_name: kafdrop
     restart: always
     ports:
-      - "9000:9000"  # Web UI port
+      - "9000:9000" # Web UI port
     environment:
-      KAFKA_BROKERCONNECT: kafka:9092  # Kafka broker connection string
-      JVM_OPTS: "-Xms32M -Xmx64M"  # JVM memory settings
-      SERVER_SERVLET_CONTEXTPATH: "/"  # Web context path
+      KAFKA_BROKERCONNECT: kafka:9092 # Kafka broker connection string
+      JVM_OPTS: "-Xms32M -Xmx64M" # JVM memory settings
+      SERVER_SERVLET_CONTEXTPATH: "/" # Web context path
     depends_on:
       kafka:
-        condition: service_healthy  # Wait for Kafka to be healthy
+        condition: service_healthy # Wait for Kafka to be healthy
     networks:
       - restaurant-platform-network
 
@@ -87,19 +93,28 @@ services:
     container_name: mysql-user-service
     restart: always
     ports:
-      - "3306:3306"  # Standard MySQL port
+      - "3309:3306" # Using alternative port 3309 to avoid conflicts
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword  # Root user password
-      MYSQL_DATABASE: user_service  # Default database
-      MYSQL_USER: user_service  # Service user
-      MYSQL_PASSWORD: user_password  # Service user password
+      MYSQL_ROOT_PASSWORD: rootpassword # Root user password
+      MYSQL_DATABASE: user_service # Default database
+      MYSQL_USER: user_service # Service user
+      MYSQL_PASSWORD: user_password # Service user password
     volumes:
-      - mysql-user-data:/var/lib/mysql  # Persistent storage for MySQL data
-      - ${PWD}/scripts/mysql/init-user-db.sql:/docker-entrypoint-initdb.d/init-user-db.sql  # Initialization script
+      - mysql-user-data:/var/lib/mysql # Persistent storage for MySQL data
+      - ${PWD}/scripts/mysql/init-user-db.sql:/docker-entrypoint-initdb.d/init-user-db.sql # Initialization script
     networks:
       - restaurant-platform-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]  # Check if MySQL is operational
+      test: [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p$$MYSQL_ROOT_PASSWORD",
+        ] # Check if MySQL is operational
       interval: 10s
       timeout: 5s
       retries: 5
@@ -111,7 +126,7 @@ services:
     container_name: mysql-restaurant-service
     restart: always
     ports:
-      - "3307:3306"  # Alternative port for second MySQL instance
+      - "3307:3306" # Alternative port for second MySQL instance
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: restaurant_service
@@ -123,7 +138,17 @@ services:
     networks:
       - restaurant-platform-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p$$MYSQL_ROOT_PASSWORD",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -135,7 +160,7 @@ services:
     container_name: mysql-reservation-service
     restart: always
     ports:
-      - "3308:3306"  # Alternative port for third MySQL instance
+      - "3308:3306" # Alternative port for third MySQL instance
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: reservation_service
@@ -147,7 +172,17 @@ services:
     networks:
       - restaurant-platform-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p$$MYSQL_ROOT_PASSWORD",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -161,10 +196,10 @@ services:
     container_name: kafka-init
     depends_on:
       kafka:
-        condition: service_healthy  # Wait for Kafka to be healthy
+        condition: service_healthy # Wait for Kafka to be healthy
     volumes:
-      - ${PWD}/scripts/init-kafka.sh:/scripts/init-kafka.sh  # Initialization script
-    command: ["bash", "/scripts/init-kafka.sh"]  # Run initialization script
+      - ${PWD}/scripts/init-kafka.sh:/scripts/init-kafka.sh # Initialization script
+    command: ["bash", "/scripts/init-kafka.sh"] # Run initialization script
     networks:
       - restaurant-platform-network
 
@@ -182,7 +217,7 @@ services:
     ports:
       - "8081:8081"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-user-service:3306/user_service
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-user-service:3306/user_service # Using internal container port
       SPRING_DATASOURCE_USERNAME: user_service
       SPRING_DATASOURCE_PASSWORD: user_password
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
@@ -225,11 +260,29 @@ services:
     networks:
       - restaurant-platform-network
 
+  # Adminer - Database Management UI
+  # Web-based database management tool for MySQL
+  adminer:
+    image: adminer:latest
+    container_name: adminer
+    restart: always
+    ports:
+      - "8080:8080" # Web UI port
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql-user-service # Default MySQL server to connect to
+      ADMINER_DESIGN: pepa-linha # UI theme
+    depends_on:
+      - mysql-user-service
+      - mysql-restaurant-service
+      - mysql-reservation-service
+    networks:
+      - restaurant-platform-network
+
 # Volume definitions for persistent data storage
 volumes:
-  zookeeper-data:  # Zookeeper data volume
-  zookeeper-log:   # Zookeeper log volume
-  kafka-data:      # Kafka data volume
+  zookeeper-data: # Zookeeper data volume
+  zookeeper-log: # Zookeeper log volume
+  kafka-data: # Kafka data volume
   mysql-user-data: # User service database volume
   mysql-restaurant-data: # Restaurant service database volume
   mysql-reservation-data: # Reservation service database volume
@@ -237,4 +290,4 @@ volumes:
 # Network configuration
 networks:
   restaurant-platform-network:
-    driver: bridge  # Bridge network for inter-container communication
+    driver: bridge # Bridge network for inter-container communication
