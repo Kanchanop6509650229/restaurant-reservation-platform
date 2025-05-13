@@ -302,7 +302,7 @@ public class TableAvailabilityService {
      * @return current status of the table
      * @throws IllegalArgumentException if tableId is null or empty
      */
-    private String getTableStatus(String tableId) {
+    public String getTableStatus(String tableId) {
         if (tableId == null || tableId.isEmpty()) {
             logger.error("Cannot get status for null or empty tableId");
             throw new IllegalArgumentException("Table ID cannot be null or empty");
@@ -332,7 +332,7 @@ public class TableAvailabilityService {
      * @throws ValidationException if the status update fails
      * @throws IllegalArgumentException if tableId, restaurantId, or newStatus is null or empty
      */
-    private void publishTableStatusEvent(String tableId, String restaurantId, String oldStatus, String newStatus, String reservationId) {
+    public void publishTableStatusEvent(String tableId, String restaurantId, String oldStatus, String newStatus, String reservationId) {
         // Validate input parameters
         if (tableId == null || tableId.isEmpty()) {
             throw new IllegalArgumentException("Table ID cannot be null or empty");
@@ -370,6 +370,32 @@ public class TableAvailabilityService {
             logger.error("Failed to update table status: {}", e.getMessage(), e);
             throw new ValidationException("tableId",
                     "Failed to update table status: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Finds a suitable table for a reservation without assigning it.
+     * This method is used to check if a table is available before committing to a reservation update.
+     *
+     * @param reservation the reservation to find a table for
+     * @return ID of the suitable table, or null if none found
+     */
+    public String findSuitableTableForReservation(Reservation reservation) {
+        if (reservation == null) {
+            logger.error("Cannot find table for null reservation");
+            throw new IllegalArgumentException("Reservation cannot be null");
+        }
+
+        try {
+            return findSuitableTableAsync(
+                    reservation.getId(),
+                    reservation.getRestaurantId(),
+                    reservation.getReservationTime(),
+                    reservation.getEndTime(),
+                    reservation.getPartySize());
+        } catch (Exception e) {
+            logger.error("Error finding suitable table for reservation: {}", e.getMessage(), e);
+            return null;
         }
     }
 

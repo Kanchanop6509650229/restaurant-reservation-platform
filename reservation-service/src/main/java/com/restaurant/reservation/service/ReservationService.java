@@ -516,26 +516,76 @@ public class ReservationService {
             // Add to new quota
             updateReservationQuota(updatedReservation, true);
 
-            // Reassign table if needed
-            if (updatedReservation.getTableId() != null) {
-                tableAvailabilityService.releaseTable(updatedReservation);
-                // Clear the table ID to ensure a new table is assigned
-                updatedReservation.setTableId(null);
-                updatedReservation = reservationRepository.save(updatedReservation);
-            }
+            // Store the original table ID before attempting to find a new one
+            String originalTableId = updatedReservation.getTableId();
 
-            // Find and assign a new table
-            tableAvailabilityService.findAndAssignTable(updatedReservation);
+            if (originalTableId != null) {
+                // Create a temporary copy of the reservation to check if a new table can be found
+                // without releasing the original table
+                Reservation tempReservation = new Reservation();
+                tempReservation.setId(updatedReservation.getId());
+                tempReservation.setRestaurantId(updatedReservation.getRestaurantId());
+                tempReservation.setReservationTime(updatedReservation.getReservationTime());
+                tempReservation.setPartySize(updatedReservation.getPartySize());
+                tempReservation.setDurationMinutes(updatedReservation.getDurationMinutes());
+                tempReservation.setStatus(updatedReservation.getStatus());
 
-            // Reload the reservation to get the latest state with the new table assignment
-            updatedReservation = reservationRepository.findById(updatedReservation.getId()).orElse(updatedReservation);
+                // Try to find a suitable table without releasing the original one
+                String newTableId = null;
+                try {
+                    newTableId = tableAvailabilityService.findSuitableTableForReservation(tempReservation);
+                } catch (Exception e) {
+                    logger.error("Error finding suitable table for updated reservation: {}", e.getMessage(), e);
+                }
 
-            // If no table was assigned after update, throw an exception
-            if (updatedReservation.getTableId() == null) {
-                if (partySizeChanged) {
-                    throw RestaurantCapacityException.noSuitableTables(updatedReservation.getPartySize());
+                if (newTableId != null) {
+                    // A suitable table was found, now we can safely release the original table
+                    logger.info("Found suitable table {} for updated reservation {}, releasing original table {}",
+                            newTableId, updatedReservation.getId(), originalTableId);
+
+                    // Release the original table
+                    tableAvailabilityService.releaseTable(updatedReservation);
+
+                    // Assign the new table
+                    updatedReservation.setTableId(newTableId);
+                    updatedReservation = reservationRepository.save(updatedReservation);
+
+                    // Publish table status changed event for the new table
+                    tableAvailabilityService.publishTableStatusEvent(
+                        newTableId,
+                        updatedReservation.getRestaurantId(),
+                        tableAvailabilityService.getTableStatus(newTableId),
+                        StatusCodes.TABLE_RESERVED,
+                        updatedReservation.getId()
+                    );
+
+                    logger.info("Successfully reassigned table for reservation {}: old table {}, new table {}",
+                            updatedReservation.getId(), originalTableId, newTableId);
                 } else {
-                    throw new ValidationException("reservationTime", "No tables available at the selected time");
+                    // No suitable table found, keep the original table and throw an exception
+                    logger.warn("No suitable table found for updated reservation {}, keeping original table {}",
+                            updatedReservation.getId(), originalTableId);
+
+                    if (partySizeChanged) {
+                        throw RestaurantCapacityException.noSuitableTablesForUpdate(updatedReservation.getPartySize());
+                    } else {
+                        throw new ValidationException("reservationTime", "No tables available at the selected time. Your original reservation has been preserved.");
+                    }
+                }
+            } else {
+                // No original table was assigned, try to find and assign a new table
+                tableAvailabilityService.findAndAssignTable(updatedReservation);
+
+                // Reload the reservation to get the latest state with the new table assignment
+                updatedReservation = reservationRepository.findById(updatedReservation.getId()).orElse(updatedReservation);
+
+                // If no table was assigned after update, throw an exception
+                if (updatedReservation.getTableId() == null) {
+                    if (partySizeChanged) {
+                        throw RestaurantCapacityException.noSuitableTables(updatedReservation.getPartySize());
+                    } else {
+                        throw new ValidationException("reservationTime", "No tables available at the selected time");
+                    }
                 }
             }
         }

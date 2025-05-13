@@ -64,4 +64,19 @@ public class RestaurantCapacityException extends BaseException {
                     "Please select a different time, modify your party size, or contact the restaurant directly for assistance.", partySize)
         );
     }
+
+    /**
+     * Creates an exception specifically for reservation updates where no suitable tables
+     * are available for the new party size, but the original reservation is preserved.
+     *
+     * @param partySize The size of the party that cannot be accommodated
+     * @return A new RestaurantCapacityException with a formatted message
+     */
+    public static RestaurantCapacityException noSuitableTablesForUpdate(int partySize) {
+        return new RestaurantCapacityException(
+            String.format("Cannot update reservation: No suitable tables available for a party of %d. " +
+                    "Your original reservation has been preserved. " +
+                    "Please select a different time, modify your party size, or contact the restaurant directly for assistance.", partySize)
+        );
+    }
 }
