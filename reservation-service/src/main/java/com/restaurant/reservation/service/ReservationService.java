@@ -350,7 +350,8 @@ public class ReservationService {
         // Check if reservation can be cancelled
         if (reservation.getStatus().equals(StatusCodes.RESERVATION_CANCELLED) ||
                 reservation.getStatus().equals(StatusCodes.RESERVATION_COMPLETED) ||
-                reservation.getStatus().equals(StatusCodes.RESERVATION_NO_SHOW)) {
+                reservation.getStatus().equals(StatusCodes.RESERVATION_NO_SHOW) ||
+                reservation.getStatus().equals(StatusCodes.RESERVATION_CONFIRMED)) {
             throw new ValidationException("status",
                     "Cannot cancel reservation in " + reservation.getStatus() + " status");
         }
