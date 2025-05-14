@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -521,10 +522,14 @@ public class ReservationService {
             boolean hasCombinedTables = updatedReservation.hasCombinedTables();
             String originalTableIds = hasCombinedTables ?
                     updatedReservation.getCombinedTableIds() : updatedReservation.getTableId();
+            List<String> originalTableIdsList = hasCombinedTables ?
+                    updatedReservation.getTableIds() :
+                    (updatedReservation.getTableId() != null ?
+                            Collections.singletonList(updatedReservation.getTableId()) :
+                            Collections.emptyList());
 
             if (originalTableIds != null) {
                 // Create a temporary copy of the reservation to check if a new table can be found
-                // without releasing the original table(s)
                 Reservation tempReservation = new Reservation();
                 tempReservation.setId(updatedReservation.getId());
                 tempReservation.setRestaurantId(updatedReservation.getRestaurantId());
@@ -533,7 +538,14 @@ public class ReservationService {
                 tempReservation.setDurationMinutes(updatedReservation.getDurationMinutes());
                 tempReservation.setStatus(updatedReservation.getStatus());
 
-                // Try to find a suitable table without releasing the original one(s)
+                // First release the currently assigned table(s)
+                logger.info("Releasing original table(s) {} for reservation {} to handle party size change",
+                        originalTableIds, updatedReservation.getId());
+
+                // Release the original table(s)
+                tableAvailabilityService.releaseTable(updatedReservation);
+
+                // Now search for a table that can accommodate the updated party size
                 String newTableIdResult = null;
                 try {
                     newTableIdResult = tableAvailabilityService.findSuitableTableForReservation(tempReservation);
@@ -542,12 +554,9 @@ public class ReservationService {
                 }
 
                 if (newTableIdResult != null) {
-                    // A suitable table or combination was found, now we can safely release the original table(s)
-                    logger.info("Found suitable table(s) {} for updated reservation {}, releasing original table(s) {}",
-                            newTableIdResult, updatedReservation.getId(), originalTableIds);
-
-                    // Release the original table(s) in a transaction
-                    tableAvailabilityService.releaseTable(updatedReservation);
+                    // A suitable table or combination was found
+                    logger.info("Found suitable table(s) {} for updated reservation {} with new party size {}",
+                            newTableIdResult, updatedReservation.getId(), updatedReservation.getPartySize());
 
                     // Assign the new table(s)
                     if (newTableIdResult.contains(",")) {
@@ -591,10 +600,42 @@ public class ReservationService {
                                 updatedReservation.getId(), originalTableIds, newTableIdResult);
                     }
                 } else {
-                    // No suitable table found, keep the original table(s) and throw an exception
-                    logger.warn("No suitable table found for updated reservation {}, keeping original table(s) {}",
+                    // No suitable table found, reassign the original table(s) to the reservation
+                    logger.warn("No suitable table found for updated reservation {}, reassigning original table(s) {}",
                             updatedReservation.getId(), originalTableIds);
 
+                    // Reassign the original table(s)
+                    if (hasCombinedTables) {
+                        // This was a combined table reservation
+                        updatedReservation.setTableIds(originalTableIdsList);
+                        updatedReservation = reservationRepository.save(updatedReservation);
+
+                        // Publish table status changed events for all tables
+                        for (String tableId : originalTableIdsList) {
+                            tableAvailabilityService.publishTableStatusEvent(
+                                tableId,
+                                updatedReservation.getRestaurantId(),
+                                tableAvailabilityService.getTableStatus(tableId),
+                                StatusCodes.TABLE_RESERVED,
+                                updatedReservation.getId()
+                            );
+                        }
+                    } else if (!originalTableIdsList.isEmpty()) {
+                        // This was a single table reservation
+                        updatedReservation.setTableId(originalTableIdsList.get(0));
+                        updatedReservation = reservationRepository.save(updatedReservation);
+
+                        // Publish table status changed event for the table
+                        tableAvailabilityService.publishTableStatusEvent(
+                            originalTableIdsList.get(0),
+                            updatedReservation.getRestaurantId(),
+                            tableAvailabilityService.getTableStatus(originalTableIdsList.get(0)),
+                            StatusCodes.TABLE_RESERVED,
+                            updatedReservation.getId()
+                        );
+                    }
+
+                    // Throw an exception to inform the user
                     if (partySizeChanged) {
                         throw RestaurantCapacityException.noSuitableTablesForUpdate(updatedReservation.getPartySize());
                     } else {
