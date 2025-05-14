@@ -321,13 +321,6 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
             description "This diagram shows the sequence of interactions when registering a new user."
         }
 
-        dynamic restaurantService "MenuItemAddition" "Shows the process of adding a menu item to a restaurant" {
-            restaurantRepository -> restaurantDB "query(restaurantId)"
-            restaurantEventProducer -> kafka "send()"
-            autoLayout
-            description "This diagram shows the sequence of interactions when adding a menu item to a restaurant."
-        }
-
         dynamic userService "UserAuthentication" "Shows the process of authenticating a user" {
             authController -> authService "authenticate(credentials)"
             authService -> userRepository "findByUsername(username)"
