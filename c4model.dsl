@@ -42,20 +42,16 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
             restaurantService = container "Restaurant Service" "Manages restaurant information" "Spring Boot, Java 17" {
                 // API Layer components
                 restaurantController = component "Restaurant Controller" "Handles restaurant CRUD operations" "Spring MVC"
-                menuController = component "Menu Controller" "Handles menu and item operations" "Spring MVC"
 
                 // Service Layer components
                 restaurantServiceComponent = component "Restaurant Service Component" "Core restaurant business logic" "Spring Service"
-                menuService = component "Menu Service" "Manages restaurant menus and items" "Spring Service"
                 locationService = component "Location Service" "Manages restaurant locations and seating" "Spring Service"
 
                 // Repository Layer components
                 restaurantRepository = component "Restaurant Repository" "Data access for restaurants" "Spring Data JPA"
-                menuRepository = component "Menu Repository" "Data access for menus" "Spring Data JPA"
 
                 // Domain Layer components
                 restaurantEntity = component "Restaurant Entity" "Restaurant domain model" "JPA Entity"
-                menuEntity = component "Menu Entity" "Menu domain model" "JPA Entity"
 
                 // Kafka Layer components
                 restaurantEventProducer = component "Restaurant Event Producer" "Publishes restaurant domain events" "Spring Kafka"
@@ -135,7 +131,6 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
 
         // Restaurant Service database relationships
         restaurantRepository -> restaurantDB "Reads from and writes to for restaurant data" "JDBC/SQL"
-        menuRepository -> restaurantDB "Reads from and writes to for menu data" "JDBC/SQL"
 
         // User Service database relationships
         userRepository -> userDB "Reads from and writes to for user accounts" "JDBC/SQL"
@@ -159,19 +154,14 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
 
         // Restaurant Service internal component relationships
         restaurantController -> restaurantServiceComponent "Uses for restaurant operations" "Java Method Calls"
-        menuController -> menuService "Uses for menu operations" "Java Method Calls"
         restaurantServiceComponent -> restaurantRepository "Uses for data access" "Java Method Calls"
         restaurantServiceComponent -> locationService "Uses for location validation" "Java Method Calls"
-        menuService -> menuRepository "Uses for menu data access" "Java Method Calls"
-        menuService -> restaurantRepository "Uses for restaurant data access" "Java Method Calls"
-        menuService -> restaurantEventProducer "Publishes menu events using" "Java Method Calls"
         locationService -> restaurantRepository "Uses for location data" "Java Method Calls"
         restaurantServiceComponent -> restaurantEventProducer "Publishes events using" "Java Method Calls"
         restaurantEventConsumer -> restaurantServiceComponent "Delivers events to" "Java Method Calls"
 
         // Restaurant Service entity relationships
         restaurantRepository -> restaurantEntity "Uses for ORM mapping" "JPA"
-        menuRepository -> menuEntity "Uses for ORM mapping" "JPA"
 
         // User Service internal component relationships
         userController -> userServiceComponent "Uses for user operations" "Java Method Calls"
@@ -200,9 +190,7 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
 
         // Web and Mobile App to Restaurant Service controllers
         webApp -> restaurantController "Makes restaurant profile and menu viewing requests to" "HTTP/REST"
-        webApp -> menuController "Makes menu item browsing requests to" "HTTP/REST"
         mobileApp -> restaurantController "Makes restaurant profile and menu viewing requests to" "HTTP/REST"
-        mobileApp -> menuController "Makes menu item browsing requests to" "HTTP/REST"
 
         // Web and Mobile App to User Service controllers
         webApp -> userController "Makes user profile management requests to" "HTTP/REST"
@@ -334,12 +322,7 @@ workspace "Restaurant Reservation System" "C4 model of the restaurant reservatio
         }
 
         dynamic restaurantService "MenuItemAddition" "Shows the process of adding a menu item to a restaurant" {
-            menuController -> menuService "addMenuItem(restaurantId, menuItemRequest)"
-            menuService -> restaurantRepository "findRestaurant(restaurantId)"
             restaurantRepository -> restaurantDB "query(restaurantId)"
-            menuService -> menuRepository "saveMenuItem(menuItem)"
-            menuRepository -> restaurantDB "save(menuItem)"
-            menuService -> restaurantEventProducer "publishMenuUpdatedEvent()"
             restaurantEventProducer -> kafka "send()"
             autoLayout
             description "This diagram shows the sequence of interactions when adding a menu item to a restaurant."
